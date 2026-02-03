@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #0f766e;
+}
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background-color: #f5f5f4;
+  background-image:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 45%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-size: auto, 60px 60px, 60px 60px;
+}
+
+h1,
+h2 {
+  font-family: 'IBM Plex Mono', monospace;
+}

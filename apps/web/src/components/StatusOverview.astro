@@ -1,0 +1,10 @@
+---
+import StatusCard from './StatusCard.svelte'
+---
+
+<div class="grid gap-4 sm:grid-cols-2">
+	<StatusCard title="Cluster" value="K3s / 1 node" meta="Local control plane" />
+	<StatusCard title="API" value="Deployed" meta="Hono + Node 22" />
+	<StatusCard title="DB" value="Dragonfly" meta="Warm cache online" />
+	<StatusCard title="Ingress" value="Cloudflare" meta="Tunnel bound to ClusterIP" />
+</div>

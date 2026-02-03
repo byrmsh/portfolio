@@ -1,0 +1,9 @@
+node_modules/
+apps/*/node_modules/
+apps/*/dist/
+apps/*/.astro/
+.env
+.env.*
+.DS_Store
+pnpm-debug.log*
+.pnpm-store/
