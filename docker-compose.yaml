@@ -1,0 +1,37 @@
+services:
+  redis:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "4321:4321"
+    depends_on:
+      - api
+
+  jobber:
+    build:
+      context: apps/jobber
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_STREAM_KEY=jobs
+    env_file:
+      - apps/jobber/.env
+    depends_on:
+      - redis

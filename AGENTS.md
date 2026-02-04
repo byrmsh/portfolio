@@ -191,3 +191,11 @@ kubectl create secret generic db-credentials \
   --namespace portfolio \
   --from-literal=password='YOUR_SECURE_PASSWORD'
 ```
+
+---
+
+## 8. Git & Commit Conventions
+
+- Use Conventional Commits for all changes.
+- Format: `type(scope): summary`
+- Example: `feat(jobber): add upwork graphql ingestion`

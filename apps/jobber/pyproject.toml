@@ -1,0 +1,20 @@
+[project]
+name = "jobber"
+version = "0.1.0"
+description = "Job ingestion workers (Upwork and more)."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "redis>=5.2.1",
+  "structlog>=25.1.0",
+  "simple-pid>=2.0.1",
+  "environs>=14.1.1",
+  "pydantic>=2.10.6",
+  "curl-cffi>=0.7.4",
+]
+
+[project.scripts]
+jobber = "__main__:main"
+
+[tool.uv]
+package = true
