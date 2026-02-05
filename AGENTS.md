@@ -62,6 +62,14 @@ kubectl create secret generic db-credentials \
 
 ---
 
+## 6.5. Build Check Discipline
+
+- After refactors or UI changes, run the relevant build(s) for the affected app(s).
+- Example: `pnpm -C apps/web build`.
+- If the build fails, fix issues and re-run until it passes.
+
+---
+
 ## 7. Worker Apps (Python)
 
 - `apps/upworker`: Upwork ingestion worker (Python + uv).
