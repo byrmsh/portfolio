@@ -1,184 +1,36 @@
-# AGENTS.md - Digital Garden Engineering Guidelines
+# AGENTS.md - Coding Agent Rules
 
-## 1. Project Mission & Identity
+## 1. Purpose
 
-> **Goal:** Build a "living" portfolio that demonstrates Full-Stack & DevOps mastery.
-> **Philosophy:** "Functional Engineering." The site is not just a brochure; it is a dashboard monitoring the very infrastructure it runs on.
-> **Aesthetic:** High-density information, clean typography, monochromatic with single accent (think Vercel/Linear/Cloudflare). No "hacker" gimmicks.
+This file defines constraints and operating rules for coding agents. Project architecture and human-facing docs live in `README.md`.
 
 ---
 
-## 2. Architecture & The "Homelab" Contract
+## 2. Homelab Contract
 
-This repository is a **Polylithic Monorepo**. It contains the Application Code and Deployment Manifests, but **not** the Infrastructure provisioning.
-
-### 2.1 The "Interface" with `homelab` Repo
-
-We rely on the `homelab` repository for the physical reality of the cluster.
-
-- **We Do Not:** Create servers, configure SSH keys, or manage Cloudflare Tunnels directly.
-- **We Do:** Build container images, write K8s manifests, and define Application Logic.
-- **Ingress Handshake:**
-  - This repo creates a K8s **Service** (ClusterIP).
-  - _Action Required:_ We must instruct the user to update `homelab/infra/tunnel.ts` to point the Cloudflare Tunnel to this internal Service IP/Port.
-- **Secrets:**
-  - We assume secrets (DB passwords, API keys) exist in the cluster as K8s Secrets.
-  - We reference them via `envFrom` or `secretKeyRef`.
+- Do not provision infrastructure (servers, SSH keys, Cloudflare Tunnels).
+- Do build images, write K8s manifests, and implement application logic.
+- Ingress handshake: this repo creates a K8s `Service` (ClusterIP). The user must update `homelab/infra/tunnel.ts` to point the Cloudflare Tunnel at the internal Service IP/Port.
 
 ---
 
-## 3. Repository Structure (pnpm Workspaces)
+## 3. Data & Storage Rules
 
-```text
-/
-├── apps/
-│   ├── web/                # Frontend (Astro 5 + Svelte 5)
-│   │   ├── src/
-│   │   │   ├── components/ # Astro & Svelte components
-│   │   │   ├── layouts/    # Page layouts
-│   │   │   └── pages/      # File-based routing
-│   │   └── Dockerfile      # Multistage build (Node -> Nginx/Node)
-│   └── api/                # Backend (Hono)
-│       ├── src/
-│       │   ├── routes/     # Route definitions
-│       │   └── db/         # DragonflyDB/Redis connection
-│       └── Dockerfile      # Bun or Node Distroless build
-│   ├── collector/          # Personal data collectors (Python)
-│   └── upworker/           # Upwork ingestion worker (Python)
-├── deploy/
-│   └── k8s/                # Kubernetes Manifests (The "GitOps" State)
-│       ├── 01-namespace.yaml
-│       ├── 02-db.yaml      # DragonflyDB StatefulSet + PVC
-│       ├── 03-api.yaml     # Deployment + Service
-│       └── 04-web.yaml     # Deployment + Service
-├── packages/               # (Reserved for shared UI/Types)
-└── AGENTS.md               # This file
-
-```
+- Database: DragonflyDB (Redis API). Use `ioredis` client in the API.
+- Keyspacing: use colons `entity:id:attribute` (e.g., `job:1024:title`).
+- Jobs: `job:{id}` and field keys like `job:{id}:title`.
+- Personal data: `stat:{source}:{id}` (non-observability metrics).
+- Observability: do not store logs/metrics/traces in Redis. Use Grafana stack + OpenTelemetry pipeline instead.
 
 ---
 
-## 4. Technology Standards
+## 4. Kubernetes Manifest Rules
 
-### 4.1 Frontend (`apps/web`)
-
-- **Core:** Astro 5.
-- **Interactivity:** Svelte 5 (Runes mode preferred).
-- **Hydration:** Use "Islands Architecture" strictly.
-- Default: Static HTML (Zero JS).
-- Interactive: `<Component client:visible />` (only for things like live status dots or charts).
-
-- **Styling:** TailwindCSS.
-- Use `class` sorting (Prettier plugin).
-- Avoid `@apply` in CSS files; keep styles utility-first in markup.
-
-- **Data Fetching:**
-- **Build Time:** `await fetch()` inside Astro frontmatter (SSG/ISR).
-- **Client Time:** Fetch from `/api/...` inside Svelte components for live telemetry.
-
-### 4.2 Backend (`apps/api`)
-
-- **Framework:** Hono (Lightweight, standards-compliant).
-- **Runtime:** Node.js 22 (LTS) or Bun (if performance demands it).
-- **API Design:** REST (JSON).
-- Endpoints: `/api/status` (Infra health), `/api/jobs` (Scraped data).
-- Response Format: `{ data: T, meta: { ... } }` or standard HTTP errors.
-
-- **Database:** DragonflyDB (Redis API).
-- Use `ioredis` client.
-- Keyspacing: Use colons `entity:id:attribute` (e.g., `job:1024:title`).
-
-### 4.3 Containerization
-
-- **Base Images:** `node:22-alpine` or `gcr.io/distroless/nodejs`.
-- **Optimization:** Multi-stage builds are mandatory to keep images small.
-- **Security:** run as non-root user (`USER node`).
-- **Web Runtime:** Use an unprivileged web server image; default container port is `8080` (service maps `80 -> 8080`).
-
----
-
-## 5. Development Workflow
-
-### 5.1 Local Development
-
-1. **Install:** `pnpm install`
-2. **Database:** `docker run -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly`
-3. **Run:**
-
-- `pnpm --filter api dev` (Port 3000)
-- `pnpm --filter web dev` (Port 4321)
-
-### 5.2 Deployment Lifecycle (Manual GitOps)
-
-Until CI/CD is configured, the Agent follows this "Push" workflow:
-
-1. **Build Images:**
-
-```bash
-docker build -f apps/api/Dockerfile -t ghcr.io/byrmsh/portfolio-api:latest .
-docker build -f apps/web/Dockerfile -t ghcr.io/byrmsh/portfolio-web:latest .
-```
-
-2. **Push:** `docker push ...`
-3. **Update K8s:**
-
-- Ensure `deploy/k8s/*.yaml` references the new image tag (or `latest` + `imagePullPolicy: Always`).
-- `kubectl apply -f deploy/k8s/`
-
-4. **Restart (if needed):**
-   `kubectl rollout restart deployment/portfolio-api -n portfolio`
-
----
-
-## 6. Implementation Roadmap & Checklist
-
-### Phase 1: The "Coming Soon" Page (Frontend Only)
-
-- [ ] Initialize Astro project in `apps/web`.
-- [ ] Create a "Bento Grid" layout using CSS Grid + Tailwind.
-- [ ] Component: `StatusCard.svelte` (Placeholder for live infra stats).
-- [ ] Component: `SocialLink.svelte` (GitHub, Email, PGP).
-- [ ] Output: A static site running on `localhost:4321`.
-
-### Phase 2: The Data Layer (Backend + DB)
-
-- [ ] Initialize Hono app in `apps/api`.
-- [ ] Create `deploy/k8s/db.yaml` (DragonflyDB StatefulSet).
-- **Constraint:** Use `hostPath` for storage initially (simplest for single-node K3s) or `local-path` StorageClass.
-
-- [ ] Implement `GET /health` in API.
-- [ ] Containerize API and deploy to K8s.
-- [ ] **Integration Task:** Instruct user to map tunnel ingress to this API service.
-
-### Phase 3: The "Live" Connection
-
-- [ ] Create a "Scraper" cron function in the API (or separate worker).
-- Source: Upwork RSS / GitHub GraphQL API.
-- Sink: DragonflyDB.
-
-- [ ] Update Frontend `StatusCard.svelte` to fetch from real API.
-- [ ] Add "Infrastructure" visualizer (Ping K8s API for node status).
-
-### Phase 4: Personal Telemetry & Content
-
-- [ ] Fetch personal metrics (Anki streak grid, GitHub streak grid).
-- [ ] Fetch YT Music saved playlist and generate lyric/lore pages (Genius-like, but personal).
-- [ ] Ingest cluster info and surface it on the dashboard.
-
----
-
-## 7. Kubernetes Manifest Guidelines
-
-**Naming Convention:**
-
-- Namespace: `portfolio`
-- Resources: `app-name-resource` (e.g., `api-deployment`, `web-service`).
-
-**Mandatory Fields:**
-
-1. **Labels:** `app: portfolio`, `component: [api|web|db]`.
-2. **Resources:** Always define requests/limits (Start low: 128Mi RAM).
-3. **Probes:**
+- Namespace: `portfolio`.
+- Naming: `app-name-resource` (e.g., `api-deployment`, `web-service`).
+- Mandatory labels: `app: portfolio`, `component: [api|web|db|collector|upworker]`.
+- Resources: always define requests/limits (start low: 128Mi RAM).
+- Probes:
 
 ```yaml
 livenessProbe:
@@ -188,13 +40,13 @@ livenessProbe:
   initialDelaySeconds: 5
 ```
 
-**Secret Management:**
-The Agent must **NEVER** write secrets to YAML.
-Instead, output a shell command for the user:
+---
+
+## 5. Secret Management
+
+The agent must **NEVER** write secrets to YAML. Instead, output a shell command for the user. Example:
 
 ```bash
-# Agent Output Example:
-"Please run this command to configure the database secret:"
 kubectl create secret generic db-credentials \
   --namespace portfolio \
   --from-literal=password='YOUR_SECURE_PASSWORD'
@@ -202,8 +54,17 @@ kubectl create secret generic db-credentials \
 
 ---
 
-## 8. Git & Commit Conventions
+## 6. Git & Commit Conventions
 
 - Use Conventional Commits for all changes.
-- Format: `type(scope): summary`
-- Example: `feat(upworker): add upwork graphql ingestion`
+- Format: `type(scope): summary`.
+- Example: `feat(upworker): add upwork graphql ingestion`.
+
+---
+
+## 7. Worker Apps (Python)
+
+- `apps/upworker`: Upwork ingestion worker (Python + uv).
+- `apps/collector`: Personal data collectors (Python + uv).
+- Keep these apps small and task-focused; add a new app only when a task has distinct dependencies or runtime needs.
+- Prefer K8s CronJobs for scheduled runs; long-lived services should stream updates to Redis and the API can expose them.
