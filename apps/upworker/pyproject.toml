@@ -1,7 +1,7 @@
 [project]
-name = "jobber"
+name = "upworker"
 version = "0.1.0"
-description = "Job ingestion workers (Upwork and more)."
+description = "Upwork job ingestion worker."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-jobber = "__main__:main"
+upworker = "__main__:main"
 
 [tool.uv]
 package = true

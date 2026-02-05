@@ -43,6 +43,7 @@ We rely on the `homelab` repository for the physical reality of the cluster.
 │       │   ├── routes/     # Route definitions
 │       │   └── db/         # DragonflyDB/Redis connection
 │       └── Dockerfile      # Bun or Node Distroless build
+│   └── upworker/           # Upwork ingestion worker (Python)
 ├── deploy/
 │   └── k8s/                # Kubernetes Manifests (The "GitOps" State)
 │       ├── 01-namespace.yaml
@@ -198,4 +199,4 @@ kubectl create secret generic db-credentials \
 
 - Use Conventional Commits for all changes.
 - Format: `type(scope): summary`
-- Example: `feat(jobber): add upwork graphql ingestion`
+- Example: `feat(upworker): add upwork graphql ingestion`

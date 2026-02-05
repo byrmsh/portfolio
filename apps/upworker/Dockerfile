@@ -14,4 +14,4 @@ COPY .env.sample ./
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["jobber"]
+CMD ["upworker"]

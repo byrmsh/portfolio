@@ -23,6 +23,15 @@ pnpm --filter web dev
 docker run -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly
 ```
 
+## Workers (uv)
+
+```bash
+cd apps/upworker
+uv venv
+uv sync
+uv run upworker
+```
+
 ## Docker Compose (Optional)
 
 ```bash
@@ -33,4 +42,4 @@ Services:
 - `web`: http://localhost:4321
 - `api`: http://localhost:3000
 - `redis` (DragonflyDB): localhost:6379
-- `jobber`: worker process
+- `upworker`: Upwork ingestion worker

@@ -24,14 +24,14 @@ services:
     depends_on:
       - api
 
-  jobber:
+  upworker:
     build:
-      context: apps/jobber
+      context: apps/upworker
       dockerfile: Dockerfile
     environment:
       - REDIS_URL=redis://redis:6379/0
       - REDIS_STREAM_KEY=jobs
     env_file:
-      - apps/jobber/.env
+      - apps/upworker/.env
     depends_on:
       - redis
