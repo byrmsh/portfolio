@@ -32,6 +32,13 @@ uv sync
 uv run upworker
 ```
 
+```bash
+cd apps/collector
+uv venv
+uv sync
+uv run collector-github
+```
+
 ## Docker Compose (Optional)
 
 ```bash
@@ -43,3 +50,4 @@ Services:
 - `api`: http://localhost:3000
 - `redis` (DragonflyDB): localhost:6379
 - `upworker`: Upwork ingestion worker
+- `collector`: personal data collectors

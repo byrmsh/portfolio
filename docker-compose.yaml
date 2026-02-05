@@ -35,3 +35,15 @@ services:
       - apps/upworker/.env
     depends_on:
       - redis
+
+  collector:
+    build:
+      context: apps/collector
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_EVENTS_STREAM=events
+    env_file:
+      - apps/collector/.env
+    depends_on:
+      - redis

@@ -43,6 +43,7 @@ We rely on the `homelab` repository for the physical reality of the cluster.
 │       │   ├── routes/     # Route definitions
 │       │   └── db/         # DragonflyDB/Redis connection
 │       └── Dockerfile      # Bun or Node Distroless build
+│   ├── collector/          # Personal data collectors (Python)
 │   └── upworker/           # Upwork ingestion worker (Python)
 ├── deploy/
 │   └── k8s/                # Kubernetes Manifests (The "GitOps" State)
@@ -157,6 +158,12 @@ docker build -f apps/web/Dockerfile -t ghcr.io/byrmsh/portfolio-web:latest .
 
 - [ ] Update Frontend `StatusCard.svelte` to fetch from real API.
 - [ ] Add "Infrastructure" visualizer (Ping K8s API for node status).
+
+### Phase 4: Personal Telemetry & Content
+
+- [ ] Fetch personal metrics (Anki streak grid, GitHub streak grid).
+- [ ] Fetch YT Music saved playlist and generate lyric/lore pages (Genius-like, but personal).
+- [ ] Ingest cluster info and surface it on the dashboard.
 
 ---
 

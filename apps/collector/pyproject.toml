@@ -1,0 +1,22 @@
+[project]
+name = "collector"
+version = "0.1.0"
+description = "Personal data collectors (Anki, GitHub, YT Music, cluster info)."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "redis>=5.2.1",
+  "structlog>=25.1.0",
+  "environs>=14.1.1",
+  "pydantic>=2.10.6",
+  "httpx>=0.27.0",
+]
+
+[project.scripts]
+collector-anki = "anki:main"
+collector-github = "github_streak:main"
+collector-ytmusic = "ytmusic:main"
+collector-cluster = "cluster:main"
+
+[tool.uv]
+package = false
