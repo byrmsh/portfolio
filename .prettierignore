@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+**/dist
+**/build
+**/.astro
+**/.svelte-kit
+**/.next
+**/.turbo
+**/.cache
+**/.output
+**/coverage
+**/pnpm-lock.yaml
