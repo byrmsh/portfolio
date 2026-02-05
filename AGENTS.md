@@ -68,3 +68,15 @@ kubectl create secret generic db-credentials \
 - `apps/collector`: Personal data collectors (Python + uv).
 - Keep these apps small and task-focused; add a new app only when a task has distinct dependencies or runtime needs.
 - Prefer K8s CronJobs for scheduled runs; long-lived services should stream updates to Redis and the API can expose them.
+
+---
+
+## 8. Web Dev Performance Notes
+
+- Avoid barrel imports from `@lucide/astro` in dev. Prefer per-icon imports like `@lucide/astro/icons/menu` to prevent large module scans and slow TTFB.
+
+---
+
+## 9. Commit Hygiene
+
+- Do not mix unrelated changes in a single commit. Separate documentation/agent-rule updates from code formatting changes.
