@@ -1,17 +1,17 @@
 ---
-import StatusCard from './StatusCard.svelte'
+import StatusCard from './StatusCard.svelte';
 
 interface Props {
-	title?: string
-	value?: string
-	meta?: string
+  title?: string;
+  value?: string;
+  meta?: string;
 }
 
 const {
-	title = 'Roadmap',
-	value = 'Phase 1',
-	meta = 'Bento grid + telemetry',
-}: Props = Astro.props
+  title = 'Roadmap',
+  value = 'Phase 1',
+  meta = 'Bento grid + telemetry',
+}: Props = Astro.props;
 ---
 
 <StatusCard title={title} value={value} meta={meta} accent />
