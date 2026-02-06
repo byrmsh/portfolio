@@ -1,5 +1,5 @@
 [project]
-name = "portfolio-pytypes"
+name = "portfolio-schema"
 version = "0.1.0"
 description = "Shared Pydantic schemas and Redis key helpers for portfolio apps."
 readme = "README.md"

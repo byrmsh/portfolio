@@ -1,11 +1,12 @@
 {
-  "name": "@portfolio/contracts",
+  "name": "@portfolio/schema",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./portfolio": "./src/portfolio.ts"
+    "./dashboard": "./src/dashboard.ts",
+    "./upwork": "./src/upwork.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

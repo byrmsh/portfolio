@@ -80,11 +80,11 @@ These keys follow the repository rules from `AGENTS.md`.
 ## 3) Contract Files
 
 - TypeScript contracts + validators:
-  - canonical: `packages/contracts/src/portfolio.ts` (Zod + inferred types)
-  - app bridges: `apps/api/src/contracts/portfolio.ts`, `apps/web/src/contracts/portfolio.ts`
+  - canonical: `packages/schema/src/dashboard.ts` and `packages/schema/src/upwork.ts` (Zod + inferred types)
+  - app bridges: `apps/api/src/schema/index.ts` and `apps/web/src/schema/index.ts`
 - Python contracts + validators:
-  - canonical: `packages/portfolio-pytypes/src/portfolio_pytypes/portfolio_schema.py`
-  - app bridges: `apps/collector/portfolio_schema.py`, `apps/upworker/portfolio_schema.py`
+  - canonical: `packages/schema-py/src/portfolio_schema/dashboard.py` and `packages/schema-py/src/portfolio_schema/upwork.py`
+  - app bridges: `apps/collector/schema.py`, `apps/upworker/schema.py`
 
 Both files define:
 

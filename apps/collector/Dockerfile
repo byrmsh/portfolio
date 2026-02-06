@@ -5,7 +5,7 @@ RUN pip install --no-cache-dir uv==0.4.30
 WORKDIR /app
 
 COPY apps/collector/pyproject.toml apps/collector/README.md ./apps/collector/
-COPY packages/portfolio-pytypes ./packages/portfolio-pytypes
+COPY packages/schema-py ./packages/schema-py
 
 WORKDIR /app/apps/collector
 

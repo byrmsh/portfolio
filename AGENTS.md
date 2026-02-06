@@ -21,9 +21,9 @@ This file defines constraints and operating rules for coding agents. Project arc
 - Jobs: `job:{id}` and field keys like `job:{id}:title`.
 - Personal data: `stat:{source}:{id}` (non-observability metrics).
 - Observability: do not store logs/metrics/traces in Redis. Use Grafana stack + OpenTelemetry pipeline instead.
-- Shared contracts:
-  - TypeScript validators/types belong in `packages/contracts`.
-  - Python validators/types belong in `packages/portfolio-pytypes`.
+- Shared schemas:
+  - TypeScript validators/types belong in `packages/schema`.
+  - Python validators/types belong in `packages/schema-py`.
   - App-local files should be thin bridges/re-exports, not separate schema sources.
 
 ---

@@ -11,7 +11,7 @@ dependencies = [
   "environs>=14.1.1",
   "pydantic>=2.10.6",
   "curl-cffi>=0.7.4",
-  "portfolio-pytypes",
+  "portfolio-schema",
 ]
 
 [project.scripts]
@@ -21,4 +21,4 @@ upworker = "__main__:main"
 package = true
 
 [tool.uv.sources]
-portfolio-pytypes = { path = "../../packages/portfolio-pytypes" }
+portfolio-schema = { path = "../../packages/schema-py" }
