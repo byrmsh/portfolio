@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import SiteNav from '../components/SiteNav.astro';
 import PageHero from '../components/PageHero.astro';
 import ActivityMonitor from '../components/ActivityMonitor.astro';
-import SonicArchivesCard from '../components/SonicArchivesCard.astro';
+import SavedLyricsCard from '../components/SavedLyricsCard.astro';
 import WritingCard from '../components/WritingCard.astro';
 import KnowledgeGraphCard from '../components/KnowledgeGraphCard.astro';
 import JobScoutCard from '../components/JobScoutCard.astro';
@@ -33,7 +33,7 @@ const writingPosts = [
 
       <div class="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-5">
         <ActivityMonitor />
-        <SonicArchivesCard />
+        <SavedLyricsCard />
         <WritingCard posts={writingPosts} />
         <KnowledgeGraphCard />
         <JobScoutCard />
