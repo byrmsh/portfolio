@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import json
-from typing import Any, Dict
+from typing import Any
 
 import httpx
 from environs import env
@@ -20,7 +19,7 @@ def fetch_contrib_svg(username: str) -> str:
     return res.text
 
 
-def build_payload(svg: str) -> Dict[str, Any]:
+def build_payload(svg: str) -> dict[str, Any]:
     return {"svg": svg}
 
 

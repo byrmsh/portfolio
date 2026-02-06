@@ -67,6 +67,9 @@ kubectl create secret generic db-credentials \
 - After refactors or UI changes, run the relevant build(s) for the affected app(s).
 - Example: `pnpm -C apps/web build`.
 - If the build fails, fix issues and re-run until it passes.
+- Run lint before finalizing changes and fix violations:
+  - `pnpm lint` for monorepo TypeScript/Astro/Python lint checks.
+  - If scope is limited, run the minimal relevant lint command(s) and mention what was run.
 
 ---
 
