@@ -22,3 +22,10 @@ package = true
 
 [tool.uv.sources]
 portfolio-schema = { path = "../../packages/schema-py" }
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["__main__", "schema", "typex"]

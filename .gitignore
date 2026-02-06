@@ -2,6 +2,10 @@ node_modules/
 apps/*/node_modules/
 apps/*/dist/
 apps/*/.astro/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
 .env
 .env.*
 .DS_Store
