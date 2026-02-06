@@ -26,8 +26,8 @@ services:
 
   upworker:
     build:
-      context: apps/upworker
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/upworker/Dockerfile
     environment:
       - REDIS_URL=redis://redis:6379/0
       - REDIS_STREAM_KEY=jobs
@@ -38,8 +38,8 @@ services:
 
   collector:
     build:
-      context: apps/collector
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/collector/Dockerfile
     environment:
       - REDIS_URL=redis://redis:6379/0
       - REDIS_EVENTS_STREAM=events

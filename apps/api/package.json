@@ -7,6 +7,7 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@portfolio/contracts": "workspace:*",
     "@hono/node-server": "^1.13.0",
     "hono": "^4.0.0",
     "ioredis": "^5.0.0"

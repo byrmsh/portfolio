@@ -4,13 +4,17 @@ RUN pip install --no-cache-dir uv==0.4.30
 
 WORKDIR /app
 
-COPY pyproject.toml README.md ./
+COPY apps/collector/pyproject.toml apps/collector/README.md ./apps/collector/
+COPY packages/portfolio-pytypes ./packages/portfolio-pytypes
+
+WORKDIR /app/apps/collector
+
 RUN uv venv /app/.venv && \
     . /app/.venv/bin/activate && \
     uv sync
 
-COPY *.py .
-COPY .env.sample ./
+COPY apps/collector/*.py ./
+COPY apps/collector/.env.sample ./
 
 ENV PATH="/app/.venv/bin:$PATH"
 

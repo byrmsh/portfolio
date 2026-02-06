@@ -8,6 +8,7 @@ FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
+COPY packages/contracts/package.json ./packages/contracts/
 RUN pnpm install --frozen-lockfile --filter web...
 
 # 2. Build Stage

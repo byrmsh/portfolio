@@ -32,6 +32,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.0
         version: 1.19.9(hono@4.11.7)
+      '@portfolio/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       hono:
         specifier: ^4.0.0
         version: 4.11.7
@@ -57,6 +60,9 @@ importers:
       '@lucide/astro':
         specifier: ^0.563.0
         version: 0.563.0(astro@5.17.1(@types/node@20.19.31)(ioredis@5.9.2)(jiti@2.6.1)(lightningcss@1.30.2)(rollup@4.57.1)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2))
+      '@portfolio/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(vite@6.4.1(@types/node@20.19.31)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))
@@ -78,6 +84,16 @@ importers:
         version: 20.19.31
       typescript:
         specifier: ^5.4.0
+        version: 5.9.3
+
+  packages/contracts:
+    dependencies:
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
         version: 5.9.3
 
 packages:

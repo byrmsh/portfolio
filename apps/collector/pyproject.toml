@@ -10,6 +10,7 @@ dependencies = [
   "environs>=14.1.1",
   "pydantic>=2.10.6",
   "httpx>=0.27.0",
+  "portfolio-pytypes",
 ]
 
 [project.scripts]
@@ -20,3 +21,6 @@ collector-cluster = "cluster:main"
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+portfolio-pytypes = { path = "../../packages/portfolio-pytypes" }
