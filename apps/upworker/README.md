@@ -40,6 +40,38 @@ Upworker supports two modes:
 If you are getting blocked by Cloudflare challenges, prefer `UPWORK_BEARER_TOKEN` and avoid
 proxy-based "bypass" approaches.
 
+### Permissions / "oAuth2 client does not have permission"
+
+If Upwork responds with a GraphQL error like:
+
+- `Requested oAuth2 client does not have permission to see some of the requested fields`
+
+then your `UPWORK_BEARER_TOKEN` (or your request headers) are not the same as what the Upwork
+web app uses.
+
+Practical fix:
+
+- Capture the `Authorization: Bearer ...` header from your browser's job search GraphQL request.
+- If the browser request also includes cookies or extra headers (ex: `x-oauth2-client-id`),
+  copy them into `UPWORK_COOKIE` / `GRAPHQL_HEADERS`.
+
+Environment variables:
+
+- `UPWORK_COOKIE`: copied `Cookie` header value (optional, but sometimes required).
+- `GRAPHQL_HEADERS`: JSON dict of additional headers to send to GraphQL (optional).
+
+## Job Search Tuning
+
+- `UPWORK_USER_QUERY`: optional search query string (maps to `userQuery` in `UserJobSearchV1Request`).
+- `UPWORK_SORT`: sort string (default `recency`; browser often uses `relevance+desc`).
+
+## Connects Data (Optional)
+
+Job search results no longer expose connects pricing directly. Upworker can fetch connects data
+per job via a separate GraphQL query and store it at `job:{id}:connects`.
+
+- Enable with `FETCH_CONNECTS_DATA=true`.
+
 ### Optional pre-filter step (bash + curl)
 
 Use the included script to build a clean proxy file once (or on a schedule), instead of checking on every worker start:

@@ -27,7 +27,9 @@ from typex import (
 
 env.read_env(recurse=False)
 
-JOB_SEARCH_QUERY = Path("job-search.gql").read_text("utf-8")
+_HERE = Path(__file__).resolve().parent
+JOB_SEARCH_QUERY = (_HERE / "job-search.gql").read_text("utf-8")
+CONNECTS_FREELANCER_QUERY = (_HERE / "connects-freelancer.gql").read_text("utf-8")
 REDIS_URL = env.str("REDIS_URL")
 STREAM_KEY = env.str("REDIS_STREAM_KEY", default="jobs")
 UPWORK_TOKEN_REDIS_KEY = env.str("UPWORK_TOKEN_REDIS_KEY", default="upwork_token")
@@ -36,6 +38,10 @@ MAX_PAGE_SIZE = 50
 OPTIMAL_PAGE_SIZE = env.int("OPTIMAL_PAGE_SIZE", default=40)
 DEFAULT_FETCH_INTERVAL_SECONDS = env.int("DEFAULT_FETCH_INTERVAL_SECONDS", default=600)
 UPWORK_BEARER_TOKEN = env.str("UPWORK_BEARER_TOKEN", default="").strip()
+UPWORK_COOKIE = env.str("UPWORK_COOKIE", default="").strip()
+UPWORK_USER_QUERY = env.str("UPWORK_USER_QUERY", default="").strip()
+UPWORK_SORT = env.str("UPWORK_SORT", default="recency").strip()
+FETCH_CONNECTS_DATA = env.bool("FETCH_CONNECTS_DATA", default=False)
 COMMON_HEADERS_RAW = env.str("COMMON_HEADERS", default="")
 LOGIN_HEADERS_RAW = env.str("LOGIN_HEADERS", default="")
 GRAPHQL_HEADERS_RAW = env.str("GRAPHQL_HEADERS", default="")
@@ -232,6 +238,7 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
         "query": JOB_SEARCH_QUERY,
         "variables": {
             "requestVariables": {
+                **({"userQuery": UPWORK_USER_QUERY} if UPWORK_USER_QUERY else {}),
                 "sort": "recency",
                 "highlight": True,
                 "paging": {
@@ -241,6 +248,8 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
             },
         },
     }
+    if UPWORK_SORT:
+        data["variables"]["requestVariables"]["sort"] = UPWORK_SORT
     url = "https://www.upwork.com/api/graphql/v1"
     custom_headers = {
         "authorization": f"Bearer {token}",
@@ -248,6 +257,8 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
         "referer": "https://www.upwork.com/nx/search/jobs",
     }
     headers = COMMON_HEADERS | GRAPHQL_HEADERS | custom_headers
+    if UPWORK_COOKIE:
+        headers = headers | {"cookie": UPWORK_COOKIE}
     res = requests.post(
         url,
         params=params,
@@ -267,11 +278,50 @@ def extract_job_entries(res: UpworkJobSearchResponse) -> List[UpworkJobResult]:
     if "data" not in res:
         # Upwork GraphQL returns "errors" (and no "data") for schema/query validation failures.
         errors = res.get("errors")
+        hint = ""
+        if errors and any(
+            "oAuth2 client does not have permission" in (e.get("message") or "")
+            for e in errors
+            if isinstance(e, dict)
+        ):
+            hint = (
+                " Hint: your token/headers are likely not the same as the Upwork web app. "
+                "Capture the GraphQL request headers from your browser (Authorization and often Cookie/"
+                "x-oauth2-client-id/etc) and set UPWORK_BEARER_TOKEN plus GRAPHQL_HEADERS/UPWORK_COOKIE."
+            )
         raise RuntimeError(
             "Upwork GraphQL response missing 'data'. "
-            f"Likely query/schema mismatch. errors={errors!r}"
+            f"Likely query/schema mismatch or auth/permissions issue. errors={errors!r}.{hint}"
         )
     return res["data"]["search"]["universalSearchNuxt"]["userJobSearchV1"]["results"]
+
+
+def fetch_connects_data_for_job(job_id: str, token: str) -> dict:
+    params = {"alias": "connectsDataForFreelancer"}
+    data = {"query": CONNECTS_FREELANCER_QUERY, "variables": {"jobId": job_id}}
+    url = "https://www.upwork.com/api/graphql/v1"
+    custom_headers = {
+        "authorization": f"Bearer {token}",
+        "origin": "https://www.upwork.com",
+        "referer": f"https://www.upwork.com/nx/search/jobs/details/{job_id}",
+    }
+    headers = COMMON_HEADERS | GRAPHQL_HEADERS | custom_headers
+    if UPWORK_COOKIE:
+        headers = headers | {"cookie": UPWORK_COOKIE}
+    res = requests.post(
+        url,
+        params=params,
+        headers=headers,
+        json=data,
+        proxies=next_proxies(),
+    )
+    raise_custom_http_errors(res)
+    res_json = res.json()
+    if "errors" in res_json:
+        logger.warning(
+            "Errors in connects response", job_id=job_id, errors=res_json["errors"]
+        )
+    return res_json
 
 
 def fetch_jobs_page(offset: int, count: int) -> List[UpworkJobResult]:
@@ -325,6 +375,9 @@ def add_jobs_to_redis(jobs: List[UpworkJobResult]) -> None:
             job_id = job["id"]
             job_key = f"job:{job_id}"
             r.set(job_key, json.dumps(job))
+            connects_data = job.get("connectsData")
+            if connects_data is not None:
+                r.set(f"job:{job_id}:connects", json.dumps(connects_data))
             stream_id = f"{job_id}-0"
             r.xadd(
                 STREAM_KEY,
@@ -348,6 +401,27 @@ def process_jobs_iteration() -> int:
     logger.info("Latest job id from redis", latest_job_id=latest_job_id)
     new_jobs = fetch_new_jobs(latest_job_id)
     logger.info("Jobs fetched from iteration", new_jobs=len(new_jobs))
+    if new_jobs and FETCH_CONNECTS_DATA:
+        token = get_authorization_token()
+        for job in new_jobs:
+            job_id = job["id"]
+            try:
+                try:
+                    connects_res = retry_until_not_forbidden(
+                        fetch_connects_data_for_job, (job_id, token)
+                    )
+                except UnauthorizedError:
+                    if UPWORK_BEARER_TOKEN:
+                        raise
+                    token = retry_until_not_forbidden(cache_authorized_token)
+                    connects_res = retry_until_not_forbidden(
+                        fetch_connects_data_for_job, (job_id, token)
+                    )
+                job["connectsData"] = connects_res.get("data") or connects_res
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch connects data", job_id=job_id, error=str(e)
+                )
     if new_jobs:
         with r.lock("job_db_lock", timeout=10):
             add_jobs_to_redis(new_jobs)

@@ -1,0 +1,16 @@
+query connectsDataForFreelancer($jobId: ID!) {
+  pricingJobPost: jobConnectsPriceFreelancer(jobId: $jobId) {
+    price
+    context
+    auctionPrice
+  }
+  connectsSummary: jobFreelancerConnectsSummary {
+    connectsBalance
+  }
+  jobFeatureInCurrentSubscription(feature: VIEW_COMPETITOR_BIDS) {
+    featureInCurrentSubscription
+  }
+  chooseConnectsModalStatus {
+    isExplainerModalShown
+  }
+}
