@@ -215,13 +215,26 @@ def cache_authorized_token() -> str:
         return token
 
 
+def normalize_bearer_token(token: str) -> str:
+    token = token.strip()
+    if not token:
+        return token
+    if token.lower().startswith("bearer "):
+        return token.split(None, 1)[1].strip()
+    return token
+
+
 def get_authorization_token() -> str:
     if UPWORK_BEARER_TOKEN:
-        return UPWORK_BEARER_TOKEN
+        return normalize_bearer_token(UPWORK_BEARER_TOKEN)
+    # Allow supplying a full captured browser header set via GRAPHQL_HEADERS only.
+    hdr_token = GRAPHQL_HEADERS.get("authorization") or GRAPHQL_HEADERS.get("Authorization")
+    if hdr_token:
+        return normalize_bearer_token(hdr_token)
     token = r.get(UPWORK_TOKEN_REDIS_KEY)
     if token:
         assert isinstance(token, str), f"Expected string for token, got {type(token)}"
-        return token
+        return normalize_bearer_token(token)
     return retry_until_not_forbidden(cache_authorized_token)
 
 
