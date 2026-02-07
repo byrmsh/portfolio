@@ -11,3 +11,6 @@ build/
 .DS_Store
 pnpm-debug.log*
 .pnpm-store/
+
+# Local proxy lists (may contain credentials / private endpoints)
+apps/upworker/proxies*.txt

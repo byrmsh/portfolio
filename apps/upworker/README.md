@@ -23,6 +23,37 @@ cp .env.sample .env
 uv run upworker
 ```
 
+## Proxy Configuration
+
+- `PROXY_URL`: single proxy endpoint (good for rotating proxy providers).
+- `PROXY_LIST_FILE`: path to a text file with one proxy URL per line.
+- You can set either one; if both are set, both sources are used in round-robin order.
+- If both are empty, Upworker will connect directly (no proxy).
+
+## Authentication Notes
+
+Upworker supports two modes:
+
+1. Recommended: set `UPWORK_BEARER_TOKEN` and skip automated login.
+2. Automated login: set `LOGIN_DATA` (and optional `LOGIN_HEADERS`) to fetch/refresh a token.
+
+If you are getting blocked by Cloudflare challenges, prefer `UPWORK_BEARER_TOKEN` and avoid
+proxy-based "bypass" approaches.
+
+### Optional pre-filter step (bash + curl)
+
+Use the included script to build a clean proxy file once (or on a schedule), instead of checking on every worker start:
+
+```bash
+./scripts/check-proxies.sh ./proxies.txt ./proxies.good.txt
+```
+
+Then set:
+
+```env
+PROXY_LIST_FILE="./proxies.good.txt"
+```
+
 ## Redis Stream Notes
 
 Upworker writes full job JSON to `job:{id}` keys and emits a lightweight entry to the Redis

@@ -10,7 +10,7 @@ from typing import Awaitable, Callable, List, Optional
 import structlog
 from curl_cffi import requests
 from curl_cffi.requests import ProxySpec, Session
-from curl_cffi.requests.exceptions import HTTPError
+from curl_cffi.requests.exceptions import HTTPError, ProxyError
 from environs import env
 from redis import Redis
 from redis.exceptions import ResponseError as RedisResponseError
@@ -35,12 +35,56 @@ MAX_OFFSET = 5000
 MAX_PAGE_SIZE = 50
 OPTIMAL_PAGE_SIZE = env.int("OPTIMAL_PAGE_SIZE", default=40)
 DEFAULT_FETCH_INTERVAL_SECONDS = env.int("DEFAULT_FETCH_INTERVAL_SECONDS", default=600)
-LOGIN_DATA = InitialLoginPayloadValidator.validate_python(env.json("LOGIN_DATA"))
-COMMON_HEADERS = HeadersValidator.validate_python(env.json("COMMON_HEADERS"))
-LOGIN_HEADERS = HeadersValidator.validate_python(env.json("LOGIN_HEADERS"))
-GRAPHQL_HEADERS = HeadersValidator.validate_python(env.json("GRAPHQL_HEADERS"))
-PROXY_URL = env.str("PROXY_URL")
-PROXIES: ProxySpec = {"https": PROXY_URL}
+UPWORK_BEARER_TOKEN = env.str("UPWORK_BEARER_TOKEN", default="").strip()
+COMMON_HEADERS_RAW = env.str("COMMON_HEADERS", default="")
+LOGIN_HEADERS_RAW = env.str("LOGIN_HEADERS", default="")
+GRAPHQL_HEADERS_RAW = env.str("GRAPHQL_HEADERS", default="")
+LOGIN_DATA_RAW = env.str("LOGIN_DATA", default="")
+COMMON_HEADERS = (
+    HeadersValidator.validate_json(COMMON_HEADERS_RAW) if COMMON_HEADERS_RAW else {}
+)
+LOGIN_HEADERS = (
+    HeadersValidator.validate_json(LOGIN_HEADERS_RAW) if LOGIN_HEADERS_RAW else {}
+)
+GRAPHQL_HEADERS = (
+    HeadersValidator.validate_json(GRAPHQL_HEADERS_RAW) if GRAPHQL_HEADERS_RAW else {}
+)
+LOGIN_DATA = (
+    InitialLoginPayloadValidator.validate_json(LOGIN_DATA_RAW)
+    if LOGIN_DATA_RAW
+    else None
+)
+PROXY_URL = env.str("PROXY_URL", default="")
+PROXY_LIST_FILE = env.str("PROXY_LIST_FILE", default="")
+def load_proxy_urls() -> List[str]:
+    proxies: List[str] = []
+    if PROXY_LIST_FILE:
+        proxy_file_path = Path(PROXY_LIST_FILE)
+        if not proxy_file_path.exists():
+            raise ValueError(f"PROXY_LIST_FILE does not exist: {PROXY_LIST_FILE}")
+        proxy_lines = proxy_file_path.read_text("utf-8").splitlines()
+        proxies.extend(
+            line.strip()
+            for line in proxy_lines
+            if line.strip() and not line.lstrip().startswith("#")
+        )
+    if PROXY_URL:
+        proxies.append(PROXY_URL)
+    return proxies
+
+
+PROXY_URLS = load_proxy_urls()
+_proxy_index = 0
+DEFAULT_PROXY_MAX_RETRIES = max(5, min(len(PROXY_URLS), 20))
+
+
+def next_proxies() -> Optional[ProxySpec]:
+    if not PROXY_URLS:
+        return None
+    global _proxy_index
+    proxy_url = PROXY_URLS[_proxy_index % len(PROXY_URLS)]
+    _proxy_index += 1
+    return {"http": proxy_url, "https": proxy_url}
 
 logging.basicConfig(format="%(message)s", stream=sys.stdout, level=logging.INFO)
 structlog.configure(
@@ -57,6 +101,12 @@ structlog.configure(
 
 logger = structlog.get_logger()
 r = Redis.from_url(REDIS_URL, decode_responses=True)
+logger.info(
+    "Proxy configuration loaded",
+    proxy_count=len(PROXY_URLS),
+    proxy_list_file=PROXY_LIST_FILE or None,
+    direct_connection=not PROXY_URLS,
+)
 
 
 class UnauthorizedError(HTTPError):
@@ -70,6 +120,11 @@ class ProxyForbiddenError(HTTPError):
 def login_to_account_sec(
     session: Session, sec_check_data: Optional[dict] = None
 ) -> LoginResponse:
+    if LOGIN_DATA is None:
+        raise ValueError(
+            "LOGIN_DATA is required for automated login. "
+            "Set UPWORK_BEARER_TOKEN to skip login flow."
+        )
     logger.info("Logging in")
     url = "https://www.upwork.com/ab/account-security/login"
     static_headers = {
@@ -80,7 +135,7 @@ def login_to_account_sec(
     }
     headers = COMMON_HEADERS | LOGIN_HEADERS | static_headers
     json_data = {"login": LOGIN_DATA["login"] | (sec_check_data or {})}
-    res = session.post(url, json=json_data, headers=headers, proxies=PROXIES)
+    res = session.post(url, json=json_data, headers=headers, proxies=next_proxies())
     raise_custom_http_errors(res)
     return res.json()
 
@@ -89,7 +144,10 @@ def raise_custom_http_errors(res: requests.Response):
     if res.status_code == 401:
         raise UnauthorizedError("Unauthorized", response=res)
     if res.status_code == 403:
-        raise ProxyForbiddenError("Proxy Cloudflare forbidden", response=res)
+        # This may be a proxy-level 403, a Cloudflare/anti-bot response, or an account restriction.
+        # Treat as retryable only when using proxies.
+        if PROXY_URLS:
+            raise ProxyForbiddenError("Forbidden (proxy or Cloudflare)", response=res)
     res.raise_for_status()
 
 
@@ -102,7 +160,7 @@ def request_and_parse_token(session: Session) -> str:
         "sec-fetch-user": "?1",
     }
     headers = COMMON_HEADERS | static_headers
-    res = session.get(url, params=params, headers=headers, proxies=PROXIES)
+    res = session.get(url, params=params, headers=headers, proxies=next_proxies())
     raise_custom_http_errors(res)
     match = re.search(r"(?<=clientConf\=)\{[^}]+}", res.text)
     if not match:
@@ -111,12 +169,32 @@ def request_and_parse_token(session: Session) -> str:
     return client_conf["token"]
 
 
-def retry_until_not_forbidden(func: Callable, args=(), max_retries=5):
-    for _ in range(max_retries - 1):
+def retry_until_not_forbidden(
+    func: Callable, args=(), max_retries: Optional[int] = None
+):
+    if not PROXY_URLS:
+        # No proxy rotation; retries here don't help and can amplify rate-limits.
+        return func(*args)
+    retries = max_retries or DEFAULT_PROXY_MAX_RETRIES
+    for attempt in range(1, retries):
         try:
             return func(*args)
         except ProxyForbiddenError as e:
-            logger.warning("Forbidden error, retrying", exc_info=e)
+            logger.warning(
+                "Forbidden error, retrying",
+                attempt=attempt,
+                max_retries=retries,
+                error=str(e),
+            )
+            time.sleep(min(2, 0.25 * attempt))
+        except ProxyError as e:
+            logger.warning(
+                "Proxy transport error, retrying",
+                attempt=attempt,
+                max_retries=retries,
+                error=str(e),
+            )
+            time.sleep(min(2, 0.25 * attempt))
     return func(*args)
 
 
@@ -131,6 +209,16 @@ def cache_authorized_token() -> str:
         token = retry_until_not_forbidden(request_and_parse_token, (session,))
         r.set(UPWORK_TOKEN_REDIS_KEY, token)
         return token
+
+
+def get_authorization_token() -> str:
+    if UPWORK_BEARER_TOKEN:
+        return UPWORK_BEARER_TOKEN
+    token = r.get(UPWORK_TOKEN_REDIS_KEY)
+    if token:
+        assert isinstance(token, str), f"Expected string for token, got {type(token)}"
+        return token
+    return retry_until_not_forbidden(cache_authorized_token)
 
 
 def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchResponse:
@@ -155,12 +243,18 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
     }
     url = "https://www.upwork.com/api/graphql/v1"
     custom_headers = {
-        "authorization": f"bearer {token}",
+        "authorization": f"Bearer {token}",
         "origin": "https://www.upwork.com",
         "referer": "https://www.upwork.com/nx/search/jobs",
     }
     headers = COMMON_HEADERS | GRAPHQL_HEADERS | custom_headers
-    res = requests.post(url, params=params, headers=headers, json=data)
+    res = requests.post(
+        url,
+        params=params,
+        headers=headers,
+        json=data,
+        proxies=next_proxies(),
+    )
     raise_custom_http_errors(res)
     res_json = res.json()
     if "errors" in res_json:
@@ -174,10 +268,7 @@ def extract_job_entries(res: UpworkJobSearchResponse) -> List[UpworkJobResult]:
 
 
 def fetch_jobs_page(offset: int, count: int) -> List[UpworkJobResult]:
-    token = r.get(UPWORK_TOKEN_REDIS_KEY)
-    if not token:
-        token = retry_until_not_forbidden(cache_authorized_token)
-    assert isinstance(token, str), f"Expected string for token, got {type(token)}"
+    token = get_authorization_token()
     try:
         res = retry_until_not_forbidden(fetch_jobs_endpoint, (offset, count, token))
     except UnauthorizedError as e:
