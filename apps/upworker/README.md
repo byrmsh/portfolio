@@ -53,17 +53,11 @@ Practical fix:
 
 - Capture the `Authorization: Bearer ...` header from your browser's job search GraphQL request.
 - If the browser request also includes cookies or extra headers (ex: `x-oauth2-client-id`),
-  copy them into `UPWORK_COOKIE` / `GRAPHQL_HEADERS`.
+  copy them into `GRAPHQL_HEADERS` (yes, you can include a `cookie` header there if needed).
 
 Environment variables:
 
-- `UPWORK_COOKIE`: copied `Cookie` header value (optional, but sometimes required).
 - `GRAPHQL_HEADERS`: JSON dict of additional headers to send to GraphQL (optional).
-
-## Job Search Tuning
-
-- `UPWORK_USER_QUERY`: optional search query string (maps to `userQuery` in `UserJobSearchV1Request`).
-- `UPWORK_SORT`: sort string (default `recency`; browser often uses `relevance+desc`).
 
 ## Connects Data (Optional)
 

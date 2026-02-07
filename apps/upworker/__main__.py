@@ -38,10 +38,8 @@ MAX_PAGE_SIZE = 50
 OPTIMAL_PAGE_SIZE = env.int("OPTIMAL_PAGE_SIZE", default=40)
 DEFAULT_FETCH_INTERVAL_SECONDS = env.int("DEFAULT_FETCH_INTERVAL_SECONDS", default=600)
 UPWORK_BEARER_TOKEN = env.str("UPWORK_BEARER_TOKEN", default="").strip()
-UPWORK_COOKIE = env.str("UPWORK_COOKIE", default="").strip()
-UPWORK_USER_QUERY = env.str("UPWORK_USER_QUERY", default="").strip()
-UPWORK_SORT = env.str("UPWORK_SORT", default="recency").strip()
-FETCH_CONNECTS_DATA = env.bool("FETCH_CONNECTS_DATA", default=False)
+# Upwork doesn't expose connects pricing on job search results anymore; fetch it separately when desired.
+FETCH_CONNECTS_DATA = env.bool("FETCH_CONNECTS_DATA", default=True)
 COMMON_HEADERS_RAW = env.str("COMMON_HEADERS", default="")
 LOGIN_HEADERS_RAW = env.str("LOGIN_HEADERS", default="")
 GRAPHQL_HEADERS_RAW = env.str("GRAPHQL_HEADERS", default="")
@@ -238,7 +236,8 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
         "query": JOB_SEARCH_QUERY,
         "variables": {
             "requestVariables": {
-                **({"userQuery": UPWORK_USER_QUERY} if UPWORK_USER_QUERY else {}),
+                # Frontend sends this even when empty; keep it to match the current contract.
+                "userQuery": "",
                 "sort": "recency",
                 "highlight": True,
                 "paging": {
@@ -248,8 +247,6 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
             },
         },
     }
-    if UPWORK_SORT:
-        data["variables"]["requestVariables"]["sort"] = UPWORK_SORT
     url = "https://www.upwork.com/api/graphql/v1"
     custom_headers = {
         "authorization": f"Bearer {token}",
@@ -257,8 +254,6 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
         "referer": "https://www.upwork.com/nx/search/jobs",
     }
     headers = COMMON_HEADERS | GRAPHQL_HEADERS | custom_headers
-    if UPWORK_COOKIE:
-        headers = headers | {"cookie": UPWORK_COOKIE}
     res = requests.post(
         url,
         params=params,
@@ -287,7 +282,7 @@ def extract_job_entries(res: UpworkJobSearchResponse) -> List[UpworkJobResult]:
             hint = (
                 " Hint: your token/headers are likely not the same as the Upwork web app. "
                 "Capture the GraphQL request headers from your browser (Authorization and often Cookie/"
-                "x-oauth2-client-id/etc) and set UPWORK_BEARER_TOKEN plus GRAPHQL_HEADERS/UPWORK_COOKIE."
+                "x-oauth2-client-id/etc) and set UPWORK_BEARER_TOKEN plus GRAPHQL_HEADERS."
             )
         raise RuntimeError(
             "Upwork GraphQL response missing 'data'. "
@@ -306,8 +301,6 @@ def fetch_connects_data_for_job(job_id: str, token: str) -> dict:
         "referer": f"https://www.upwork.com/nx/search/jobs/details/{job_id}",
     }
     headers = COMMON_HEADERS | GRAPHQL_HEADERS | custom_headers
-    if UPWORK_COOKIE:
-        headers = headers | {"cookie": UPWORK_COOKIE}
     res = requests.post(
         url,
         params=params,
