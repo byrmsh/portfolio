@@ -264,6 +264,13 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
 
 
 def extract_job_entries(res: UpworkJobSearchResponse) -> List[UpworkJobResult]:
+    if "data" not in res:
+        # Upwork GraphQL returns "errors" (and no "data") for schema/query validation failures.
+        errors = res.get("errors")
+        raise RuntimeError(
+            "Upwork GraphQL response missing 'data'. "
+            f"Likely query/schema mismatch. errors={errors!r}"
+        )
     return res["data"]["search"]["universalSearchNuxt"]["userJobSearchV1"]["results"]
 
 

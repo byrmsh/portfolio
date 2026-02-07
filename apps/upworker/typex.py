@@ -101,7 +101,6 @@ class UpworkJobResult(TypedDict):
     relevanceEncoded: str
     ontologySkills: List[UpworkOntologySkill]
     isSTSVectorSearchResult: bool
-    connectPrice: Optional[int]
     applied: Optional[bool]
     upworkHistoryData: UpworkHistoryData
     jobTile: UpworkJobTile
