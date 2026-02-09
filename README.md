@@ -119,6 +119,24 @@ uv sync
 uv run collector-github
 ```
 
+### Activity Monitor Data Flow
+
+The homepage **Activity Monitor** is **rendered at build time** in `apps/web` by fetching the API and embedding the last 7 days into static HTML.
+
+- Collectors (Python, `apps/collector`) write activity series to Redis:
+  - `stat:github:default`
+  - `stat:anki:default` (currently placeholder until Anki collector exists)
+- API (`apps/api`) serves:
+  - `GET /api/activity-monitor` -> `{ github, anki }`
+- Web (`apps/web`) fetches the API **during build**:
+  - Set `API_ORIGIN` (preferred) or `PUBLIC_API_ORIGIN`
+  - Local default is `http://localhost:3000`
+
+Collector env vars:
+- `GITHUB_USERNAME`
+- `GITHUB_TOKEN`
+- `REDIS_URL` (e.g. `redis://localhost:6379/0`)
+
 ## Docker Compose (Optional)
 
 ```bash
