@@ -114,18 +114,10 @@ def build_series_from_payload(payload: dict[str, Any], *, start: date, end: date
         cells.append(ActivityCell(date=cur, level=lvl, count=cnt))
         cur += timedelta(days=1)
 
-    # Streak is consecutive non-zero days ending at end-of-window.
-    streak = 0
-    for cell in reversed(cells):
-        if cell.count <= 0:
-            break
-        streak += 1
-
     return ActivitySeries(
         source="github",
         label="GitHub",
         cells=cells,
-        streak=streak,
         updatedAt=datetime.now(tz=UTC),
     )
 
@@ -154,9 +146,8 @@ def main() -> None:
     write_metric(r, key, series.model_dump(mode="json"))
     emit_event(r, "github_activity_updated", {"key": key})
 
-    logger.info("collector.github.done", key=key, cells=len(series.cells), streak=series.streak)
+    logger.info("collector.github.done", key=key, cells=len(series.cells))
 
 
 if __name__ == "__main__":
     main()
-

@@ -49,7 +49,8 @@ function buildEmptyActivitySeries(source: ActivitySource): ActivitySeries {
     source,
     label: source === 'github' ? 'GitHub' : 'Anki',
     cells,
-    streak: source === 'github' ? 0 : undefined,
+    // Only Anki displays a streak number on the homepage.
+    streak: source === 'anki' ? 0 : undefined,
     updatedAt: new Date().toISOString(),
   };
 }
