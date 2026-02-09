@@ -15,7 +15,7 @@ dependencies = [
 
 [project.scripts]
 collector-anki = "anki:main"
-collector-github = "github_streak:main"
+collector-github = "github_activity:main"
 collector-ytmusic = "ytmusic:main"
 collector-cluster = "cluster:main"
 
