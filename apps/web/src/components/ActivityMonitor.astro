@@ -33,8 +33,8 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
             data-count="0"
             data-level="0"
           >
-            <span class="text-[10px] font-mono">---</span>
-            <span class="text-xs font-semibold">0</span>
+            <span class="tag-dow text-[10px] font-mono opacity-90">---</span>
+            <span class="tag-count text-xs font-semibold">0</span>
           </button>
         ))}
       </div>
@@ -60,8 +60,8 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
             data-count="0"
             data-level="0"
           >
-            <span class="text-[10px] font-mono">---</span>
-            <span class="text-xs font-semibold">0</span>
+            <span class="tag-dow text-[10px] font-mono opacity-90">---</span>
+            <span class="tag-count text-xs font-semibold">0</span>
           </button>
         ))}
       </div>
@@ -78,17 +78,30 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
   }
 
   [data-activity-monitor] .activity-tags {
-    --tag-gap: clamp(0.25rem, 1.25cqw, 0.75rem);
+    /* Slightly tighter by default to maximize node size. */
+    --tag-gap: clamp(0.1875rem, 1cqw, 0.625rem);
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: var(--tag-gap);
     min-width: 0;
+    container-type: inline-size;
   }
 
   [data-activity-monitor] .activity-tag {
     width: 100%;
     aspect-ratio: 1 / 1;
     min-width: 0;
+  }
+
+  /* When a panel gets tight, drop the weekday line so the count stays readable. */
+  @container (max-width: 360px) {
+    [data-activity-monitor] .activity-tag .tag-dow {
+      display: none;
+    }
+    [data-activity-monitor] .activity-tag .tag-count {
+      font-size: 0.9rem;
+      line-height: 1;
+    }
   }
 </style>
 
@@ -192,11 +205,11 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
       setBtnStyle(btn, source, level);
 
       const dow = document.createElement('span');
-      dow.className = 'text-[10px] font-mono opacity-90';
+      dow.className = 'tag-dow text-[10px] font-mono opacity-90';
       dow.textContent = d ? fmtDay.format(d) : '---';
 
       const num = document.createElement('span');
-      num.className = 'text-xs font-semibold';
+      num.className = 'tag-count text-xs font-semibold';
       num.textContent = String(count);
 
       btn.appendChild(dow);
@@ -215,7 +228,8 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
       btn.dataset.count = '0';
       btn.dataset.level = '0';
       btn.setAttribute('aria-label', `${source === 'github' ? 'GitHub' : 'Anki'} day`);
-      btn.innerHTML = '<span class="text-[10px] font-mono">---</span><span class="text-xs font-semibold">0</span>';
+      btn.innerHTML =
+        '<span class="tag-dow text-[10px] font-mono opacity-90">---</span><span class="tag-count text-xs font-semibold">0</span>';
       host.appendChild(btn);
     }
 

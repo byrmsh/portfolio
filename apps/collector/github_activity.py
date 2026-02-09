@@ -23,14 +23,9 @@ ContributionLevel = Literal[
 ]
 
 
-def _last_saturday(today: date) -> date:
-    # date.weekday(): Mon=0..Sun=6. Saturday is 5.
-    days_since_saturday = (today.weekday() - 5) % 7
-    return today - timedelta(days=days_since_saturday)
-
-
 def _date_range_16_weeks(today: date) -> tuple[date, date]:
-    end = _last_saturday(today)
+    # For "last N days" UI we want data up through today (UTC), not end-of-week.
+    end = today
     start = end - timedelta(days=(16 * 7) - 1)
     return start, end
 

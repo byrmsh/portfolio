@@ -15,9 +15,8 @@ env.read_env(recurse=False)
 def main() -> None:
     logger.info("collector.anki.todo_activity_series")
     today = datetime.now(tz=UTC).date()
-    # Mirror GitHub: 16 full weeks ending on last Saturday.
-    days_since_saturday = (today.weekday() - 5) % 7
-    end = today - timedelta(days=days_since_saturday)
+    # Mirror GitHub windowing: 16 weeks ending today (UTC).
+    end = today
     start = end - timedelta(days=(16 * 7) - 1)
 
     cells: list[ActivityCell] = []

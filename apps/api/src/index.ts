@@ -23,18 +23,10 @@ function isoDate(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function lastSaturdayUtc(today: Date): Date {
-  // JS: 0=Sun..6=Sat
-  const day = today.getUTCDay();
-  const daysSinceSaturday = (day - 6 + 7) % 7;
-  const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  d.setUTCDate(d.getUTCDate() - daysSinceSaturday);
-  return d;
-}
-
 function buildEmptyActivitySeries(source: ActivitySource): ActivitySeries {
-  const today = new Date();
-  const end = lastSaturdayUtc(today);
+  const now = new Date();
+  // End at today (UTC) so the "last 7 days" UI doesn't lag behind.
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const start = new Date(end);
   start.setUTCDate(end.getUTCDate() - (16 * 7 - 1));
 
