@@ -188,6 +188,15 @@ const rangeLabel =
     min-width: 0;
   }
 
+  /* Anki counts are much larger than GitHub contributions; keep them subtle. */
+  [data-activity-monitor] .activity-tag[data-source='anki'] .tag-count {
+    font-size: 0.7rem;
+    line-height: 1;
+    font-weight: 600;
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+  }
+
   /* When a panel gets tight, drop the weekday line so the count stays readable. */
   @container (max-width: 360px) {
     [data-activity-monitor] .activity-tag .tag-dow {
@@ -196,6 +205,10 @@ const rangeLabel =
     [data-activity-monitor] .activity-tag .tag-count {
       font-size: 0.9rem;
       line-height: 1;
+    }
+    /* Keep Anki smaller even in cramped layouts. */
+    [data-activity-monitor] .activity-tag[data-source='anki'] .tag-count {
+      font-size: 0.75rem;
     }
   }
 </style>
