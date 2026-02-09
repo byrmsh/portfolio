@@ -1,5 +1,6 @@
 ---
 import Menu from '@lucide/astro/icons/menu';
+import { SITE } from '../config/site';
 
 const links = [
   { label: 'Home', href: '#' },
@@ -16,7 +17,7 @@ const links = [
       href="/"
       class="font-mono text-sm font-semibold tracking-tight hover:opacity-70 transition-opacity"
     >
-      bayram.sh
+      {SITE.domain}
     </a>
     <div class="hidden sm:flex items-center gap-6 text-sm font-medium text-neutral-600">
       {links.map((link) => (

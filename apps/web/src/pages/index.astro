@@ -9,6 +9,7 @@ import KnowledgeGraphCard from '../components/KnowledgeGraphCard.astro';
 import JobScoutCard from '../components/JobScoutCard.astro';
 import SystemHealthCard from '../components/SystemHealthCard.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import { SITE } from '../config/site';
 
 const writingPosts = [
   {
@@ -24,7 +25,7 @@ const writingPosts = [
 ];
 ---
 
-<Layout title="Bayram Şahin | Systems Console">
+<Layout title={`${SITE.name} | Systems Console`}>
   <SiteNav />
 
   <main class="pt-28 px-4 sm:px-6">
