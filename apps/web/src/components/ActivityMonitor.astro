@@ -15,8 +15,8 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
     <div class="text-xxs font-mono text-neutral-400" data-range>Last 7 days</div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 min-w-0">
-    <div class="min-w-0 lg:pr-8">
+  <div class="grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-6 lg:gap-x-8 lg:gap-y-0 min-w-0">
+    <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <GitHub class="w-4 h-4 text-neutral-800" />
         <span class="text-sm font-semibold">GitHub</span>
@@ -40,7 +40,9 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
       </div>
     </div>
 
-    <div class="min-w-0 pl-0 lg:pl-8 lg:border-l border-neutral-100">
+    <div class="hidden lg:block w-px bg-neutral-100 rounded-full" aria-hidden="true"></div>
+
+    <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <BrainCircuit class="w-4 h-4 text-neutral-800" />
         <span class="text-sm font-semibold">Anki</span>
