@@ -22,11 +22,11 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
         <span class="text-sm font-semibold">GitHub</span>
       </div>
 
-      <div class="flex flex-wrap gap-2" data-tags="github" aria-label="GitHub activity, last 7 days">
+      <div class="activity-tags" data-tags="github" aria-label="GitHub activity, last 7 days">
         {Array.from({ length: 7 }).map((_, i) => (
           <button
             type="button"
-            class="h-11 w-11 rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-400 flex flex-col items-center justify-center leading-none select-none"
+            class="activity-tag rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-400 flex flex-col items-center justify-center leading-none select-none"
             aria-label={`GitHub day ${i + 1}`}
             data-source="github"
             data-date=""
@@ -49,11 +49,11 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
         </span>
       </div>
 
-      <div class="flex flex-wrap gap-2" data-tags="anki" aria-label="Anki activity, last 7 days">
+      <div class="activity-tags" data-tags="anki" aria-label="Anki activity, last 7 days">
         {Array.from({ length: 7 }).map((_, i) => (
           <button
             type="button"
-            class="h-11 w-11 rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-400 flex flex-col items-center justify-center leading-none select-none"
+            class="activity-tag rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-400 flex flex-col items-center justify-center leading-none select-none"
             aria-label={`Anki day ${i + 1}`}
             data-source="anki"
             data-date=""
@@ -68,6 +68,29 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
     </div>
   </div>
 </section>
+
+<style is:global>
+  /* Fit 7 nodes into the available width without wrapping or overflow. */
+  @supports (container-type: inline-size) {
+    [data-activity-monitor] {
+      container-type: inline-size;
+    }
+  }
+
+  [data-activity-monitor] .activity-tags {
+    --tag-gap: clamp(0.25rem, 1.25cqw, 0.75rem);
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: var(--tag-gap);
+    min-width: 0;
+  }
+
+  [data-activity-monitor] .activity-tag {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+  }
+</style>
 
 <script is:inline type="module">
   const root = document.querySelector('[data-activity-monitor]');
@@ -159,7 +182,7 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className =
-        'h-11 w-11 rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400';
+        'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400';
       btn.dataset.source = source;
       btn.dataset.date = date;
       btn.dataset.count = String(count);
@@ -186,7 +209,7 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className =
-        'h-11 w-11 rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-400 flex flex-col items-center justify-center leading-none select-none';
+        'activity-tag rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-400 flex flex-col items-center justify-center leading-none select-none';
       btn.dataset.source = source;
       btn.dataset.date = '';
       btn.dataset.count = '0';
@@ -270,4 +293,3 @@ const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN ?? '';
     }
   })();
 </script>
-
