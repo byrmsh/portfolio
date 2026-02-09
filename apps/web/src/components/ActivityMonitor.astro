@@ -1,6 +1,7 @@
 ---
 import GitHub from '@lucide/astro/icons/github';
 import BrainCircuit from '@lucide/astro/icons/brain-circuit';
+import ky from 'ky';
 
 type ActivityCell = { date: string; count: number; level: number };
 type ActivitySeries = { source: 'github' | 'anki'; label: string; cells: ActivityCell[]; streak?: number };
@@ -55,13 +56,14 @@ const apiOrigin =
 
 let activity: ActivityMonitorData | null = null;
 try {
-  const res = await fetch(`${apiOrigin}/api/activity-monitor`, {
+  const json = await ky
+    .get(`${apiOrigin}/api/activity-monitor`, {
     headers: { accept: 'application/json' },
-  });
-  if (res.ok) {
-    const json = (await res.json()) as { data?: ActivityMonitorData };
-    if (json?.data?.github && json?.data?.anki) activity = json.data;
-  }
+      throwHttpErrors: false,
+    })
+    .json<{ data?: ActivityMonitorData }>();
+
+  if (json?.data?.github && json?.data?.anki) activity = json.data;
 } catch {
   // Build-time/API-time failures should not break the homepage build.
   activity = null;
