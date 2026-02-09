@@ -262,7 +262,7 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
     }
     url = "https://www.upwork.com/api/graphql/v1"
     custom_headers = {
-        "authorization": f"Bearer {token}",
+        "authorization": f"bearer {token}",
         "origin": "https://www.upwork.com",
         "referer": "https://www.upwork.com/nx/search/jobs",
     }
