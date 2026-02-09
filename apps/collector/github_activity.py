@@ -138,7 +138,8 @@ def main() -> None:
 
     r = redis_client()
     key = RedisKeys.stat("github", "default")
-    write_metric(r, key, series.model_dump(mode="json"))
+    # Omit optional fields that are None (e.g., no GitHub streak).
+    write_metric(r, key, series.model_dump(mode="json", exclude_none=True))
     emit_event(r, "github_activity_updated", {"key": key})
 
     logger.info("collector.github.done", key=key, cells=len(series.cells))

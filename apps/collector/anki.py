@@ -29,13 +29,14 @@ def main() -> None:
         source="anki",
         label="Anki",
         cells=cells,
-        streak=None,
+        # Placeholder until Anki collector is implemented.
+        streak=0,
         updatedAt=datetime.now(tz=UTC),
     )
 
     r = redis_client()
     key = RedisKeys.stat("anki", "default")
-    write_metric(r, key, series.model_dump(mode="json"))
+    write_metric(r, key, series.model_dump(mode="json", exclude_none=True))
     emit_event(r, "anki_activity_updated", {"key": key})
 
 

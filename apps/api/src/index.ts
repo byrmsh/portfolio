@@ -51,7 +51,11 @@ async function readActivitySeries(source: ActivitySource): Promise<ActivitySerie
   const key = redisKeys.stat(source, 'default');
   const raw = await redis.get(key);
   if (!raw) return buildEmptyActivitySeries(source);
-  const parsed = activitySeriesSchema.parse(JSON.parse(raw));
+  const parsedJson = JSON.parse(raw) as Record<string, unknown>;
+  // Historical collector payloads may include `"streak": null`. Our schema treats streak as
+  // optional, so normalize null -> missing to avoid 500s.
+  if (parsedJson.streak === null) delete parsedJson.streak;
+  const parsed = activitySeriesSchema.parse(parsedJson);
   return parsed;
 }
 
