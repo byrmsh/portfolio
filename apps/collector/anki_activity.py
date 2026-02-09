@@ -16,6 +16,14 @@ env.read_env(recurse=False)
 
 ANKI_COLLECTION_PATH = env.str("ANKI_COLLECTION_PATH", default="")
 ANKI_TIMEZONE = env.str("ANKI_TIMEZONE", default="UTC")
+ANKI_SYNC_DIR = env.str("ANKI_SYNC_DIR", default="/tmp/anki-sync")
+
+# If ANKI_COLLECTION_PATH is not provided, we'll try to sync down a disposable local
+# collection using the Anki Rust backend (the `anki` PyPI package).
+ANKIWEB_EMAIL = env.str("ANKIWEB_EMAIL", default="")
+ANKIWEB_PASSWORD = env.str("ANKIWEB_PASSWORD", default="")
+ANKI_SYNC_ENDPOINT = env.str("ANKI_SYNC_ENDPOINT", default="")
+
 
 def _date_range_16_weeks(today: date) -> tuple[date, date]:
     # For "last N days" UI we want data up through today.
@@ -116,6 +124,57 @@ def _build_series_from_collection(
         updatedAt=datetime.now(tz=UTC),
     )
 
+
+def _sync_down_collection_from_ankiweb(*, sync_dir: Path) -> Path:
+    """Sync collection from AnkiWeb into a local directory.
+
+    We intentionally bias towards "download" when a full sync is required, because this
+    collector is read-only and should never overwrite server state.
+    """
+    if not ANKIWEB_EMAIL or not ANKIWEB_PASSWORD:
+        raise RuntimeError(
+            "missing ANKIWEB_EMAIL/ANKIWEB_PASSWORD (set ANKI_COLLECTION_PATH instead)"
+        )
+
+    # Import lazily: this pulls in the Rust bridge shared lib.
+    from anki import sync_pb2
+    from anki.collection import Collection
+
+    sync_dir.mkdir(parents=True, exist_ok=True)
+    col_path = sync_dir / "collection.anki2"
+
+    col = Collection(str(col_path))
+    try:
+        auth = col.sync_login(
+            username=ANKIWEB_EMAIL,
+            password=ANKIWEB_PASSWORD,
+            endpoint=ANKI_SYNC_ENDPOINT or None,
+        )
+        out = col.sync_collection(auth=auth, sync_media=False)
+
+        if out.new_endpoint:
+            logger.info("collector.anki.new_endpoint", endpoint=out.new_endpoint)
+
+        if out.required in (
+            sync_pb2.SyncCollectionResponse.FULL_SYNC,
+            sync_pb2.SyncCollectionResponse.FULL_DOWNLOAD,
+        ):
+            logger.info("collector.anki.full_download_required", required=int(out.required))
+            col.close_for_full_sync()
+            col._backend.full_upload_or_download(
+                sync_pb2.FullUploadOrDownloadRequest(auth=auth, upload=False)
+            )
+        elif out.required == sync_pb2.SyncCollectionResponse.FULL_UPLOAD:
+            # Safety rail: never upload in automation.
+            raise RuntimeError(
+                "AnkiWeb requested a full upload; refusing to avoid overwriting server data"
+            )
+    finally:
+        col.close()
+
+    return col_path
+
+
 def main() -> None:
     tz = ZoneInfo(ANKI_TIMEZONE)
     today = datetime.now(tz=tz).date()
@@ -130,30 +189,41 @@ def main() -> None:
             start=str(start),
             end=str(end),
         )
-        series = _build_series_from_collection(
-            collection_path=collection_path,
-            tz=tz,
-            start=start,
-            end=end,
-        )
+        series = _build_series_from_collection(collection_path=collection_path, tz=tz, start=start, end=end)
     else:
-        logger.warning(
-            "collector.anki.missing_collection_path",
-            anki_collection_path=ANKI_COLLECTION_PATH or None,
-            tz=ANKI_TIMEZONE,
-        )
-        cells: list[ActivityCell] = []
-        cur = start
-        while cur <= end:
-            cells.append(ActivityCell(date=cur, level=0, count=0))
-            cur += timedelta(days=1)
-        series = ActivitySeries(
-            source="anki",
-            label="Anki",
-            cells=cells,
-            streak=0,
-            updatedAt=datetime.now(tz=UTC),
-        )
+        try:
+            synced_path = _sync_down_collection_from_ankiweb(sync_dir=Path(ANKI_SYNC_DIR))
+            logger.info(
+                "collector.anki.start",
+                collection=str(synced_path),
+                tz=ANKI_TIMEZONE,
+                start=str(start),
+                end=str(end),
+                mode="ankiweb-sync",
+            )
+            series = _build_series_from_collection(
+                collection_path=synced_path, tz=tz, start=start, end=end
+            )
+        except Exception as exc:
+            logger.warning(
+                "collector.anki.no_data_source",
+                anki_collection_path=ANKI_COLLECTION_PATH or None,
+                anki_sync_dir=ANKI_SYNC_DIR or None,
+                has_ankiweb_email=bool(ANKIWEB_EMAIL),
+                error=str(exc),
+            )
+            cells: list[ActivityCell] = []
+            cur = start
+            while cur <= end:
+                cells.append(ActivityCell(date=cur, level=0, count=0))
+                cur += timedelta(days=1)
+            series = ActivitySeries(
+                source="anki",
+                label="Anki",
+                cells=cells,
+                streak=0,
+                updatedAt=datetime.now(tz=UTC),
+            )
 
     r = redis_client()
     key = RedisKeys.stat("anki", "default")

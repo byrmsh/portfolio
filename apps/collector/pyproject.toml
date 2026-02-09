@@ -11,10 +11,11 @@ dependencies = [
   "pydantic>=2.10.6",
   "httpx>=0.27.0",
   "portfolio-schema",
+  "anki>=25.9.2",
 ]
 
 [project.scripts]
-collector-anki = "anki:main"
+collector-anki = "anki_activity:main"
 collector-github = "github_activity:main"
 collector-ytmusic = "ytmusic:main"
 collector-cluster = "cluster:main"
