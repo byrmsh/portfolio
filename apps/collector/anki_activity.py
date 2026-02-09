@@ -152,8 +152,11 @@ def _sync_down_collection_from_ankiweb(*, sync_dir: Path) -> Path:
         )
         out = col.sync_collection(auth=auth, sync_media=False)
 
+        # AnkiWeb may tell us to switch to a numbered host (eg https://sync6.ankiweb.net/).
+        # Ensure subsequent requests (including full download) use it.
         if out.new_endpoint:
             logger.info("collector.anki.new_endpoint", endpoint=out.new_endpoint)
+            auth.endpoint = out.new_endpoint
 
         if out.required in (
             sync_pb2.SyncCollectionResponse.FULL_SYNC,
