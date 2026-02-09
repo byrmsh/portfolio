@@ -115,7 +115,6 @@ const rangeLabel =
             data-date={cell.date}
             data-count={String(cell.count)}
             data-level={String(cell.level)}
-            title={cell.date ? `GitHub: ${cell.date} (${cell.count})` : 'GitHub'}
           >
             <span class="tag-dow text-[10px] font-mono opacity-90">{dow}</span>
             <span class="tag-count text-xs font-semibold">{cell.count}</span>
@@ -152,7 +151,6 @@ const rangeLabel =
             data-date={cell.date}
             data-count={String(cell.count)}
             data-level={String(cell.level)}
-            title={cell.date ? `Anki: ${cell.date} (${cell.count})` : 'Anki'}
           >
             <span class="tag-dow text-[10px] font-mono opacity-90">{dow}</span>
             <span class="tag-count text-xs font-semibold">{cell.count}</span>
