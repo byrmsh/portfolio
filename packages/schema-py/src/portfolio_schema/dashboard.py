@@ -50,6 +50,38 @@ class SavedLyricNote(BaseSchema):
     savedAt: datetime
 
 
+class YtMusicBackgroundNote(BaseSchema):
+    title: str
+    body: str
+
+
+class YtMusicBackground(BaseSchema):
+    tldr: str
+    notes: list[YtMusicBackgroundNote]
+
+
+class YtMusicVocabularyItem(BaseSchema):
+    term: str
+    literal: str
+    meaning: str
+    cefr: str | None = None
+    usage: list[str] | None = None
+
+
+class YtMusicAnalysis(BaseSchema):
+    id: str
+    source: Literal["ytmusic"]
+    title: str
+    artist: str
+    album: str | None = None
+    albumArtUrl: str | None = None
+    trackUrl: str | None = None
+    lyricsUrl: str | None = None
+    background: YtMusicBackground
+    vocabulary: list[YtMusicVocabularyItem]
+    updatedAt: datetime
+
+
 class WritingPost(BaseSchema):
     id: str
     source: Literal["writing"]
@@ -113,6 +145,7 @@ class DashboardSnapshot(BaseSchema):
 StatRedisRecord = (
     ActivitySeries
     | SavedLyricNote
+    | YtMusicAnalysis
     | WritingPost
     | KnowledgeGraphSnapshot
     | SystemHealthSnapshot

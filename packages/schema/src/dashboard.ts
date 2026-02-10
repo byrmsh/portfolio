@@ -45,6 +45,38 @@ export const savedLyricNoteSchema = z.object({
   savedAt: isoDatetimeSchema,
 });
 
+export const ytmusicBackgroundNoteSchema = z.object({
+  title: z.string().min(1),
+  body: z.string().min(1),
+});
+
+export const ytmusicBackgroundSchema = z.object({
+  tldr: z.string().min(1),
+  notes: z.array(ytmusicBackgroundNoteSchema),
+});
+
+export const ytmusicVocabularyItemSchema = z.object({
+  term: z.string().min(1),
+  literal: z.string().min(1),
+  meaning: z.string().min(1),
+  cefr: z.string().min(1).optional(),
+  usage: z.array(z.string().min(1)).optional(),
+});
+
+export const ytmusicAnalysisSchema = z.object({
+  id: z.string().min(1),
+  source: z.literal("ytmusic"),
+  title: z.string().min(1),
+  artist: z.string().min(1),
+  album: z.string().min(1).optional(),
+  albumArtUrl: z.string().url().nullable().optional(),
+  trackUrl: z.string().url().optional(),
+  lyricsUrl: z.string().url().optional(),
+  background: ytmusicBackgroundSchema,
+  vocabulary: z.array(ytmusicVocabularyItemSchema),
+  updatedAt: isoDatetimeSchema,
+});
+
 export const writingPostSchema = z.object({
   id: z.string().min(1),
   source: z.literal("writing"),
@@ -108,6 +140,7 @@ export const dashboardSnapshotSchema = z.object({
 export const statRedisRecordSchema = z.union([
   activitySeriesSchema,
   savedLyricNoteSchema,
+  ytmusicAnalysisSchema,
   writingPostSchema,
   knowledgeGraphSnapshotSchema,
   systemHealthSnapshotSchema,
@@ -120,6 +153,10 @@ export type ActivityCell = z.infer<typeof activityCellSchema>;
 export type ActivitySeries = z.infer<typeof activitySeriesSchema>;
 export type ActivityMonitorData = z.infer<typeof activityMonitorDataSchema>;
 export type SavedLyricNote = z.infer<typeof savedLyricNoteSchema>;
+export type YtMusicBackgroundNote = z.infer<typeof ytmusicBackgroundNoteSchema>;
+export type YtMusicBackground = z.infer<typeof ytmusicBackgroundSchema>;
+export type YtMusicVocabularyItem = z.infer<typeof ytmusicVocabularyItemSchema>;
+export type YtMusicAnalysis = z.infer<typeof ytmusicAnalysisSchema>;
 export type WritingPost = z.infer<typeof writingPostSchema>;
 export type KnowledgeGraphSnapshot = z.infer<typeof knowledgeGraphSnapshotSchema>;
 export type JobLead = z.infer<typeof jobLeadSchema>;
