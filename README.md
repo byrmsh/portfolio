@@ -52,35 +52,16 @@ Containerization:
 - Run as non-root (`USER node`)
 - Web container port `8080` (service maps `80 -> 8080`)
 
-## Feature Groups & Checklist
+## TODO / Roadmap
 
-Frontend Experience:
-- [ ] Initialize Astro project in `apps/web`.
-- [ ] Create a Bento Grid layout using CSS Grid + Tailwind.
-- [ ] Component: `StatusCard.svelte` (placeholder for live infra stats).
-- [ ] Component: `SocialLink.svelte` (GitHub, Email, PGP).
-- [ ] Output: a static site running on `localhost:4321`.
-
-API & Data Layer:
-- [ ] Initialize Hono app in `apps/api`.
-- [ ] Create `deploy/k8s/db.yaml` (DragonflyDB StatefulSet).
-- Constraint: use `hostPath` initially (single-node K3s) or `local-path` StorageClass.
-- [ ] Implement `GET /health` in API.
-- [ ] Containerize API and deploy to K8s.
-- [ ] Integration task: update `homelab/infra/tunnel.ts` to point Cloudflare Tunnel to the API service.
-
-Workers & Live Data:
-- [ ] Create a scraper cron function in a separate worker app.
-- Sources: Upwork RSS / GitHub GraphQL API.
-- Sink: DragonflyDB.
-- [ ] Update `StatusCard.svelte` to fetch from real API.
-- [ ] Add infrastructure visualizer (K8s node status).
-
-Personal Metrics & Content:
-- [x] Fetch personal metrics (Anki streak grid, GitHub streak grid).
-- [ ] Fetch YT Music saved playlist and generate lyric/lore pages (Genius-like, but personal).
-- [ ] Ingest cluster info and surface it on the dashboard.
-- [ ] Keep observability data (logs/metrics/traces) separate from personal stats content.
+- [ ] Harden local-dev + preview: one command to boot web/api/db/workers and a single env var source-of-truth for origins.
+- [ ] Formalize Redis schemas + migrations for “content” records (jobs, writing, lyric notes) so changes are forwards-compatible.
+- [ ] Add a minimal admin workflow for content curation (approve/hide/pin items; fix metadata) without hand-editing Redis keys.
+- [ ] Improve the lyric note page content process: tighten the workflow + system prompt so notes are consistently useful (better background sections, better vocabulary “usage” guidance, fewer generic filler entries).
+- [ ] Lyric notes: add quality gates (track dedupe, language detection, CEFR sanity checks) and a “regenerate for this track” endpoint.
+- [ ] Extend collectors: cluster inventory snapshot, service uptime/SLO rollups, and surface it on the dashboard.
+- [ ] Observability: keep logs/metrics/traces out of Redis; wire OpenTelemetry -> Grafana stack and link to it from the dashboard.
+- [ ] Deployment hygiene: CI build + lint, image tags by git SHA, and K8s manifests updated automatically (or documented manual flow).
 
 ## Local Development
 
