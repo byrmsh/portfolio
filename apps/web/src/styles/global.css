@@ -30,7 +30,24 @@
 
 /* Base Styles */
 @layer base {
+  html {
+    /* Fallback behind everything (including during rubber-band/overscroll). */
+    background-color: #f5f5f4;
+  }
+
   body {
+    /* Put the visual background on a fixed layer so it doesn't "move away"
+       when Firefox rubber-bands the document. */
+    background: transparent;
+    position: relative;
+    isolation: isolate;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
     background-color: #f5f5f4;
     background-image:
       radial-gradient(circle at top left, rgba(16, 185, 129, 0.05), transparent 40%),
@@ -40,6 +57,7 @@
       auto,
       40px 40px,
       40px 40px;
+    pointer-events: none;
   }
 }
 
