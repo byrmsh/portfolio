@@ -98,10 +98,10 @@ const format = (template: string, vars: Record<string, string | number>): string
                 {v.cefr ? <div class="text-xxs font-mono text-neutral-500">{v.cefr}</div> : null}
               </div>
               <div class="mt-2 text-sm text-neutral-800">
-                <span class="text-neutral-500">{labels.literal}</span> {v.literal}
+                <span class="text-neutral-500">{labels.literal}</span>&nbsp;{v.literal}
               </div>
               <div class="mt-1 text-sm text-neutral-800">
-                <span class="text-neutral-500">{labels.meaning}</span> {v.meaning}
+                <span class="text-neutral-500">{labels.meaning}</span>&nbsp;{v.meaning}
               </div>
               {v.usage?.length ? (
                 <ul class="mt-2 list-disc pl-5 text-sm text-neutral-700">
@@ -117,4 +117,3 @@ const format = (template: string, vars: Record<string, string | number>): string
     ) : null}
   </>
 ) : null}
-
