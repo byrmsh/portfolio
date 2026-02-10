@@ -6,9 +6,13 @@ import {
   activityMonitorDataSchema,
   activitySeriesSchema,
   redisKeys,
+  savedLyricNoteSchema,
+  ytmusicAnalysisSchema,
   type ActivitySource,
   type ActivitySeries,
   type ApiEnvelope,
+  type SavedLyricNote,
+  type YtMusicAnalysis,
 } from '@portfolio/schema/dashboard';
 
 const app = new Hono();
@@ -105,6 +109,46 @@ app.get('/api/activity-monitor', async (c) => {
   const github = await readActivitySeries('github');
   const anki = await readActivitySeries('anki');
   const data = activityMonitorDataSchema.parse({ github, anki });
+  const envelope: ApiEnvelope<typeof data> = {
+    data,
+    meta: { ts: new Date().toISOString(), source: 'redis' },
+  };
+  return c.json(envelope);
+});
+
+async function readLatestSavedLyric(): Promise<SavedLyricNote | null> {
+  const trackIds = await redis.zrevrange(redisKeys.index.lyricsRecent, 0, 0);
+  const trackId = trackIds?.[0];
+  if (!trackId) return null;
+
+  const key = redisKeys.stat('ytmusic', trackId);
+  const raw = await redis.get(key);
+  if (!raw) return null;
+  const parsed = savedLyricNoteSchema.parse(JSON.parse(raw) as unknown);
+  return parsed;
+}
+
+async function readYtMusicAnalysis(trackId: string): Promise<YtMusicAnalysis | null> {
+  const key = redisKeys.statField('ytmusic', trackId, 'analysis');
+  const raw = await redis.get(key);
+  if (!raw) return null;
+  const parsed = ytmusicAnalysisSchema.parse(JSON.parse(raw) as unknown);
+  return parsed;
+}
+
+app.get('/api/ytmusic/saved/latest', async (c) => {
+  const data = await readLatestSavedLyric();
+  const envelope: ApiEnvelope<typeof data> = {
+    data,
+    meta: { ts: new Date().toISOString(), source: 'redis' },
+  };
+  return c.json(envelope);
+});
+
+app.get('/api/ytmusic/:id/analysis', async (c) => {
+  const trackId = c.req.param('id');
+  const data = await readYtMusicAnalysis(trackId);
+  if (!data) return c.json({ error: 'not found' }, 404);
   const envelope: ApiEnvelope<typeof data> = {
     data,
     meta: { ts: new Date().toISOString(), source: 'redis' },
