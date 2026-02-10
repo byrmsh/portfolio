@@ -8,6 +8,7 @@ __pycache__/
 build/
 .env
 .env.*
+!.env.sample
 .DS_Store
 pnpm-debug.log*
 .pnpm-store/
