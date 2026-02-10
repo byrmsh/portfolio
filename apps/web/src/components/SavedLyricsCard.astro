@@ -2,6 +2,7 @@
 import Disc from '@lucide/astro/icons/disc';
 import ArrowRight from '@lucide/astro/icons/arrow-right';
 import ky from 'ky';
+import { localizedPath, type SupportedLocale } from '../i18n';
 
 type SavedLyricNote = {
   id: string;
@@ -12,10 +13,15 @@ type SavedLyricNote = {
   savedAt: string;
 };
 
+interface Props {
+  t: (path: string, vars?: Record<string, string | number>) => string;
+  locale: SupportedLocale;
+}
+
+const { t, locale } = Astro.props;
+
 const apiOrigin =
-  import.meta.env.API_ORIGIN ??
-  import.meta.env.PUBLIC_API_ORIGIN ??
-  'http://localhost:3000';
+  import.meta.env.API_ORIGIN ?? import.meta.env.PUBLIC_API_ORIGIN ?? 'http://localhost:3000';
 
 let saved: SavedLyricNote | null = null;
 try {
@@ -30,7 +36,9 @@ try {
   saved = null;
 }
 
-const noteHref = saved?.id ? `/lyrics/${encodeURIComponent(saved.id)}` : null;
+const noteHref = saved?.id
+  ? localizedPath(locale, `/lyrics/${encodeURIComponent(saved.id)}`)
+  : null;
 ---
 
 <section
@@ -38,37 +46,43 @@ const noteHref = saved?.id ? `/lyrics/${encodeURIComponent(saved.id)}` : null;
 >
   <div class="relative z-10">
     <div class="flex justify-between items-start mb-6">
-      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">Saved Lyrics</h2>
+      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">
+        {t('savedLyrics.title')}
+      </h2>
       <Disc class="w-4 h-4 text-neutral-400" />
     </div>
     <div class="flex gap-4">
       <div
         class="w-16 h-16 bg-neutral-900 rounded-md shadow-sm flex items-center justify-center shrink-0"
       >
-        {saved?.albumArtUrl ? (
-          <img
-            src={saved.albumArtUrl}
-            alt=""
-            class="w-16 h-16 rounded-md object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div class="w-6 h-6 rounded-full border-2 border-neutral-700"></div>
-        )}
+        {
+          saved?.albumArtUrl ? (
+            <img
+              src={saved.albumArtUrl}
+              alt=""
+              class="w-16 h-16 rounded-md object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div class="w-6 h-6 rounded-full border-2 border-neutral-700" />
+          )
+        }
       </div>
       <div class="flex flex-col justify-center">
         <div class="text-sm font-semibold text-neutral-900 line-clamp-1">
-          {saved?.title ?? 'No saved tracks yet'}
+          {saved?.title ?? t('savedLyrics.noTracks')}
         </div>
         <div class="text-xs text-neutral-500 mt-1">{saved?.artist ?? ''}</div>
-        {noteHref ? (
-          <a
-            href={noteHref}
-            class="mt-2 text-xxs font-mono text-accent hover:text-accent/80 flex items-center gap-1"
-          >
-            READ LYRIC NOTE <ArrowRight class="w-3 h-3" />
-          </a>
-        ) : null}
+        {
+          noteHref ? (
+            <a
+              href={noteHref}
+              class="mt-2 text-xxs font-mono text-accent hover:text-accent/80 flex items-center gap-1"
+            >
+              {t('savedLyrics.readLyricNote')} <ArrowRight class="w-3 h-3" />
+            </a>
+          ) : null
+        }
       </div>
     </div>
   </div>

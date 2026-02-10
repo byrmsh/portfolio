@@ -1,0 +1,17 @@
+---
+export const prerender = false;
+
+import LyricNotePage from '../../../views/LyricNotePage.astro';
+import { DEFAULT_LOCALE, getLocaleFromUrl, isSupportedLocale, localizedPath } from '../../../i18n';
+
+const { id, lang } = Astro.params;
+if (!lang || !isSupportedLocale(lang)) return new Response(null, { status: 404 });
+if (lang === DEFAULT_LOCALE) {
+  return Astro.redirect(id ? `/lyrics/${encodeURIComponent(id)}` : '/lyrics');
+}
+
+const locale = getLocaleFromUrl(Astro.url);
+if (!id) return Astro.redirect(localizedPath(locale, '/lyrics'));
+---
+
+<LyricNotePage id={id} url={Astro.url} />

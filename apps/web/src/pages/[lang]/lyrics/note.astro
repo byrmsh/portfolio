@@ -1,0 +1,18 @@
+---
+export const prerender = false;
+
+import { DEFAULT_LOCALE, isSupportedLocale, normalizeLocale, localizedPath } from '../../../i18n';
+
+const { lang: langParam } = Astro.params;
+if (!langParam || !isSupportedLocale(langParam)) return new Response(null, { status: 404 });
+if (langParam === DEFAULT_LOCALE) return Astro.redirect('/lyrics/note' + Astro.url.search);
+
+const id = Astro.url.searchParams.get('id');
+// Allow callers to override via query param, but fall back to the path locale.
+const langFromQuery = Astro.url.searchParams.get('lang');
+const locale = langFromQuery ? normalizeLocale(langFromQuery) : normalizeLocale(langParam);
+
+if (!id) return Astro.redirect(localizedPath(locale, '/lyrics'));
+return Astro.redirect(localizedPath(locale, `/lyrics/${encodeURIComponent(id)}`));
+---
+

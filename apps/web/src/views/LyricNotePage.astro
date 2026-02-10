@@ -1,0 +1,56 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SiteNav from '../components/SiteNav.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import LyricNote from '../components/LyricNote.svelte';
+import { SITE } from '../config/site';
+import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
+
+interface Props {
+  id: string;
+  url: URL;
+}
+
+const { id, url } = Astro.props;
+const locale = getLocaleFromUrl(url);
+const t = getTranslator(locale);
+---
+
+<Layout title={`${SITE.name} | ${t('meta.lyricNote')}`} locale={locale}>
+  <SiteNav locale={locale} t={t} />
+
+  <main class="pt-28 px-4 sm:px-6">
+    <div class="max-w-3xl mx-auto flex flex-col gap-8">
+      <a
+        href={localizedPath(locale, '/lyrics')}
+        class="text-xxs font-mono text-neutral-500 hover:text-neutral-800"
+      >
+        {t('lyrics.backToAll')}
+      </a>
+      <LyricNote
+        id={id}
+        locale={locale}
+        labels={{
+          loading: t('lyrics.loading'),
+          loadingDescription: t('lyrics.loadingDescription'),
+          couldNotLoadNote: t('lyrics.couldNotLoadNote'),
+          noteLabel: t('lyrics.noteLabel'),
+          openTrack: t('lyrics.openTrack'),
+          readLyrics: t('lyrics.readLyrics'),
+          updatedAt: t('lyrics.updatedAt', { date: '{date}' }),
+          background: t('lyrics.background'),
+          vocabulary: t('lyrics.vocabulary'),
+          literal: t('lyrics.literal'),
+          meaning: t('lyrics.meaning'),
+          missingId: t('lyrics.missingId'),
+          notFound: t('lyrics.notFound'),
+          invalidResponse: t('lyrics.invalidResponse'),
+          failedToLoad: t('lyrics.failedToLoad'),
+        }}
+        client:load
+      />
+      <SiteFooter t={t} locale={locale} />
+    </div>
+  </main>
+</Layout>
+

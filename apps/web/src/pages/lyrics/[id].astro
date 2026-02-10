@@ -1,28 +1,11 @@
 ---
 export const prerender = false;
 
+import { getLocaleFromUrl, localizedPath } from '../../i18n';
+import LyricNotePage from '../../views/LyricNotePage.astro';
+
 const { id } = Astro.params;
-if (!id) {
-  return Astro.redirect('/lyrics');
-}
-
-import Layout from '../../layouts/Layout.astro';
-import SiteNav from '../../components/SiteNav.astro';
-import SiteFooter from '../../components/SiteFooter.astro';
-import LyricNote from '../../components/LyricNote.svelte';
-import { SITE } from '../../config/site';
+const locale = getLocaleFromUrl(Astro.url);
+if (!id) return Astro.redirect(localizedPath(locale, '/lyrics'));
 ---
-
-<Layout title={`${SITE.name} | Lyric Note`}>
-  <SiteNav />
-
-  <main class="pt-28 px-4 sm:px-6">
-    <div class="max-w-3xl mx-auto flex flex-col gap-8">
-      <a href="/lyrics" class="text-xxs font-mono text-neutral-500 hover:text-neutral-800">
-        ← ALL LYRIC NOTES
-      </a>
-      <LyricNote id={id} client:load />
-      <SiteFooter />
-    </div>
-  </main>
-</Layout>
+<LyricNotePage id={id} url={Astro.url} />

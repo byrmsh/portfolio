@@ -1,10 +1,16 @@
 ---
 export const prerender = false;
 
+import { normalizeLocale, localizedPath } from '../../i18n';
+
 const id = Astro.url.searchParams.get('id');
+const lang = Astro.url.searchParams.get('lang');
+const locale = lang ? normalizeLocale(lang) : normalizeLocale(null);
 if (!id) {
-  return Astro.redirect('/lyrics');
+  return Astro.redirect(localizedPath(locale, '/lyrics'));
 }
 
-return Astro.redirect(`/lyrics/${encodeURIComponent(id)}`);
+return Astro.redirect(
+  localizedPath(locale, `/lyrics/${encodeURIComponent(id)}`),
+);
 ---

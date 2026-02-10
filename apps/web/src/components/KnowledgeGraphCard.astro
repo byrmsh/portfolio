@@ -1,19 +1,29 @@
+---
+interface Props {
+  t: (path: string, vars?: Record<string, string | number>) => string;
+}
+
+const { t } = Astro.props;
+---
+
 <section
   class="col-span-1 md:col-span-6 lg:col-span-4 rounded-xl border border-neutral-200 bg-neutral-900 text-white p-6 relative overflow-hidden"
 >
   <div class="relative z-10 flex flex-col h-full justify-between">
     <div class="flex justify-between items-start">
-      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-500">Knowledge Graph</h2>
+      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-500">
+        {t('knowledgeGraph.title')}
+      </h2>
       <span
         class="text-xxs font-mono text-neutral-500 border border-neutral-700 px-1.5 py-0.5 rounded"
       >
-        OBSIDIAN
+        {t('knowledgeGraph.source')}
       </span>
     </div>
     <div class="mt-4">
-      <div class="text-2xl font-light">142 Nodes</div>
+      <div class="text-2xl font-light">{t('knowledgeGraph.nodes', { count: 142 })}</div>
       <p class="text-xs text-neutral-400 mt-1">
-        Interlinked notes on DevOps, Philosophy, and Music.
+        {t('knowledgeGraph.description')}
       </p>
     </div>
   </div>

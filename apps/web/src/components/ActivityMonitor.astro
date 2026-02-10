@@ -2,10 +2,23 @@
 import GitHub from '@lucide/astro/icons/github';
 import BrainCircuit from '@lucide/astro/icons/brain-circuit';
 import ky from 'ky';
+import type { SupportedLocale } from '../i18n';
 
 type ActivityCell = { date: string; count: number; level: number };
-type ActivitySeries = { source: 'github' | 'anki'; label: string; cells: ActivityCell[]; streak?: number };
+type ActivitySeries = {
+  source: 'github' | 'anki';
+  label: string;
+  cells: ActivityCell[];
+  streak?: number;
+};
 type ActivityMonitorData = { github: ActivitySeries; anki: ActivitySeries };
+
+interface Props {
+  t: (path: string, vars?: Record<string, string | number>) => string;
+  locale: SupportedLocale;
+}
+
+const { t, locale } = Astro.props;
 
 function clampInt(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.trunc(n)));
@@ -33,7 +46,9 @@ function levelClass(source: 'github' | 'anki', level: number): string {
 }
 
 function parseIsoDateUTC(s: string): Date {
-  const [y, m, d] = String(s).split('-').map((v) => Number(v));
+  const [y, m, d] = String(s)
+    .split('-')
+    .map((v) => Number(v));
   return new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1));
 }
 
@@ -50,45 +65,51 @@ function padTo7(cells: ActivityCell[]): ActivityCell[] {
 }
 
 const apiOrigin =
-  import.meta.env.API_ORIGIN ??
-  import.meta.env.PUBLIC_API_ORIGIN ??
-  'http://localhost:3000';
+  import.meta.env.API_ORIGIN ?? import.meta.env.PUBLIC_API_ORIGIN ?? 'http://localhost:3000';
 
 let activity: ActivityMonitorData | null = null;
 try {
   const json = await ky
     .get(`${apiOrigin}/api/activity-monitor`, {
-    headers: { accept: 'application/json' },
+      headers: { accept: 'application/json' },
       throwHttpErrors: false,
     })
     .json<{ data?: ActivityMonitorData }>();
 
   if (json?.data?.github && json?.data?.anki) activity = json.data;
 } catch {
-  // Build-time/API-time failures should not break the homepage build.
   activity = null;
 }
 
-const fmtDay = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
-const fmtRange = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+const fmtDay = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+const fmtRange = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
 const githubCells = padTo7(last7Cells(activity?.github));
 const ankiCells = padTo7(last7Cells(activity?.anki));
 
-const rangeStart = githubCells.find((c) => c.date)?.date || ankiCells.find((c) => c.date)?.date || '';
-const rangeEnd = [...githubCells].reverse().find((c) => c.date)?.date || [...ankiCells].reverse().find((c) => c.date)?.date || '';
+const rangeStart =
+  githubCells.find((c) => c.date)?.date || ankiCells.find((c) => c.date)?.date || '';
+const rangeEnd =
+  [...githubCells].reverse().find((c) => c.date)?.date ||
+  [...ankiCells].reverse().find((c) => c.date)?.date ||
+  '';
 
 const rangeLabel =
   rangeStart && rangeEnd
-    ? `${fmtRange.format(parseIsoDateUTC(rangeStart))} to ${fmtRange.format(parseIsoDateUTC(rangeEnd))}`
-    : 'Last 7 days';
+    ? `${fmtRange.format(parseIsoDateUTC(rangeStart))} ${t('activity.to')} ${fmtRange.format(parseIsoDateUTC(rangeEnd))}`
+    : t('activity.last7Days');
 ---
 
 <section
   data-activity-monitor
+  data-locale={locale}
+  data-tooltip-with-date={t('activity.tooltipWithDate')}
+  data-tooltip-without-date={t('activity.tooltipWithoutDate')}
   class="col-span-1 md:col-span-6 lg:col-span-8 min-w-0 rounded-xl border border-neutral-200 bg-white p-6"
 >
   <div class="flex items-center justify-between mb-4">
-    <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">Activity Monitor</h2>
+    <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">
+      {t('activity.title')}
+    </h2>
     <div class="text-xxs font-mono text-neutral-400" data-range>{rangeLabel}</div>
   </div>
 
@@ -96,31 +117,34 @@ const rangeLabel =
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <GitHub class="w-4 h-4 text-neutral-800" />
-        <span class="text-sm font-semibold">GitHub</span>
+        <span class="text-sm font-semibold">{t('activity.githubLabel')}</span>
       </div>
 
-      <div class="activity-tags" data-tags="github" aria-label="GitHub activity, last 7 days">
-        {githubCells.map((cell, i) => {
-          const d = cell.date ? parseIsoDateUTC(cell.date) : null;
-          const dow = d ? fmtDay.format(d) : '---';
-          return (
-          <button
-            type="button"
-            class:list={[
-              'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400',
-              levelClass('github', cell.level),
-            ]}
-            aria-label={`GitHub day ${i + 1}`}
-            data-source="github"
-            data-date={cell.date}
-            data-count={String(cell.count)}
-            data-level={String(cell.level)}
-          >
-            <span class="tag-dow text-[10px] font-mono opacity-90">{dow}</span>
-            <span class="tag-count text-xs font-semibold">{cell.count}</span>
-          </button>
-          );
-        })}
+      <div class="activity-tags" data-tags="github" aria-label={t('activity.githubAria')}>
+        {
+          githubCells.map((cell, i) => {
+            const d = cell.date ? parseIsoDateUTC(cell.date) : null;
+            const dow = d ? fmtDay.format(d) : '---';
+            return (
+              <button
+                type="button"
+                class:list={[
+                  'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400',
+                  levelClass('github', cell.level),
+                ]}
+                aria-label={t('activity.githubDayAria', { day: i + 1 })}
+                data-source="github"
+                data-source-label={t('activity.githubLabel')}
+                data-date={cell.date}
+                data-count={String(cell.count)}
+                data-level={String(cell.level)}
+              >
+                <span class="tag-dow text-[10px] font-mono opacity-90">{dow}</span>
+                <span class="tag-count text-xs font-semibold">{cell.count}</span>
+              </button>
+            );
+          })
+        }
       </div>
     </div>
 
@@ -129,41 +153,45 @@ const rangeLabel =
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <BrainCircuit class="w-4 h-4 text-neutral-800" />
-        <span class="text-sm font-semibold">Anki</span>
+        <span class="text-sm font-semibold">{t('activity.ankiLabel')}</span>
         <span class="text-xs text-neutral-400 ml-auto">
-          Streak: <span data-streak="anki">{typeof activity?.anki?.streak === 'number' ? activity.anki.streak : 0}</span>
+          {t('activity.streak')}: <span data-streak="anki"
+            >{typeof activity?.anki?.streak === 'number' ? activity.anki.streak : 0}</span
+          >
         </span>
       </div>
 
-      <div class="activity-tags" data-tags="anki" aria-label="Anki activity, last 7 days">
-        {ankiCells.map((cell, i) => {
-          const d = cell.date ? parseIsoDateUTC(cell.date) : null;
-          const dow = d ? fmtDay.format(d) : '---';
-          return (
-          <button
-            type="button"
-            class:list={[
-              'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400',
-              levelClass('anki', cell.level),
-            ]}
-            aria-label={`Anki day ${i + 1}`}
-            data-source="anki"
-            data-date={cell.date}
-            data-count={String(cell.count)}
-            data-level={String(cell.level)}
-          >
-            <span class="tag-dow text-[10px] font-mono opacity-90">{dow}</span>
-            <span class="tag-count text-xs font-semibold">{cell.count}</span>
-          </button>
-          );
-        })}
+      <div class="activity-tags" data-tags="anki" aria-label={t('activity.ankiAria')}>
+        {
+          ankiCells.map((cell, i) => {
+            const d = cell.date ? parseIsoDateUTC(cell.date) : null;
+            const dow = d ? fmtDay.format(d) : '---';
+            return (
+              <button
+                type="button"
+                class:list={[
+                  'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400',
+                  levelClass('anki', cell.level),
+                ]}
+                aria-label={t('activity.ankiDayAria', { day: i + 1 })}
+                data-source="anki"
+                data-source-label={t('activity.ankiLabel')}
+                data-date={cell.date}
+                data-count={String(cell.count)}
+                data-level={String(cell.level)}
+              >
+                <span class="tag-dow text-[10px] font-mono opacity-90">{dow}</span>
+                <span class="tag-count text-xs font-semibold">{cell.count}</span>
+              </button>
+            );
+          })
+        }
       </div>
     </div>
   </div>
 </section>
 
 <style is:global>
-  /* Fit 7 nodes into the available width without wrapping or overflow. */
   @supports (container-type: inline-size) {
     [data-activity-monitor] {
       container-type: inline-size;
@@ -171,7 +199,6 @@ const rangeLabel =
   }
 
   [data-activity-monitor] .activity-tags {
-    /* Slightly tighter by default to maximize node size. */
     --tag-gap: clamp(0.1875rem, 1cqw, 0.625rem);
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -186,7 +213,6 @@ const rangeLabel =
     min-width: 0;
   }
 
-  /* Anki counts are much larger than GitHub contributions; keep them subtle. */
   [data-activity-monitor] .activity-tag[data-source='anki'] .tag-count {
     font-size: 0.65rem;
     line-height: 1;
@@ -195,7 +221,6 @@ const rangeLabel =
     font-variant-numeric: tabular-nums;
   }
 
-  /* When a panel gets tight, drop the weekday line so the count stays readable. */
   @container (max-width: 360px) {
     [data-activity-monitor] .activity-tag .tag-dow {
       display: none;
@@ -204,7 +229,6 @@ const rangeLabel =
       font-size: 0.9rem;
       line-height: 1;
     }
-    /* Keep Anki smaller even in cramped layouts. */
     [data-activity-monitor] .activity-tag[data-source='anki'] .tag-count {
       font-size: 0.7rem;
     }
@@ -212,13 +236,25 @@ const rangeLabel =
 </style>
 
 <script is:inline type="module">
-  const fmtTip = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const section = document.querySelector('[data-activity-monitor]');
+  const locale = section?.dataset.locale ?? 'en';
+  const tooltipWithDateTpl = section?.dataset.tooltipWithDate ?? '{label}: {date} ({count})';
+  const tooltipWithoutDateTpl = section?.dataset.tooltipWithoutDate ?? '{label}: ({count})';
+  const fmtTip = new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   const parseIsoDate = (s) => {
-    // Treat YYYY-MM-DD as a UTC date to avoid local TZ shifting.
-    const [y, m, d] = String(s).split('-').map((v) => Number(v));
+    const [y, m, d] = String(s)
+      .split('-')
+      .map((v) => Number(v));
     return new Date(Date.UTC(y, m - 1, d));
   };
+
+  const formatTpl = (tpl, vars) =>
+    tpl.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? `{${key}}`));
 
   const bindTooltip = () => {
     const tip = document.createElement('div');
@@ -228,36 +264,32 @@ const rangeLabel =
     document.body.appendChild(tip);
 
     const show = (el, x, y) => {
-      const source = el.dataset.source ?? '';
+      const sourceLabel = el.dataset.sourceLabel ?? el.dataset.source ?? '';
       const date = el.dataset.date ?? '';
       const count = Number(el.dataset.count ?? 0);
-      const label = source === 'github' ? 'GitHub' : source === 'anki' ? 'Anki' : source;
       const dateStr = date ? fmtTip.format(parseIsoDate(date)) : '';
 
-      tip.textContent = dateStr ? `${label}: ${dateStr} (${count})` : `${label}: (${count})`;
+      tip.textContent = dateStr
+        ? formatTpl(tooltipWithDateTpl, { label: sourceLabel, date: dateStr, count })
+        : formatTpl(tooltipWithoutDateTpl, { label: sourceLabel, count });
       tip.style.left = `${Math.min(window.innerWidth - 10, x + 12)}px`;
       tip.style.top = `${Math.min(window.innerHeight - 10, y + 12)}px`;
       tip.classList.remove('hidden');
     };
     const hide = () => tip.classList.add('hidden');
 
-    const bind = () => {
-      const nodes = document.querySelectorAll('[data-tags] button[data-source]');
-      for (const el of nodes) {
-        el.addEventListener('mouseenter', (e) => show(el, e.clientX, e.clientY));
-        el.addEventListener('mousemove', (e) => show(el, e.clientX, e.clientY));
-        el.addEventListener('mouseleave', hide);
+    const nodes = document.querySelectorAll('[data-tags] button[data-source]');
+    for (const el of nodes) {
+      el.addEventListener('mouseenter', (e) => show(el, e.clientX, e.clientY));
+      el.addEventListener('mousemove', (e) => show(el, e.clientX, e.clientY));
+      el.addEventListener('mouseleave', hide);
 
-        el.addEventListener('focus', () => {
-          const r = el.getBoundingClientRect();
-          show(el, r.left + r.width / 2, r.top + r.height / 2);
-        });
-        el.addEventListener('blur', hide);
-      }
-    };
-
-    bind();
-    return bind;
+      el.addEventListener('focus', () => {
+        const r = el.getBoundingClientRect();
+        show(el, r.left + r.width / 2, r.top + r.height / 2);
+      });
+      el.addEventListener('blur', hide);
+    }
   };
 
   bindTooltip();

@@ -1,36 +1,53 @@
 ---
 import Menu from '@lucide/astro/icons/menu';
 import { SITE } from '../config/site';
+import { localizedPath, type SupportedLocale } from '../i18n';
+
+interface Props {
+  locale: SupportedLocale;
+  t: (path: string, vars?: Record<string, string | number>) => string;
+}
+
+const { locale, t } = Astro.props;
+const baseSearch = Astro.url.search;
 
 const links = [
-  { label: 'Home', href: '/' },
-  { label: 'Blog', href: '#' },
-  { label: 'Lyrics', href: '/lyrics' },
-  { label: 'Jobs', href: '#' },
-  { label: 'Contact', href: '#' },
+  { label: t('nav.home'), href: localizedPath(locale, '/', baseSearch) },
+  { label: t('nav.blog'), href: '#' },
+  { label: t('nav.lyrics'), href: localizedPath(locale, '/lyrics', baseSearch) },
+  { label: t('nav.jobs'), href: '#' },
+  { label: t('nav.contact'), href: '#' },
 ];
 ---
 
 <nav class="fixed top-0 left-0 right-0 z-50 border-b border-neutral-200 glass-header">
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
     <a
-      href="/"
+      href={localizedPath(locale, '/', baseSearch)}
       class="font-mono text-sm font-semibold tracking-tight hover:opacity-70 transition-opacity"
     >
       {SITE.domain}
     </a>
-    <div class="hidden sm:flex items-center gap-6 text-sm font-medium text-neutral-600">
-      {links.map((link) => (
-        <a
-          href={link.href}
-          class={link.label === 'Home' ? 'text-neutral-900' : 'hover:text-neutral-900 transition-colors'}
-        >
-          {link.label}
-        </a>
-      ))}
+    <div class="flex items-center gap-3">
+      <div class="hidden sm:flex items-center gap-6 text-sm font-medium text-neutral-600">
+        {
+          links.map((link) => (
+            <a
+              href={link.href}
+              class={
+                link.label === t('nav.home')
+                  ? 'text-neutral-900'
+                  : 'hover:text-neutral-900 transition-colors'
+              }
+            >
+              {link.label}
+            </a>
+          ))
+        }
+      </div>
+      <button class="sm:hidden p-1" aria-label={t('nav.openMenu')}>
+        <Menu class="w-5 h-5 text-neutral-600" />
+      </button>
     </div>
-    <button class="sm:hidden p-1" aria-label="Open menu">
-      <Menu class="w-5 h-5 text-neutral-600" />
-    </button>
   </div>
 </nav>

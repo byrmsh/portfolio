@@ -1,0 +1,11 @@
+---
+import LyricsIndexPage from '../../../views/LyricsIndexPage.astro';
+import { DEFAULT_LOCALE, isSupportedLocale } from '../../../i18n';
+
+const { lang } = Astro.params;
+if (!lang || !isSupportedLocale(lang)) return new Response(null, { status: 404 });
+if (lang === DEFAULT_LOCALE) return Astro.redirect('/lyrics');
+---
+
+<LyricsIndexPage url={Astro.url} />
+

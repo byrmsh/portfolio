@@ -1,0 +1,57 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SiteNav from '../components/SiteNav.astro';
+import PageHero from '../components/PageHero.astro';
+import ActivityMonitor from '../components/ActivityMonitor.astro';
+import SavedLyricsCard from '../components/SavedLyricsCard.astro';
+import WritingCard from '../components/WritingCard.astro';
+import KnowledgeGraphCard from '../components/KnowledgeGraphCard.astro';
+import JobScoutCard from '../components/JobScoutCard.astro';
+import SystemHealthCard from '../components/SystemHealthCard.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import { SITE } from '../config/site';
+import { getLocaleFromUrl, getTranslator } from '../i18n';
+
+interface Props {
+  url: URL;
+}
+
+const { url } = Astro.props;
+const locale = getLocaleFromUrl(url);
+const t = getTranslator(locale);
+
+const writingPosts = [
+  {
+    title: t('writing.post1Title'),
+    description: t('writing.post1Description'),
+    href: '#',
+  },
+  {
+    title: t('writing.post2Title'),
+    description: t('writing.post2Description'),
+    href: '#',
+  },
+];
+---
+
+<Layout title={`${SITE.name} | ${t('meta.systemsConsole')}`} locale={locale}>
+  <SiteNav locale={locale} t={t} />
+
+  <main class="pt-28 px-4 sm:px-6">
+    <div class="max-w-5xl mx-auto flex flex-col gap-10">
+      <PageHero t={t} />
+
+      <div class="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-5">
+        <ActivityMonitor locale={locale} t={t} />
+        <SavedLyricsCard locale={locale} t={t} />
+        <WritingCard posts={writingPosts} t={t} />
+        <KnowledgeGraphCard t={t} />
+        <JobScoutCard t={t} />
+        <SystemHealthCard t={t} />
+      </div>
+
+      <SiteFooter t={t} locale={locale} />
+    </div>
+  </main>
+</Layout>
+

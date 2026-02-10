@@ -2,6 +2,24 @@
   import { onMount } from 'svelte';
 
   export let id: string | undefined;
+  export let locale: string;
+  export let labels: {
+    loading: string;
+    loadingDescription: string;
+    couldNotLoadNote: string;
+    noteLabel: string;
+    openTrack: string;
+    readLyrics: string;
+    updatedAt: string;
+    background: string;
+    vocabulary: string;
+    literal: string;
+    meaning: string;
+    missingId: string;
+    notFound: string;
+    invalidResponse: string;
+    failedToLoad: string;
+  };
 
   type YtMusicAnalysis = {
     id: string;
@@ -23,6 +41,9 @@
 
   const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN || '';
 
+  const format = (template: string, vars: Record<string, string | number>): string =>
+    template.replaceAll(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? `{${key}}`));
+
   function getIdFallback(): string | null {
     try {
       const u = new URL(window.location.href);
@@ -35,7 +56,7 @@
   async function load(): Promise<void> {
     const resolvedId = id ?? getIdFallback();
     if (!resolvedId) {
-      error = 'Missing id';
+      error = labels.missingId;
       loading = false;
       return;
     }
@@ -46,19 +67,19 @@
         headers: { accept: 'application/json' },
       });
       if (!res.ok) {
-        error = res.status === 404 ? 'Not found' : `HTTP ${res.status}`;
+        error = res.status === 404 ? labels.notFound : `HTTP ${res.status}`;
         loading = false;
         return;
       }
       const json = (await res.json()) as { data?: YtMusicAnalysis };
       if (!json?.data?.id) {
-        error = 'Invalid response';
+        error = labels.invalidResponse;
         loading = false;
         return;
       }
       analysis = json.data;
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load';
+      error = e instanceof Error ? e.message : labels.failedToLoad;
     } finally {
       loading = false;
     }
@@ -71,12 +92,12 @@
 
 {#if loading}
   <section class="rounded-xl border border-neutral-200 bg-white p-6">
-    <h2 class="text-sm font-semibold text-neutral-900">Loading…</h2>
-    <p class="mt-2 text-sm text-neutral-700">Fetching analysis from the API.</p>
+    <h2 class="text-sm font-semibold text-neutral-900">{labels.loading}</h2>
+    <p class="mt-2 text-sm text-neutral-700">{labels.loadingDescription}</p>
   </section>
 {:else if error}
   <section class="rounded-xl border border-neutral-200 bg-white p-6">
-    <h2 class="text-sm font-semibold text-neutral-900">Could not load note</h2>
+    <h2 class="text-sm font-semibold text-neutral-900">{labels.couldNotLoadNote}</h2>
     <p class="mt-2 text-sm text-neutral-700">{error}</p>
   </section>
 {:else if analysis}
@@ -87,7 +108,7 @@
       {/if}
     </div>
     <div class="min-w-0">
-      <div class="text-xs font-bold uppercase tracking-widest text-neutral-400">Lyric Note</div>
+      <div class="text-xs font-bold uppercase tracking-widest text-neutral-400">{labels.noteLabel}</div>
       <h1 class="mt-2 text-2xl font-semibold text-neutral-900">{analysis.title}</h1>
       <div class="mt-1 text-sm text-neutral-600">{analysis.artist}</div>
       <div class="mt-3 flex flex-wrap gap-2">
@@ -96,7 +117,7 @@
             class="text-xxs font-mono rounded-full border border-neutral-200 px-3 py-1 hover:bg-neutral-50"
             href={analysis.trackUrl}
           >
-            OPEN TRACK
+            {labels.openTrack}
           </a>
         {/if}
         {#if analysis.lyricsUrl}
@@ -104,18 +125,18 @@
             class="text-xxs font-mono rounded-full border border-neutral-200 px-3 py-1 hover:bg-neutral-50"
             href={analysis.lyricsUrl}
           >
-            READ LYRICS
+            {labels.readLyrics}
           </a>
         {/if}
       </div>
       <div class="mt-2 text-xxs font-mono text-neutral-400">
-        Updated {new Date(analysis.updatedAt).toLocaleString('en-US')}
+        {format(labels.updatedAt, { date: new Date(analysis.updatedAt).toLocaleString(locale) })}
       </div>
     </div>
   </header>
 
   <section class="rounded-xl border border-neutral-200 bg-white p-6">
-    <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">Background</h2>
+    <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">{labels.background}</h2>
     <p class="mt-3 text-sm text-neutral-800 leading-relaxed">{analysis.background.tldr}</p>
 
     {#if analysis.background.notes?.length}
@@ -132,7 +153,7 @@
 
   {#if analysis.vocabulary?.length}
     <section class="rounded-xl border border-neutral-200 bg-white p-6">
-      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">Vocabulary</h2>
+      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">{labels.vocabulary}</h2>
       <div class="mt-4 grid gap-3">
         {#each analysis.vocabulary as v (v.term)}
           <div class="rounded-lg border border-neutral-200 p-4">
@@ -143,10 +164,10 @@
               {/if}
             </div>
             <div class="mt-2 text-sm text-neutral-800">
-              <span class="text-neutral-500">Literal:</span> {v.literal}
+              <span class="text-neutral-500">{labels.literal}</span> {v.literal}
             </div>
             <div class="mt-1 text-sm text-neutral-800">
-              <span class="text-neutral-500">Meaning:</span> {v.meaning}
+              <span class="text-neutral-500">{labels.meaning}</span> {v.meaning}
             </div>
             {#if v.usage?.length}
               <ul class="mt-2 list-disc pl-5 text-sm text-neutral-700">

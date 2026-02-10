@@ -1,39 +1,51 @@
 ---
+interface Props {
+  t: (path: string, vars?: Record<string, string | number>) => string;
+}
+
+const { t } = Astro.props;
+
 const services = [
-  { name: 'apps/web', detail: 'Astro SSR', pulse: false },
-  { name: 'apps/api', detail: 'Hono / Node', pulse: false },
-  { name: 'apps/collector', detail: 'Python Worker', pulse: false },
-  { name: 'apps/upworker', detail: 'Scraper Active', pulse: true },
-  { name: 'dragonfly', detail: 'Redis-compatible', pulse: false },
+  { name: 'apps/web', detail: t('health.serviceWeb'), pulse: false },
+  { name: 'apps/api', detail: t('health.serviceApi'), pulse: false },
+  { name: 'apps/collector', detail: t('health.serviceCollector'), pulse: false },
+  { name: 'apps/upworker', detail: t('health.serviceUpworker'), pulse: true },
+  { name: 'dragonfly', detail: t('health.serviceDb'), pulse: false },
 ];
 ---
 
-<section class="col-span-1 md:col-span-6 lg:col-span-12 rounded-xl border border-neutral-200 bg-white p-6">
+<section
+  class="col-span-1 md:col-span-6 lg:col-span-12 rounded-xl border border-neutral-200 bg-white p-6"
+>
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div class="flex items-center gap-3">
-      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">System Health</h2>
+      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">
+        {t('health.title')}
+      </h2>
       <span class="text-xxs font-mono text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded"
-        >k8s/portfolio-ns</span
+        >{t('health.namespace')}</span
       >
     </div>
-    <div class="text-xxs font-mono text-neutral-400">UPTIME: 99.9%</div>
+    <div class="text-xxs font-mono text-neutral-400">{t('health.uptime', { value: '99.9%' })}</div>
   </div>
 
   <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-    {services.map((service) => (
-      <div class="flex flex-col gap-1">
-        <div class="flex items-center gap-2">
-          <div
-            class={
-              service.pulse
-                ? 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse'
-                : 'w-1.5 h-1.5 rounded-full bg-emerald-500'
-            }
-          ></div>
-          <span class="text-sm font-semibold text-neutral-800">{service.name}</span>
+    {
+      services.map((service) => (
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-2">
+            <div
+              class={
+                service.pulse
+                  ? 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse'
+                  : 'w-1.5 h-1.5 rounded-full bg-emerald-500'
+              }
+            />
+            <span class="text-sm font-semibold text-neutral-800">{service.name}</span>
+          </div>
+          <span class="text-xs text-neutral-500 pl-3.5">{service.detail}</span>
         </div>
-        <span class="text-xs text-neutral-500 pl-3.5">{service.detail}</span>
-      </div>
-    ))}
+      ))
+    }
   </div>
 </section>
