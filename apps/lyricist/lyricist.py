@@ -25,6 +25,7 @@ from portfolio_schema import RedisKeys, SavedLyricNote, YtMusicAnalysis
 YTMUSIC_PLAYLIST_ID = env.str("YTMUSIC_PLAYLIST_ID", default="")
 WEB_ORIGIN = env.str("WEB_ORIGIN", default="http://localhost:4321")
 LYRICIST_DRY_RUN = env.bool("LYRICIST_DRY_RUN", default=False)
+LYRICIST_REGENERATE_ANALYSIS = env.bool("LYRICIST_REGENERATE_ANALYSIS", default=False)
 
 # LLM provider wiring:
 # - gemini: native Gemini API (structured output via responseSchema + responseMimeType)
@@ -273,6 +274,11 @@ def _analysis_fallback(track: Track, reason: str) -> YtMusicAnalysis:
         vocabulary=[],
         updatedAt=_iso_now(),
     )
+
+
+def _is_error_fallback(analysis: YtMusicAnalysis) -> bool:
+    t = (analysis.background.tldr or "").lower()
+    return "llm analysis failed:" in t or "llm output invalid:" in t
 
 
 def _llm_instructions() -> str:
@@ -584,13 +590,22 @@ def _process_track(r, playlist_id: str, track: Track) -> None:
         savedAt=saved_at,
     )
 
-    analysis = _generate_analysis(track)
-
     stat_key = RedisKeys.stat("ytmusic", track.id)
     analysis_key = RedisKeys.stat_field("ytmusic", track.id, "analysis")
 
     r.set(stat_key, note.model_dump_json())
-    r.set(analysis_key, analysis.model_dump_json())
+
+    # Analysis can be expensive and depends on external APIs. Avoid regenerating on every touch unless asked.
+    existing_analysis = r.get(analysis_key)
+    if existing_analysis and not LYRICIST_REGENERATE_ANALYSIS:
+        logger.info("lyricist.analysis.skip_existing", track_id=track.id)
+    else:
+        analysis = _generate_analysis(track)
+        # If LLM call failed and we already had an analysis, don't overwrite good data with a fallback.
+        if existing_analysis and _is_error_fallback(analysis):
+            logger.warning("lyricist.analysis.keep_existing_on_error", track_id=track.id)
+        else:
+            r.set(analysis_key, analysis.model_dump_json())
 
     # Keep an index so the API can find "latest" quickly.
     r.zadd(RedisKeys.INDEX_LYRICS_RECENT, {track.id: int(time.time())})
