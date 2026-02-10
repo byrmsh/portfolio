@@ -62,6 +62,7 @@ kubectl create secret generic db-credentials \
 
 - Use Conventional Commits for all changes.
 - Format: `type(scope): summary`.
+- `scope` should name the most relevant area (app/package/docs folder). It does not have to be a microservice name; omit the scope if unclear.
 - Example: `feat(upworker): add upwork graphql ingestion`.
 
 ---
@@ -95,3 +96,4 @@ kubectl create secret generic db-credentials \
 ## 9. Commit Hygiene
 
 - Do not mix unrelated changes in a single commit. Separate documentation/agent-rule updates from code formatting changes.
+- Use multiple commits when changes span distinct concerns (e.g., repo hygiene vs app behavior vs docs).
