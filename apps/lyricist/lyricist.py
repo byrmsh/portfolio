@@ -28,6 +28,9 @@ LYRICIST_DRY_RUN = env.bool("LYRICIST_DRY_RUN", default=False)
 LYRICIST_REGENERATE_ANALYSIS = env.bool("LYRICIST_REGENERATE_ANALYSIS", default=False)
 LYRICIST_RETRY_FAILED_ANALYSIS = env.bool("LYRICIST_RETRY_FAILED_ANALYSIS", default=True)
 LYRICIST_RETRY_FAILED_LIMIT = env.int("LYRICIST_RETRY_FAILED_LIMIT", default=3)
+# Ignore the Redis cursor and rescan the playlist from newest->oldest (up to the playlist fetch limit).
+# Useful when you want to force (re)processing existing tracks.
+LYRICIST_IGNORE_CURSOR = env.bool("LYRICIST_IGNORE_CURSOR", default=False)
 
 # LLM provider wiring:
 # - gemini: native Gemini API (structured output via responseSchema + responseMimeType)
@@ -716,6 +719,9 @@ def main() -> None:
     r = redis_client()
     cursor = _read_cursor(r)
     last_seen = (cursor or {}).get("lastSeenTrackId")
+    if LYRICIST_IGNORE_CURSOR and last_seen:
+        logger.info("lyricist.sync.ignore_cursor", playlist_id=YTMUSIC_PLAYLIST_ID, last_seen=last_seen)
+        last_seen = None
 
     logger.info("lyricist.sync.start", playlist_id=YTMUSIC_PLAYLIST_ID, last_seen=last_seen)
     tracks = _list_playlist_tracks(YTMUSIC_PLAYLIST_ID)
