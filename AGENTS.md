@@ -75,6 +75,7 @@ kubectl create secret generic db-credentials \
 - Run lint before finalizing changes and fix violations:
   - `pnpm lint` for monorepo TypeScript/Astro/Python lint checks.
   - If scope is limited, run the minimal relevant lint command(s) and mention what was run.
+- Local Python smoke tests should use `uv run --env-file .env ...` (or a temp env file) instead of overwriting repo `.env` files.
 
 ---
 
