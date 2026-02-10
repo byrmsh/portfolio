@@ -128,6 +128,35 @@ async function readLatestSavedLyric(): Promise<SavedLyricNote | null> {
   return parsed;
 }
 
+async function readSavedLyricsPage(
+  offset: number,
+  limit: number,
+): Promise<{ items: SavedLyricNote[]; offset: number; limit: number; total: number }> {
+  const total = await redis.zcard(redisKeys.index.lyricsRecent);
+  if (total === 0) return { items: [], offset, limit, total: 0 };
+
+  const start = Math.max(0, offset);
+  const stop = Math.max(start, start + limit - 1);
+  const trackIds = await redis.zrevrange(redisKeys.index.lyricsRecent, start, stop);
+  if (!trackIds.length) return { items: [], offset: start, limit, total };
+
+  const pipeline = redis.pipeline();
+  for (const trackId of trackIds) pipeline.get(redisKeys.stat('ytmusic', trackId));
+  const results = await pipeline.exec();
+
+  const items: SavedLyricNote[] = [];
+  for (const [, raw] of results ?? []) {
+    if (typeof raw !== 'string') continue;
+    try {
+      items.push(savedLyricNoteSchema.parse(JSON.parse(raw) as unknown));
+    } catch {
+      // Ignore malformed historical records so the list still renders.
+    }
+  }
+
+  return { items, offset: start, limit, total };
+}
+
 async function readYtMusicAnalysis(trackId: string): Promise<YtMusicAnalysis | null> {
   const key = redisKeys.statField('ytmusic', trackId, 'analysis');
   const raw = await redis.get(key);
@@ -138,6 +167,21 @@ async function readYtMusicAnalysis(trackId: string): Promise<YtMusicAnalysis | n
 
 app.get('/api/ytmusic/saved/latest', async (c) => {
   const data = await readLatestSavedLyric();
+  const envelope: ApiEnvelope<typeof data> = {
+    data,
+    meta: { ts: new Date().toISOString(), source: 'redis' },
+  };
+  return c.json(envelope);
+});
+
+app.get('/api/ytmusic/saved', async (c) => {
+  const offsetRaw = c.req.query('offset');
+  const limitRaw = c.req.query('limit');
+
+  const offset = Math.max(0, Number.parseInt(offsetRaw ?? '0', 10) || 0);
+  const limit = Math.min(200, Math.max(1, Number.parseInt(limitRaw ?? '50', 10) || 50));
+
+  const data = await readSavedLyricsPage(offset, limit);
   const envelope: ApiEnvelope<typeof data> = {
     data,
     meta: { ts: new Date().toISOString(), source: 'redis' },
