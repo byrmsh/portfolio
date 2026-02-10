@@ -1,10 +1,12 @@
 ---
+import ky from 'ky';
 import Layout from '../layouts/Layout.astro';
 import SiteNav from '../components/SiteNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
-import LyricNote from '../components/LyricNote.svelte';
+import LyricNoteView from '../components/LyricNoteView.astro';
 import { SITE } from '../config/site';
 import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
+import type { YtMusicAnalysis } from '@portfolio/schema/dashboard';
 
 interface Props {
   id: string;
@@ -14,6 +16,33 @@ interface Props {
 const { id, url } = Astro.props;
 const locale = getLocaleFromUrl(url);
 const t = getTranslator(locale);
+
+const apiOrigin =
+  import.meta.env.API_ORIGIN ?? import.meta.env.PUBLIC_API_ORIGIN ?? 'http://localhost:3000';
+
+let analysis: YtMusicAnalysis | null = null;
+let error: string | null = null;
+
+try {
+  const base = apiOrigin.replace(/\/$/, '');
+  const res = await ky.get(`${base}/api/ytmusic/${encodeURIComponent(id)}/analysis`, {
+    headers: { accept: 'application/json' },
+    throwHttpErrors: false,
+    timeout: 8000,
+  });
+
+  if (res.status === 404) {
+    error = t('lyrics.notFound');
+  } else if (!res.ok) {
+    error = `HTTP ${res.status}`;
+  } else {
+    const json = (await res.json()) as { data?: YtMusicAnalysis };
+    if (!json?.data?.id) error = t('lyrics.invalidResponse');
+    else analysis = json.data;
+  }
+} catch (e) {
+  error = e instanceof Error ? e.message : t('lyrics.failedToLoad');
+}
 ---
 
 <Layout title={`${SITE.name} | ${t('meta.lyricNote')}`} locale={locale}>
@@ -27,12 +56,11 @@ const t = getTranslator(locale);
       >
         {t('lyrics.backToAll')}
       </a>
-      <LyricNote
-        id={id}
+      <LyricNoteView
+        analysis={analysis}
+        error={error}
         locale={locale}
         labels={{
-          loading: t('lyrics.loading'),
-          loadingDescription: t('lyrics.loadingDescription'),
           couldNotLoadNote: t('lyrics.couldNotLoadNote'),
           noteLabel: t('lyrics.noteLabel'),
           openTrack: t('lyrics.openTrack'),
@@ -42,15 +70,9 @@ const t = getTranslator(locale);
           vocabulary: t('lyrics.vocabulary'),
           literal: t('lyrics.literal'),
           meaning: t('lyrics.meaning'),
-          missingId: t('lyrics.missingId'),
-          notFound: t('lyrics.notFound'),
-          invalidResponse: t('lyrics.invalidResponse'),
-          failedToLoad: t('lyrics.failedToLoad'),
         }}
-        client:load
       />
       <SiteFooter t={t} locale={locale} />
     </div>
   </main>
 </Layout>
-
