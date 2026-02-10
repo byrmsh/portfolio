@@ -1,0 +1,12 @@
+---
+export const prerender = false;
+
+import BlogPostPage from '../../views/BlogPostPage.astro';
+import { getLocaleFromUrl, localizedPath } from '../../i18n';
+
+const { slug } = Astro.params;
+const locale = getLocaleFromUrl(Astro.url);
+if (!slug) return Astro.redirect(localizedPath(locale, '/blog'));
+---
+
+<BlogPostPage slug={slug} url={Astro.url} />

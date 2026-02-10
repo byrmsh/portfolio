@@ -1,0 +1,16 @@
+---
+export const prerender = false;
+
+import BlogPostPage from '../../../views/BlogPostPage.astro';
+import { DEFAULT_LOCALE, getLocaleFromUrl, isSupportedLocale, localizedPath } from '../../../i18n';
+
+const { lang, slug } = Astro.params;
+if (!lang || !isSupportedLocale(lang)) return new Response(null, { status: 404 });
+if (lang === DEFAULT_LOCALE) return Astro.redirect(slug ? `/blog/${slug}` : '/blog');
+
+const locale = getLocaleFromUrl(Astro.url);
+if (!slug) return Astro.redirect(localizedPath(locale, '/blog'));
+---
+
+<BlogPostPage slug={slug} url={Astro.url} />
+

@@ -1,0 +1,102 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SiteNav from '../components/SiteNav.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import { SITE } from '../config/site';
+import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
+import { getEntry } from 'astro:content';
+
+interface Props {
+  url: URL;
+  slug: string;
+}
+
+const { url, slug } = Astro.props;
+const locale = getLocaleFromUrl(url);
+const t = getTranslator(locale);
+
+const post = await getEntry('blog', slug);
+if (!post || post.data.draft) return new Response(null, { status: 404 });
+
+const { Content } = await post.render();
+const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
+---
+
+<Layout title={`${SITE.name} | ${post.data.title}`} locale={locale}>
+  <SiteNav locale={locale} t={t} />
+
+  <main class="pt-28 px-4 sm:px-6">
+    <div class="max-w-3xl mx-auto flex flex-col gap-8">
+      <header>
+        <a
+          href={localizedPath(locale, '/blog')}
+          class="text-xs font-bold uppercase tracking-widest text-neutral-400 hover:text-neutral-700"
+        >
+          ← {t('nav.blog')}
+        </a>
+        <h1 class="mt-3 text-2xl font-semibold text-neutral-900">{post.data.title}</h1>
+        <div class="mt-2 text-xxs font-mono text-neutral-400">
+          {dateFmt.format(post.data.pubDate)}
+          {post.data.updatedDate ? ` · updated ${dateFmt.format(post.data.updatedDate)}` : ''}
+        </div>
+        <p class="mt-3 text-sm text-neutral-700">{post.data.description}</p>
+      </header>
+
+      <article class="rounded-xl border border-neutral-200 bg-white p-6 blog-prose">
+        <Content />
+      </article>
+
+      <SiteFooter t={t} locale={locale} />
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .blog-prose :global(h2) {
+    margin-top: 1.5rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-neutral-900);
+  }
+  .blog-prose :global(h3) {
+    margin-top: 1.25rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-neutral-900);
+  }
+  .blog-prose :global(p),
+  .blog-prose :global(li) {
+    margin-top: 0.75rem;
+    font-size: 0.95rem;
+    line-height: 1.7rem;
+    color: var(--color-neutral-800);
+  }
+  .blog-prose :global(ul) {
+    margin-top: 0.75rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+  .blog-prose :global(a) {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .blog-prose :global(code) {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 0.1em 0.25em;
+    border-radius: 0.25rem;
+  }
+  .blog-prose :global(pre) {
+    margin-top: 0.75rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(0, 0, 0, 0.04);
+    overflow: auto;
+  }
+  .blog-prose :global(pre code) {
+    background: transparent;
+    padding: 0;
+  }
+</style>

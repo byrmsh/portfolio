@@ -13,7 +13,7 @@ const baseSearch = Astro.url.search;
 
 const links = [
   { label: t('nav.home'), href: localizedPath(locale, '/', baseSearch) },
-  { label: t('nav.blog'), href: '#' },
+  { label: t('nav.blog'), href: localizedPath(locale, '/blog', baseSearch) },
   { label: t('nav.lyrics'), href: localizedPath(locale, '/lyrics', baseSearch) },
   { label: t('nav.jobs'), href: '#' },
   { label: t('nav.contact'), href: '#' },

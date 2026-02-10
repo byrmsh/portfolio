@@ -1,0 +1,64 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SiteNav from '../components/SiteNav.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import { SITE } from '../config/site';
+import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
+import { getCollection } from 'astro:content';
+
+interface Props {
+  url: URL;
+}
+
+const { url } = Astro.props;
+const locale = getLocaleFromUrl(url);
+const t = getTranslator(locale);
+
+const posts = (await getCollection('blog'))
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime());
+
+const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
+---
+
+<Layout title={`${SITE.name} | ${t('nav.blog')}`} locale={locale}>
+  <SiteNav locale={locale} t={t} />
+
+  <main class="pt-28 px-4 sm:px-6">
+    <div class="max-w-3xl mx-auto flex flex-col gap-8">
+      <header>
+        <div class="text-xs font-bold uppercase tracking-widest text-neutral-400">
+          {t('nav.blog')}
+        </div>
+        <h1 class="mt-2 text-2xl font-semibold text-neutral-900">{t('nav.blog')}</h1>
+        <p class="mt-2 text-sm text-neutral-700">Notes, systems write-ups, and project logs.</p>
+      </header>
+
+      <section class="rounded-xl border border-neutral-200 bg-white p-6">
+        <ul class="space-y-5">
+          {
+            posts.map((post) => (
+              <li>
+                <a
+                  href={localizedPath(locale, `/blog/${post.slug}`)}
+                  class="block hover:opacity-90"
+                >
+                  <div class="text-xxs font-mono text-neutral-400">
+                    {dateFmt.format(post.data.pubDate)}
+                  </div>
+                  <div class="mt-1 text-base font-semibold text-neutral-900">
+                    {post.data.title}
+                  </div>
+                  <div class="mt-1 text-sm text-neutral-700">{post.data.description}</div>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <SiteFooter t={t} locale={locale} />
+    </div>
+  </main>
+</Layout>
+

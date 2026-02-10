@@ -1,0 +1,11 @@
+---
+import BlogIndexPage from '../../../views/BlogIndexPage.astro';
+import { DEFAULT_LOCALE, isSupportedLocale } from '../../../i18n';
+
+const { lang } = Astro.params;
+if (!lang || !isSupportedLocale(lang)) return new Response(null, { status: 404 });
+if (lang === DEFAULT_LOCALE) return Astro.redirect('/blog');
+---
+
+<BlogIndexPage url={Astro.url} />
+
