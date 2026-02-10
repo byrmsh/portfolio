@@ -1,0 +1,34 @@
+[project]
+name = "lyricist"
+version = "0.1.0"
+description = "YT Music lyric note generator (no lyric quoting)."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "redis>=5.2.1",
+  "structlog>=25.1.0",
+  "environs>=14.1.1",
+  "pydantic>=2.10.6",
+  "ytmusicapi>=1.11.0",
+  "openai>=1.0.0",
+  "portfolio-schema",
+  "portfolio-common",
+]
+
+[project.scripts]
+lyricist = "lyricist:main"
+lyricist-migrate-note-urls = "migrate_note_urls:main"
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+portfolio-schema = { path = "../../packages/schema-py" }
+portfolio-common = { path = "../../packages/common-py" }
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["lyricist", "schema", "migrate_note_urls"]
