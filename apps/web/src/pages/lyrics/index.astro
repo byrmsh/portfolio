@@ -1,0 +1,76 @@
+---
+import ky from 'ky';
+import Layout from '../../layouts/Layout.astro';
+import SiteNav from '../../components/SiteNav.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import { SITE } from '../../config/site';
+
+const apiOrigin =
+  import.meta.env.API_ORIGIN ??
+  import.meta.env.PUBLIC_API_ORIGIN ??
+  'http://localhost:3000';
+
+type SavedLyricNote = {
+  id: string;
+  title: string;
+  artist: string;
+  noteUrl: string;
+  albumArtUrl?: string | null;
+  savedAt: string;
+};
+
+let latest: SavedLyricNote | null = null;
+try {
+  const json = await ky
+    .get(`${apiOrigin}/api/ytmusic/saved/latest`, {
+      headers: { accept: 'application/json' },
+      throwHttpErrors: false,
+    })
+    .json<{ data?: SavedLyricNote | null }>();
+  if (json?.data) latest = json.data;
+} catch {
+  latest = null;
+}
+
+const latestHref = latest?.id ? `/lyrics/note?id=${encodeURIComponent(latest.id)}` : null;
+---
+
+<Layout title={`${SITE.name} | Lyrics`}>
+  <SiteNav />
+
+  <main class="pt-28 px-4 sm:px-6">
+    <div class="max-w-3xl mx-auto flex flex-col gap-8">
+      <header>
+        <div class="text-xs font-bold uppercase tracking-widest text-neutral-400">Lyrics</div>
+        <h1 class="mt-2 text-2xl font-semibold text-neutral-900">Lyric Notes</h1>
+        <p class="mt-2 text-sm text-neutral-700">
+          Background analysis and vocabulary notes. Full lyrics are hosted on external sites.
+        </p>
+      </header>
+
+      <section class="rounded-xl border border-neutral-200 bg-white p-6">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">Latest</h2>
+        {latest && latestHref ? (
+          <a href={latestHref} class="mt-4 flex items-center gap-4 hover:opacity-90">
+            <div class="w-14 h-14 rounded-lg bg-neutral-900 overflow-hidden shrink-0">
+              {latest.albumArtUrl ? (
+                <img src={latest.albumArtUrl} alt="" class="w-14 h-14 object-cover" loading="lazy" />
+              ) : null}
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold text-neutral-900 line-clamp-1">{latest.title}</div>
+              <div class="text-xs text-neutral-600 mt-1 line-clamp-1">{latest.artist}</div>
+              <div class="text-xxs font-mono text-neutral-400 mt-2">
+                Saved {new Date(latest.savedAt).toLocaleString('en-US')}
+              </div>
+            </div>
+          </a>
+        ) : (
+          <p class="mt-3 text-sm text-neutral-700">No tracks processed yet.</p>
+        )}
+      </section>
+
+      <SiteFooter />
+    </div>
+  </main>
+</Layout>
