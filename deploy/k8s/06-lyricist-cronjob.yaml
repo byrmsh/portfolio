@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lyricist-cron
+  namespace: portfolio
+  labels:
+    app: portfolio
+    component: collector
+spec:
+  schedule: "10 5 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: portfolio
+            component: collector
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: lyricist
+              image: ghcr.io/byrmsh/portfolio-lyricist:latest
+              imagePullPolicy: Always
+              command: ["lyricist"]
+              env:
+                - name: REDIS_URL
+                  value: "redis://db:6379/0"
+                - name: REDIS_EVENTS_STREAM
+                  value: "events"
+              envFrom:
+                - secretRef:
+                    name: lyricist-secrets
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "256Mi"
+                  cpu: "500m"
+
