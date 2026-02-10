@@ -104,7 +104,7 @@
             class="text-xxs font-mono rounded-full border border-neutral-200 px-3 py-1 hover:bg-neutral-50"
             href={analysis.lyricsUrl}
           >
-            READ LYRICS (EXTERNAL)
+            READ LYRICS
           </a>
         {/if}
       </div>
