@@ -128,17 +128,30 @@ async function readLatestSavedLyric(): Promise<SavedLyricNote | null> {
   return parsed;
 }
 
-async function readSavedLyricsPage(
-  offset: number,
-  limit: number,
-): Promise<{ items: SavedLyricNote[]; offset: number; limit: number; total: number }> {
-  const total = await redis.zcard(redisKeys.index.lyricsRecent);
-  if (total === 0) return { items: [], offset, limit, total: 0 };
+const YTMUSIC_SAVED_PAGE_SIZE = 50;
 
-  const start = Math.max(0, offset);
-  const stop = Math.max(start, start + limit - 1);
+async function readSavedLyricsPage(
+  page: number,
+): Promise<{ items: SavedLyricNote[]; page: number; pageSize: number; total: number; totalPages: number }> {
+  const total = await redis.zcard(redisKeys.index.lyricsRecent);
+  const totalPages = total === 0 ? 0 : Math.ceil(total / YTMUSIC_SAVED_PAGE_SIZE);
+  if (total === 0) {
+    return { items: [], page: 1, pageSize: YTMUSIC_SAVED_PAGE_SIZE, total: 0, totalPages: 0 };
+  }
+
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * YTMUSIC_SAVED_PAGE_SIZE;
+  const stop = start + YTMUSIC_SAVED_PAGE_SIZE - 1;
   const trackIds = await redis.zrevrange(redisKeys.index.lyricsRecent, start, stop);
-  if (!trackIds.length) return { items: [], offset: start, limit, total };
+  if (!trackIds.length) {
+    return {
+      items: [],
+      page: safePage,
+      pageSize: YTMUSIC_SAVED_PAGE_SIZE,
+      total,
+      totalPages,
+    };
+  }
 
   const pipeline = redis.pipeline();
   for (const trackId of trackIds) pipeline.get(redisKeys.stat('ytmusic', trackId));
@@ -154,7 +167,13 @@ async function readSavedLyricsPage(
     }
   }
 
-  return { items, offset: start, limit, total };
+  return {
+    items,
+    page: safePage,
+    pageSize: YTMUSIC_SAVED_PAGE_SIZE,
+    total,
+    totalPages,
+  };
 }
 
 async function readYtMusicAnalysis(trackId: string): Promise<YtMusicAnalysis | null> {
@@ -178,13 +197,10 @@ app.get('/api/ytmusic/saved/latest', async (c) => {
 });
 
 app.get('/api/ytmusic/saved', async (c) => {
-  const offsetRaw = c.req.query('offset');
-  const limitRaw = c.req.query('limit');
+  const pageRaw = c.req.query('page');
+  const page = Number.parseInt(pageRaw ?? '1', 10) || 1;
 
-  const offset = Math.max(0, Number.parseInt(offsetRaw ?? '0', 10) || 0);
-  const limit = Math.min(200, Math.max(1, Number.parseInt(limitRaw ?? '50', 10) || 50));
-
-  const data = await readSavedLyricsPage(offset, limit);
+  const data = await readSavedLyricsPage(page);
   const envelope: ApiEnvelope<typeof data> = {
     data,
     meta: { ts: new Date().toISOString(), source: 'redis' },
