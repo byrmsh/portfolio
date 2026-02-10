@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from _common import emit_event, logger, redis_client, write_metric
+from portfolio_common import emit_event, logger, redis_client, write_metric
 
 
 # Placeholder for cluster metrics ingestion.

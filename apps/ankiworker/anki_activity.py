@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from environs import env
 
-from _common import emit_event, logger, redis_client, write_metric
+from portfolio_common import emit_event, logger, redis_client, write_metric
 from schema import ActivityCell, ActivitySeries, RedisKeys
 
 env.read_env(recurse=False)
@@ -248,4 +248,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

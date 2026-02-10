@@ -10,6 +10,7 @@ dependencies = [
   "environs>=14.1.1",
   "pydantic>=2.10.6",
   "portfolio-schema",
+  "portfolio-common",
   "anki>=25.9.2",
 ]
 
@@ -21,10 +22,11 @@ package = true
 
 [tool.uv.sources]
 portfolio-schema = { path = "../../packages/schema-py" }
+portfolio-common = { path = "../../packages/common-py" }
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["anki_activity", "_common", "schema"]
+py-modules = ["anki_activity", "schema"]

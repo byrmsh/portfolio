@@ -11,6 +11,7 @@ dependencies = [
   "pydantic>=2.10.6",
   "httpx>=0.27.0",
   "portfolio-schema",
+  "portfolio-common",
 ]
 
 [project.scripts]
@@ -23,10 +24,11 @@ package = true
 
 [tool.uv.sources]
 portfolio-schema = { path = "../../packages/schema-py" }
+portfolio-common = { path = "../../packages/common-py" }
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["github_activity", "ytmusic", "cluster", "_common", "schema"]
+py-modules = ["github_activity", "ytmusic", "cluster", "schema"]

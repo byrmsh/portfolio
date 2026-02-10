@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from environs import env
 
-from _common import emit_event, logger, redis_client, write_metric
+from portfolio_common import emit_event, logger, redis_client, write_metric
 
 env.read_env(recurse=False)
 

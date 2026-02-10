@@ -5,6 +5,7 @@ RUN pip install --no-cache-dir uv==0.4.30
 WORKDIR /app
 
 COPY packages/schema-py ./packages/schema-py
+COPY packages/common-py ./packages/common-py
 COPY apps/collector/pyproject.toml apps/collector/uv.lock apps/collector/README.md ./apps/collector/
 COPY apps/collector/*.py apps/collector/.env.sample ./apps/collector/
 

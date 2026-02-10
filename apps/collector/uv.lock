@@ -40,6 +40,7 @@ source = { editable = "." }
 dependencies = [
     { name = "environs" },
     { name = "httpx" },
+    { name = "portfolio-common" },
     { name = "portfolio-schema" },
     { name = "pydantic" },
     { name = "redis" },
@@ -50,6 +51,7 @@ dependencies = [
 requires-dist = [
     { name = "environs", specifier = ">=14.1.1" },
     { name = "httpx", specifier = ">=0.27.0" },
+    { name = "portfolio-common", directory = "../../packages/common-py" },
     { name = "portfolio-schema", directory = "../../packages/schema-py" },
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "redis", specifier = ">=5.2.1" },
@@ -122,6 +124,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/03/261af5efb3d3ce0e2db3fd1e11dc5a96b74a4fb76e488da1c845a8f12345/marshmallow-4.2.2.tar.gz", hash = "sha256:ba40340683a2d1c15103647994ff2f6bc2c8c80da01904cbe5d96ee4baa78d9f", size = 221404, upload-time = "2026-02-04T15:47:03.401Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/aa/70/bb89f807a6a6704bdc4d6f850d5d32954f6c1965e3248e31455defdf2f30/marshmallow-4.2.2-py3-none-any.whl", hash = "sha256:084a9466111b7ec7183ca3a65aed758739af919fedc5ebdab60fb39d6b4dc121", size = 48454, upload-time = "2026-02-04T15:47:02.013Z" },
+]
+
+[[package]]
+name = "portfolio-common"
+version = "0.1.0"
+source = { directory = "../../packages/common-py" }
+dependencies = [
+    { name = "environs" },
+    { name = "redis" },
+    { name = "structlog" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "environs", specifier = ">=14.1.1" },
+    { name = "redis", specifier = ">=5.2.1" },
+    { name = "structlog", specifier = ">=25.1.0" },
 ]
 
 [[package]]
