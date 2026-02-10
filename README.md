@@ -77,7 +77,7 @@ Workers & Live Data:
 - [ ] Add infrastructure visualizer (K8s node status).
 
 Personal Metrics & Content:
-- [ ] Fetch personal metrics (Anki streak grid, GitHub streak grid).
+- [x] Fetch personal metrics (Anki streak grid, GitHub streak grid).
 - [ ] Fetch YT Music saved playlist and generate lyric/lore pages (Genius-like, but personal).
 - [ ] Ingest cluster info and surface it on the dashboard.
 - [ ] Keep observability data (logs/metrics/traces) separate from personal stats content.
@@ -125,17 +125,14 @@ The homepage **Activity Monitor** is **rendered at build time** in `apps/web` by
 
 - Collectors (Python, `apps/collector`) write activity series to Redis:
   - `stat:github:default`
-  - `stat:anki:default` (currently placeholder until Anki collector exists)
+  - `stat:anki:default`
 - API (`apps/api`) serves:
   - `GET /api/activity-monitor` -> `{ github, anki }`
 - Web (`apps/web`) fetches the API **during build**:
   - Set `API_ORIGIN` (preferred) or `PUBLIC_API_ORIGIN`
   - Local default is `http://localhost:3000`
 
-Collector env vars:
-- `GITHUB_USERNAME`
-- `GITHUB_TOKEN`
-- `REDIS_URL` (e.g. `redis://localhost:6379/0`)
+Collector env vars are listed in `apps/collector/.env.sample` (source of truth).
 
 ## Docker Compose (Optional)
 

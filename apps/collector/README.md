@@ -1,51 +1,44 @@
 # Collector
 
-Personal data collectors for the portfolio.
+Python collectors that write personal stats into Redis (DragonflyDB) for the portfolio API/web.
 
-## Scripts
+## Entrypoints
 
-- `collector-anki` (Anki activity from local `collection.anki2` or AnkiWeb sync)
-- `collector-github` (GitHub contributions activity, 16x7 grid)
-- `collector-ytmusic` (YT Music playlist ingestion)
-- `collector-cluster` (cluster health + nodes)
+Collector commands are defined in `apps/collector/pyproject.toml`:
 
-## Local Setup (uv)
+- `collector-github` (GitHub contributions activity, 16x7 daily grid)
+- `collector-anki` (Anki review activity, 16x7 daily grid + streak)
+- `collector-ytmusic` (placeholder; writes a stub record)
+- `collector-cluster` (placeholder; writes a stub record)
+
+## Local Development (uv)
 
 ```bash
 uv venv
 uv sync
 cp .env.sample .env
-```
-
-Run a collector:
-
-```bash
 uv run collector-github
 ```
 
-GitHub requires a token:
+All required environment variables live in `.env.sample` (treat it as the source of truth).
 
-```bash
-export GITHUB_USERNAME="your-login"
-export GITHUB_TOKEN="ghp_..."
-```
+## Schemas
 
-Anki activity requires a path to your local `collection.anki2`:
+The collectors write JSON payloads that the API/web can validate.
 
-```bash
-export ANKI_COLLECTION_PATH="$HOME/.local/share/Anki2/User 1/collection.anki2"
-# Optional: affects which calendar day a review lands on.
-export ANKI_TIMEZONE="America/Los_Angeles"
-```
+- Source of truth: `packages/schema-py` (installed here as the `portfolio-schema` dependency; see `apps/collector/pyproject.toml`).
+- Import path used by collectors: `apps/collector/schema.py` (thin re-export of the shared schemas).
+- The activity collectors write an `ActivitySeries` record (cells + optional streak + timestamps).
 
-If `ANKI_COLLECTION_PATH` is not set, the collector will attempt to sync a disposable
-collection from AnkiWeb using:
+## Redis Writes (Current)
 
-```bash
-export ANKIWEB_EMAIL="you@example.com"
-export ANKIWEB_PASSWORD="..."
-# Optional: where the synced collection lives (persist this in K8s/GHA if you want incremental sync).
-export ANKI_SYNC_DIR="/tmp/anki-sync"
-# Optional: override sync endpoint (default is AnkiWeb).
-export ANKI_SYNC_ENDPOINT=""
-```
+- Activity series live under `stat:{source}:default` (ex: `stat:github:default`, `stat:anki:default`).
+- Collectors emit a lightweight notification event to a Redis Stream (`REDIS_EVENTS_STREAM`, default `events`) with:
+  - `type`: e.g. `github_activity_updated`
+  - `payload`: JSON like `{ "key": "stat:github:default" }`
+
+Per collector:
+- `collector-github` (`github_activity.py`): GitHub GraphQL contributions calendar -> `stat:github:default` and `github_activity_updated`.
+- `collector-anki` (`anki_activity.py`): reads Anki `collection.anki2` revlog timestamps (or AnkiWeb-sync fallback) -> `stat:anki:default` and `anki_activity_updated`.
+- `collector-ytmusic` (`ytmusic.py`): placeholder -> `metric:ytmusic:playlist` and `ytmusic_playlist_updated`.
+- `collector-cluster` (`cluster.py`): placeholder -> `metric:cluster:status` and `cluster_status_updated`.
