@@ -25,7 +25,7 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       language: 'Language',
     },
     hero: {
-      subtitle: 'Full-Stack Engineer & DevOps Practitioner.',
+      subtitle: 'Full-Stack Developer & DevOps Practitioner.',
       description: 'Building functional systems and documenting the process.',
     },
     activity: {
@@ -132,7 +132,7 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       language: 'Sprache',
     },
     hero: {
-      subtitle: 'Full-Stack-Engineer & DevOps-Praktiker.',
+      subtitle: 'Full-Stack Entwickler & DevOps-Praktiker.',
       description: 'Ich baue funktionale Systeme und dokumentiere den Prozess.',
     },
     activity: {
@@ -239,7 +239,7 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       language: 'Dil',
     },
     hero: {
-      subtitle: 'Full-Stack Mühendisi ve DevOps Uygulayıcısı.',
+      subtitle: 'Full-Stack Geliştirici ve DevOps Uygulayıcısı.',
       description: 'İşlevsel sistemler kuruyor ve süreci belgeliyorum.',
     },
     activity: {
