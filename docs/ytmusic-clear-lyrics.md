@@ -141,7 +141,10 @@ Non-secret:
 Secrets (K8s secret, never committed to YAML):
 - `YTMUSIC_AUTH_JSON` (if needed by `ytmusicapi` auth mode)
 - `GENIUS_ACCESS_TOKEN` (optional; lyrics lookup is not required for MVP)
-- `OPENAI_API_KEY` (optional; only used if we do Phase 2)
+- `LYRICIST_LLM_PROVIDER` (`auto|gemini|openai|none`; `auto` prefers Gemini if configured)
+- `GEMINI_API_KEY` (optional; enables LLM analysis via Gemini)
+- `GEMINI_MODEL` (optional; defaults to `gemini-1.5-flash`)
+- `OPENAI_API_KEY` (optional; enables LLM analysis via OpenAI fallback)
 
 ### Outputs
 
@@ -197,6 +200,9 @@ kubectl create secret generic lyricist-secrets \
   --from-literal=YTMUSIC_PLAYLIST_ID='YOUR_PLAYLIST_ID' \
   --from-literal=WEB_ORIGIN='https://YOUR_DOMAIN' \
   --from-literal=GENIUS_ACCESS_TOKEN='YOUR_TOKEN' \
+  --from-literal=LYRICIST_LLM_PROVIDER='gemini' \
+  --from-literal=GEMINI_API_KEY='YOUR_KEY' \
+  --from-literal=GEMINI_MODEL='gemini-1.5-flash' \
   --from-literal=OPENAI_API_KEY='YOUR_KEY'
 ```
 

@@ -2,22 +2,41 @@ from __future__ import annotations
 
 import json
 import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
 from environs import env
+
+# Load .env before importing shared modules that read env vars at import time
+# (e.g. portfolio_common.redis_io expects REDIS_URL).
+env.read_env(recurse=False)
+
 from openai import OpenAI
+from pydantic import ValidationError
 from ytmusicapi import YTMusic
 
 from portfolio_common import emit_event, logger, redis_client
 from portfolio_schema import RedisKeys, SavedLyricNote, YtMusicAnalysis
 
-env.read_env(recurse=False)
-
 
 YTMUSIC_PLAYLIST_ID = env.str("YTMUSIC_PLAYLIST_ID", default="")
 WEB_ORIGIN = env.str("WEB_ORIGIN", default="http://localhost:4321")
+LYRICIST_DRY_RUN = env.bool("LYRICIST_DRY_RUN", default=False)
+
+# LLM provider wiring:
+# - gemini: native Gemini API (structured output via responseSchema + responseMimeType)
+# - openai: OpenAI Responses API (json_schema + strict)
+# - auto: prefer Gemini if configured; else OpenAI if configured; else none
+# - none: disable LLM analysis entirely
+LYRICIST_LLM_PROVIDER = env.str("LYRICIST_LLM_PROVIDER", default="auto")
+
+GEMINI_API_KEY = env.str("GEMINI_API_KEY", default="")
+GEMINI_MODEL = env.str("GEMINI_MODEL", default="gemini-1.5-flash")
+GEMINI_API_BASE = env.str("GEMINI_API_BASE", default="https://generativelanguage.googleapis.com/v1beta")
+
 OPENAI_API_KEY = env.str("OPENAI_API_KEY", default="")
 OPENAI_MODEL = env.str("OPENAI_MODEL", default="gpt-5")
 
@@ -182,35 +201,178 @@ def _analysis_json_schema() -> dict[str, Any]:
     }
 
 
-def _generate_analysis(track: Track) -> YtMusicAnalysis:
-    # Fallback that keeps the pipeline moving even without OpenAI configured.
-    if not OPENAI_API_KEY:
-        return YtMusicAnalysis(
-            id=track.id,
-            source="ytmusic",
-            title=track.title,
-            artist=track.artist,
-            album=track.album,
-            albumArtUrl=track.album_art_url,
-            trackUrl=_ytmusic_track_url(track.id),
-            lyricsUrl=_genius_search_url(track.title, track.artist),
-            background={
-                "tldr": f"A track by {track.artist}. (LLM analysis not configured.)",
-                "notes": [],
+def _analysis_gemini_schema() -> dict[str, Any]:
+    # Gemini's responseSchema support is more limited than full JSON Schema.
+    # Use a conservative subset (no additionalProperties/minLength/enum).
+    return {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "source": {"type": "string"},
+            "title": {"type": "string"},
+            "artist": {"type": "string"},
+            "album": {"type": "string"},
+            "albumArtUrl": {"type": "string"},
+            "trackUrl": {"type": "string"},
+            "lyricsUrl": {"type": "string"},
+            "background": {
+                "type": "object",
+                "properties": {
+                    "tldr": {"type": "string"},
+                    "notes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "title": {"type": "string"},
+                                "body": {"type": "string"},
+                            },
+                            "required": ["title", "body"],
+                        },
+                    },
+                },
+                "required": ["tldr", "notes"],
             },
-            vocabulary=[],
-            updatedAt=_iso_now(),
-        )
+            "vocabulary": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "term": {"type": "string"},
+                        "literal": {"type": "string"},
+                        "meaning": {"type": "string"},
+                        "cefr": {"type": "string"},
+                        "usage": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["term", "literal", "meaning"],
+                },
+            },
+            "updatedAt": {"type": "string"},
+        },
+        "required": ["id", "source", "title", "artist", "background", "vocabulary", "updatedAt"],
+    }
+
+
+def _analysis_fallback(track: Track, reason: str) -> YtMusicAnalysis:
+    # Keep the pipeline moving even if the LLM is unavailable/misconfigured.
+    return YtMusicAnalysis(
+        id=track.id,
+        source="ytmusic",
+        title=track.title,
+        artist=track.artist,
+        album=track.album,
+        albumArtUrl=track.album_art_url,
+        trackUrl=_ytmusic_track_url(track.id),
+        lyricsUrl=_genius_search_url(track.title, track.artist),
+        background={
+            "tldr": f"A track by {track.artist}. ({reason})",
+            "notes": [],
+        },
+        vocabulary=[],
+        updatedAt=_iso_now(),
+    )
+
+
+def _llm_instructions() -> str:
+    return (
+        "You write compact, high-signal music notes for a public portfolio site.\n"
+        "\n"
+        "Hard rules:\n"
+        "- You MUST NOT quote lyrics or reproduce any lyric lines (even partial lines).\n"
+        "- Do not fabricate factual claims about the artist/song history. If unsure, keep it generic.\n"
+        "- Output must be JSON only and must match the provided schema exactly (no markdown).\n"
+        "\n"
+        "Content goals:\n"
+        "- background.tldr: 1-2 sentences, concrete and specific.\n"
+        "- background.notes: 3-5 notes. Each note: title + 2-4 sentences.\n"
+        "  Prefer: musical arrangement, cultural/historical context (only if confident), themes/imagery,\n"
+        "  language/register, and why it is interesting.\n"
+        "- vocabulary: 8-12 items. Avoid trivial A1 dictionary entries unless there is a non-obvious nuance.\n"
+        "  At least 4 items must be multiword expressions or collocations.\n"
+        "  For each item:\n"
+        "  - term: German word/phrase\n"
+        "  - literal: literal gloss\n"
+        "  - meaning: nuanced explanation (register, connotation, grammar quirks)\n"
+        "  - usage: 2-4 short bullet strings with original usage notes (no lyric examples).\n"
+        "    Include collocations, common complements, case/preposition, separable verb patterns,\n"
+        "    or false friends as relevant.\n"
+        "  - cefr: optional; omit if unsure.\n"
+    )
+
+
+def _select_llm_provider() -> str:
+    p = (LYRICIST_LLM_PROVIDER or "auto").strip().lower()
+    if p in {"gemini", "openai", "none"}:
+        return p
+    # auto
+    if GEMINI_API_KEY:
+        return "gemini"
+    if OPENAI_API_KEY:
+        return "openai"
+    return "none"
+
+
+def _strip_code_fences(s: str) -> str:
+    t = s.strip()
+    if t.startswith("```"):
+        # Remove a single fenced block wrapper if present.
+        t = t.split("\n", 1)[1] if "\n" in t else ""
+        if t.endswith("```"):
+            t = t[: -len("```")]
+    return t.strip()
+
+
+def _validation_error_summary(e: ValidationError) -> str:
+    # Compact, model-friendly error summary: loc + msg only.
+    items: list[str] = []
+    for it in e.errors():
+        loc = ".".join(str(p) for p in (it.get("loc") or []))
+        msg = str(it.get("msg") or "")
+        items.append(f"{loc}: {msg}" if loc else msg)
+    return "; ".join(items[:20])
+
+
+def _normalize_analysis_payload(track: Track, payload: dict[str, Any]) -> dict[str, Any]:
+    # Align with TS schema expectations:
+    # - url fields must be valid URLs or null/undefined (never "")
+    # - optional strings should be null/undefined (never "")
+    def _blank_to_none(v: Any) -> Any:
+        if v is None:
+            return None
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
+    payload["id"] = str(payload.get("id") or track.id)
+    payload["source"] = "ytmusic"
+    payload["title"] = str(payload.get("title") or track.title)
+    payload["artist"] = str(payload.get("artist") or track.artist)
+
+    album = _blank_to_none(payload.get("album"))
+    payload["album"] = album if album is not None else (track.album or None)
+
+    album_art = _blank_to_none(payload.get("albumArtUrl"))
+    payload["albumArtUrl"] = album_art if album_art is not None else (track.album_art_url or None)
+
+    track_url = _blank_to_none(payload.get("trackUrl"))
+    payload["trackUrl"] = track_url if track_url is not None else _ytmusic_track_url(track.id)
+
+    lyrics_url = _blank_to_none(payload.get("lyricsUrl"))
+    payload["lyricsUrl"] = lyrics_url if lyrics_url is not None else _genius_search_url(track.title, track.artist)
+
+    # Always stamp analysis generation time.
+    payload["updatedAt"] = _iso_now()
+
+    return payload
+
+
+def _generate_analysis_openai(track: Track) -> YtMusicAnalysis:
+    if not OPENAI_API_KEY:
+        return _analysis_fallback(track, "LLM analysis not configured.")
 
     client = OpenAI(api_key=OPENAI_API_KEY)
 
-    instructions = (
-        "You write compact, high-signal music notes for a public portfolio site.\n"
-        "You MUST NOT quote lyrics or reproduce any lyric lines.\n"
-        "Output must follow the provided JSON schema exactly.\n"
-        "Vocabulary items should explain terms/phrases a German learner might encounter in songs generally.\n"
-        "Do not include example sentences from the song; if you include usage notes, they must be original."
-    )
+    instructions = _llm_instructions()
 
     user_input = (
         "Generate background notes and vocabulary explanations for this track.\n"
@@ -237,18 +399,153 @@ def _generate_analysis(track: Track) -> YtMusicAnalysis:
     )
 
     payload = json.loads(resp.output_text)
-    # Ensure required enrichments even if model leaves them blank.
-    payload.setdefault("id", track.id)
-    payload.setdefault("source", "ytmusic")
-    payload.setdefault("title", track.title)
-    payload.setdefault("artist", track.artist)
-    payload.setdefault("album", track.album)
-    payload.setdefault("albumArtUrl", track.album_art_url)
-    payload.setdefault("trackUrl", _ytmusic_track_url(track.id))
-    payload.setdefault("lyricsUrl", _genius_search_url(track.title, track.artist))
-    payload.setdefault("updatedAt", _iso_now())
-
+    payload = _normalize_analysis_payload(track, payload)
     return YtMusicAnalysis.model_validate(payload)
+
+
+def _gemini_generate_content(
+    *,
+    api_key: str,
+    model: str,
+    system: str,
+    user: str,
+    response_schema: dict[str, Any] | None,
+) -> dict[str, Any]:
+    url = f"{GEMINI_API_BASE}/models/{model}:generateContent?key={api_key}"
+    body: dict[str, Any] = {
+        "systemInstruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": user}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+        },
+    }
+    if response_schema is not None:
+        body["generationConfig"]["responseSchema"] = response_schema
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        raw = resp.read().decode("utf-8")
+        return json.loads(raw)
+
+
+def _gemini_extract_text(resp: dict[str, Any]) -> str:
+    candidates = resp.get("candidates") or []
+    if not isinstance(candidates, list) or not candidates:
+        raise ValueError("gemini: missing candidates")
+    content = candidates[0].get("content") or {}
+    parts = content.get("parts") or []
+    if not isinstance(parts, list) or not parts:
+        raise ValueError("gemini: missing content parts")
+    for p in parts:
+        if isinstance(p, dict) and isinstance(p.get("text"), str) and p["text"].strip():
+            return p["text"]
+    raise ValueError("gemini: missing text part")
+
+
+def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
+    if not GEMINI_API_KEY:
+        return _analysis_fallback(track, "LLM analysis not configured.")
+
+    instructions = _llm_instructions()
+
+    schema_hint = (
+        "Return JSON only with exactly these keys:\n"
+        "- id (string)\n"
+        "- source (string; use \"ytmusic\")\n"
+        "- title (string)\n"
+        "- artist (string)\n"
+        "- album (string or empty)\n"
+        "- albumArtUrl (string or empty)\n"
+        "- trackUrl (string)\n"
+        "- lyricsUrl (string)\n"
+        "- background (object: { tldr: string, notes: [{ title: string, body: string }] })\n"
+        "- vocabulary (array of objects: { term: string, literal: string, meaning: string, cefr?: string, usage?: string[] })\n"
+        "- updatedAt (string)\n"
+        "Do not invent additional top-level keys.\n"
+        "Vocabulary requirements:\n"
+        "- 8-12 items\n"
+        "- at least 4 multiword expressions or collocations\n"
+        "- each item should include 2-4 usage bullets\n"
+    )
+
+    base_user_input = (
+        "Generate background notes and vocabulary explanations for this track.\n"
+        f"track_id: {track.id}\n"
+        f"title: {track.title}\n"
+        f"artist: {track.artist}\n"
+        f"album: {track.album or ''}\n"
+        f"{schema_hint}"
+        "Return JSON only."
+    )
+
+    # Try schema mode first; if it errors, fall back to plain JSON. If validation fails, retry once with repair.
+    last_err: Exception | None = None
+    user_input = base_user_input
+    schema_mode: dict[str, Any] | None = _analysis_gemini_schema()
+
+    for attempt in range(1, 4):
+        try:
+            resp = _gemini_generate_content(
+                api_key=GEMINI_API_KEY,
+                model=GEMINI_MODEL,
+                system=instructions,
+                user=user_input,
+                response_schema=schema_mode,
+            )
+            text = _gemini_extract_text(resp)
+            payload = json.loads(_strip_code_fences(text))
+        except urllib.error.HTTPError as e:
+            body = ""
+            try:
+                body = (e.read() or b"").decode("utf-8", errors="replace")[:500]
+            except Exception:
+                body = ""
+            last_err = e
+            logger.warning(
+                "lyricist.gemini.http_error",
+                attempt=attempt,
+                status=getattr(e, "code", None),
+                body=body,
+            )
+            schema_mode = None
+            continue
+        except (urllib.error.URLError, json.JSONDecodeError, ValueError) as e:
+            last_err = e
+            logger.warning("lyricist.gemini.error", attempt=attempt, error=str(e))
+            schema_mode = None
+            continue
+
+        payload = _normalize_analysis_payload(track, payload)
+
+        try:
+            return YtMusicAnalysis.model_validate(payload)
+        except ValidationError as e:
+            last_err = e
+            logger.warning("lyricist.gemini.validation_error", attempt=attempt, error=_validation_error_summary(e))
+            user_input = (
+                f"{base_user_input}\n"
+                "The previous JSON was invalid. Fix it.\n"
+                f"Validation errors: {_validation_error_summary(e)}\n"
+                "Return corrected JSON only."
+            )
+            schema_mode = None
+            continue
+
+    return _analysis_fallback(track, f"LLM analysis failed: {last_err}")
+
+
+def _generate_analysis(track: Track) -> YtMusicAnalysis:
+    provider = _select_llm_provider()
+    if provider == "gemini":
+        return _generate_analysis_gemini(track)
+    if provider == "openai":
+        return _generate_analysis_openai(track)
+    return _analysis_fallback(track, "LLM analysis not configured.")
 
 
 def _process_track(r, playlist_id: str, track: Track) -> None:
@@ -299,6 +596,17 @@ def _list_playlist_tracks(playlist_id: str) -> list[Track]:
 def main() -> None:
     if not YTMUSIC_PLAYLIST_ID:
         logger.info("lyricist.no_playlist_configured")
+        return
+
+    if LYRICIST_DRY_RUN:
+        tracks = _list_playlist_tracks(YTMUSIC_PLAYLIST_ID)
+        if not tracks:
+            logger.info("lyricist.sync.empty", playlist_id=YTMUSIC_PLAYLIST_ID)
+            return
+        tr = tracks[0]
+        logger.info("lyricist.dry_run.track", track_id=tr.id, title=tr.title, artist=tr.artist)
+        analysis = _generate_analysis(tr)
+        print(analysis.model_dump_json())
         return
 
     r = redis_client()
