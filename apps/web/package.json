@@ -4,13 +4,14 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "start": "astro dev",
+    "start": "node ./dist/server/entry.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check"
   },
   "dependencies": {
+    "@astrojs/node": "^9.5.2",
     "@astrojs/svelte": "^7.2.5",
     "@lucide/astro": "^0.563.0",
     "@portfolio/schema": "workspace:*",

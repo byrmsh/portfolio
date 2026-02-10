@@ -1,0 +1,25 @@
+---
+export const prerender = false;
+
+const { id } = Astro.params;
+if (!id) {
+  return Astro.redirect('/lyrics');
+}
+
+import Layout from '../../layouts/Layout.astro';
+import SiteNav from '../../components/SiteNav.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import LyricNote from '../../components/LyricNote.svelte';
+import { SITE } from '../../config/site';
+---
+
+<Layout title={`${SITE.name} | Lyric Note`}>
+  <SiteNav />
+
+  <main class="pt-28 px-4 sm:px-6">
+    <div class="max-w-3xl mx-auto flex flex-col gap-8">
+      <LyricNote id={id} client:load />
+      <SiteFooter />
+    </div>
+  </main>
+</Layout>

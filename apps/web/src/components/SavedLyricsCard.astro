@@ -30,7 +30,7 @@ try {
   saved = null;
 }
 
-const noteHref = saved?.id ? `/lyrics/note?id=${encodeURIComponent(saved.id)}` : null;
+const noteHref = saved?.id ? `/lyrics/${encodeURIComponent(saved.id)}` : null;
 ---
 
 <section

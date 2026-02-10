@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
+  export let id: string | undefined;
+
   type YtMusicAnalysis = {
     id: string;
     source: 'ytmusic';
@@ -21,7 +23,7 @@
 
   const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN || '';
 
-  function getId(): string | null {
+  function getIdFallback(): string | null {
     try {
       const u = new URL(window.location.href);
       return u.searchParams.get('id');
@@ -31,8 +33,8 @@
   }
 
   async function load(): Promise<void> {
-    const id = getId();
-    if (!id) {
+    const resolvedId = id ?? getIdFallback();
+    if (!resolvedId) {
       error = 'Missing id';
       loading = false;
       return;
@@ -40,7 +42,7 @@
 
     try {
       const base = apiOrigin ? apiOrigin.replace(/\/$/, '') : '';
-      const res = await fetch(`${base}/api/ytmusic/${encodeURIComponent(id)}/analysis`, {
+      const res = await fetch(`${base}/api/ytmusic/${encodeURIComponent(resolvedId)}/analysis`, {
         headers: { accept: 'application/json' },
       });
       if (!res.ok) {
@@ -159,4 +161,3 @@
     </section>
   {/if}
 {/if}
-

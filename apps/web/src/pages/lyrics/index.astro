@@ -32,7 +32,7 @@ try {
   latest = null;
 }
 
-const latestHref = latest?.id ? `/lyrics/note?id=${encodeURIComponent(latest.id)}` : null;
+const latestHref = latest?.id ? `/lyrics/${encodeURIComponent(latest.id)}` : null;
 ---
 
 <Layout title={`${SITE.name} | Lyrics`}>
