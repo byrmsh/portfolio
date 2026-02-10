@@ -8,7 +8,7 @@
     "lint": "pnpm lint:ts && pnpm lint:web && pnpm lint:py",
     "lint:ts": "eslint --no-error-on-unmatched-pattern \"apps/api/src/**/*.ts\" \"packages/**/*.ts\"",
     "lint:web": "pnpm -C apps/web check",
-    "lint:py": "XDG_DATA_HOME=/tmp/.xdg XDG_CACHE_HOME=/tmp/.xdg-cache UV_CACHE_DIR=/tmp/.uv-cache uvx ruff check apps/collector apps/upworker packages/schema-py/src",
+    "lint:py": "XDG_DATA_HOME=/tmp/.xdg XDG_CACHE_HOME=/tmp/.xdg-cache UV_CACHE_DIR=/tmp/.uv-cache uvx ruff check apps/collector apps/ankiworker apps/upworker packages/schema-py/src",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

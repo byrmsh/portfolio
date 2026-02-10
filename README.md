@@ -125,7 +125,7 @@ The homepage **Activity Monitor** is **rendered at build time** in `apps/web` by
 
 - Collectors (Python, `apps/collector`) write activity series to Redis:
   - `stat:github:default`
-  - `stat:anki:default`
+  - `stat:anki:default` (via `apps/ankiworker`)
 - API (`apps/api`) serves:
   - `GET /api/activity-monitor` -> `{ github, anki }`
 - Web (`apps/web`) fetches the API **during build**:
@@ -133,6 +133,7 @@ The homepage **Activity Monitor** is **rendered at build time** in `apps/web` by
   - Local default is `http://localhost:3000`
 
 Collector env vars are listed in `apps/collector/.env.sample` (source of truth).
+Ankiworker env vars are listed in `apps/ankiworker/.env.sample` (source of truth).
 
 ## Docker Compose (Optional)
 
@@ -155,6 +156,7 @@ Services:
 docker build -f apps/api/Dockerfile -t ghcr.io/byrmsh/portfolio-api:latest .
 docker build -f apps/web/Dockerfile -t ghcr.io/byrmsh/portfolio-web:latest .
 docker build -f apps/collector/Dockerfile -t ghcr.io/byrmsh/portfolio-collector:latest .
+docker build -f apps/ankiworker/Dockerfile -t ghcr.io/byrmsh/portfolio-ankiworker:latest .
 docker build -f apps/upworker/Dockerfile -t ghcr.io/byrmsh/portfolio-upworker:latest .
 ```
 
@@ -164,6 +166,7 @@ docker build -f apps/upworker/Dockerfile -t ghcr.io/byrmsh/portfolio-upworker:la
 docker push ghcr.io/byrmsh/portfolio-api:latest
 docker push ghcr.io/byrmsh/portfolio-web:latest
 docker push ghcr.io/byrmsh/portfolio-collector:latest
+docker push ghcr.io/byrmsh/portfolio-ankiworker:latest
 docker push ghcr.io/byrmsh/portfolio-upworker:latest
 ```
 

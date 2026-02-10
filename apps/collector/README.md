@@ -7,7 +7,6 @@ Python collectors that write personal stats into Redis (DragonflyDB) for the por
 Collector commands are defined in `apps/collector/pyproject.toml`:
 
 - `collector-github` (GitHub contributions activity, 16x7 daily grid)
-- `collector-anki` (Anki review activity, 16x7 daily grid + streak)
 - `collector-ytmusic` (placeholder; writes a stub record)
 - `collector-cluster` (placeholder; writes a stub record)
 
@@ -17,7 +16,7 @@ Collector commands are defined in `apps/collector/pyproject.toml`:
 uv venv
 uv sync
 cp .env.sample .env
-uv run collector-github
+uv run --env-file .env collector-github
 ```
 
 All required environment variables live in `.env.sample` (treat it as the source of truth).
@@ -39,6 +38,7 @@ The collectors write JSON payloads that the API/web can validate.
 
 Per collector:
 - `collector-github` (`github_activity.py`): GitHub GraphQL contributions calendar -> `stat:github:default` and `github_activity_updated`.
-- `collector-anki` (`anki_activity.py`): reads Anki `collection.anki2` revlog timestamps (or AnkiWeb-sync fallback) -> `stat:anki:default` and `anki_activity_updated`.
 - `collector-ytmusic` (`ytmusic.py`): placeholder -> `metric:ytmusic:playlist` and `ytmusic_playlist_updated`.
 - `collector-cluster` (`cluster.py`): placeholder -> `metric:cluster:status` and `cluster_status_updated`.
+
+Anki review activity was split into `apps/ankiworker` (separate dependencies and image).

@@ -65,9 +65,9 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: collector-anki
-              image: ghcr.io/byrmsh/portfolio-collector:latest
+              image: ghcr.io/byrmsh/portfolio-ankiworker:latest
               imagePullPolicy: Always
-              command: ["collector-anki"]
+              command: ["ankiworker-activity"]
               env:
                 - name: REDIS_URL
                   value: "redis://db:6379/0"

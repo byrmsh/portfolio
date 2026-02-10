@@ -5,10 +5,10 @@ RUN pip install --no-cache-dir uv==0.4.30
 WORKDIR /app
 
 COPY packages/schema-py ./packages/schema-py
-COPY apps/collector/pyproject.toml apps/collector/uv.lock apps/collector/README.md ./apps/collector/
-COPY apps/collector/*.py apps/collector/.env.sample ./apps/collector/
+COPY apps/ankiworker/pyproject.toml apps/ankiworker/uv.lock apps/ankiworker/README.md ./apps/ankiworker/
+COPY apps/ankiworker/*.py apps/ankiworker/.env.sample ./apps/ankiworker/
 
-WORKDIR /app/apps/collector
+WORKDIR /app/apps/ankiworker
 
 RUN uv venv /app/.venv && \
     . /app/.venv/bin/activate && \
@@ -16,4 +16,4 @@ RUN uv venv /app/.venv && \
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["collector-github"]
+CMD ["ankiworker-activity"]

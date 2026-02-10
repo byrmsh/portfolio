@@ -47,3 +47,15 @@ services:
       - apps/collector/.env
     depends_on:
       - redis
+
+  ankiworker:
+    build:
+      context: .
+      dockerfile: apps/ankiworker/Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_EVENTS_STREAM=events
+    env_file:
+      - apps/ankiworker/.env
+    depends_on:
+      - redis

@@ -6,6 +6,8 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 build/
+.venv/
+apps/*/.venv/
 .env
 .env.*
 !.env.sample
