@@ -26,6 +26,8 @@ YTMUSIC_PLAYLIST_ID = env.str("YTMUSIC_PLAYLIST_ID", default="")
 WEB_ORIGIN = env.str("WEB_ORIGIN", default="http://localhost:4321")
 LYRICIST_DRY_RUN = env.bool("LYRICIST_DRY_RUN", default=False)
 LYRICIST_REGENERATE_ANALYSIS = env.bool("LYRICIST_REGENERATE_ANALYSIS", default=False)
+LYRICIST_RETRY_FAILED_ANALYSIS = env.bool("LYRICIST_RETRY_FAILED_ANALYSIS", default=True)
+LYRICIST_RETRY_FAILED_LIMIT = env.int("LYRICIST_RETRY_FAILED_LIMIT", default=3)
 
 # LLM provider wiring:
 # - gemini: native Gemini API (structured output via responseSchema + responseMimeType)
@@ -279,6 +281,22 @@ def _analysis_fallback(track: Track, reason: str) -> YtMusicAnalysis:
 def _is_error_fallback(analysis: YtMusicAnalysis) -> bool:
     t = (analysis.background.tldr or "").lower()
     return "llm analysis failed:" in t or "llm output invalid:" in t
+
+
+def _raw_analysis_is_error_fallback(raw: str | bytes | None) -> bool:
+    if not raw:
+        return False
+    try:
+        s = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else str(raw)
+        payload = json.loads(s)
+        bg = payload.get("background") if isinstance(payload, dict) else None
+        tldr = (bg or {}).get("tldr") if isinstance(bg, dict) else None
+        if not isinstance(tldr, str):
+            return False
+        t = tldr.lower()
+        return "llm analysis failed:" in t or "llm output invalid:" in t
+    except Exception:
+        return False
 
 
 def _llm_instructions() -> str:
@@ -597,7 +615,7 @@ def _process_track(r, playlist_id: str, track: Track) -> None:
 
     # Analysis can be expensive and depends on external APIs. Avoid regenerating on every touch unless asked.
     existing_analysis = r.get(analysis_key)
-    if existing_analysis and not LYRICIST_REGENERATE_ANALYSIS:
+    if existing_analysis and not LYRICIST_REGENERATE_ANALYSIS and not _raw_analysis_is_error_fallback(existing_analysis):
         logger.info("lyricist.analysis.skip_existing", track_id=track.id)
     else:
         analysis = _generate_analysis(track)
@@ -629,6 +647,56 @@ def _list_playlist_tracks(playlist_id: str) -> list[Track]:
     return tracks
 
 
+def _retry_failed_recent_analyses(r) -> None:
+    if not LYRICIST_RETRY_FAILED_ANALYSIS:
+        return
+    limit = max(0, int(LYRICIST_RETRY_FAILED_LIMIT or 0))
+    if limit <= 0:
+        return
+
+    ids = r.zrevrange(RedisKeys.INDEX_LYRICS_RECENT, 0, limit - 1)
+    for raw_id in ids:
+        track_id = raw_id.decode("utf-8") if isinstance(raw_id, (bytes, bytearray)) else str(raw_id)
+        if not track_id:
+            continue
+
+        analysis_key = RedisKeys.stat_field("ytmusic", track_id, "analysis")
+        existing = r.get(analysis_key)
+        if existing and not _raw_analysis_is_error_fallback(existing):
+            continue
+
+        stat_key = RedisKeys.stat("ytmusic", track_id)
+        note_raw = r.get(stat_key)
+        if not note_raw:
+            continue
+        try:
+            note = json.loads(note_raw.decode("utf-8") if isinstance(note_raw, (bytes, bytearray)) else str(note_raw))
+        except Exception:
+            continue
+        if not isinstance(note, dict):
+            continue
+        title = note.get("title")
+        artist = note.get("artist")
+        album_art_url = note.get("albumArtUrl")
+        if not isinstance(title, str) or not isinstance(artist, str):
+            continue
+
+        track = Track(
+            id=track_id,
+            title=title,
+            artist=artist,
+            album=None,
+            album_art_url=album_art_url if isinstance(album_art_url, str) else None,
+        )
+
+        logger.info("lyricist.analysis.retry", track_id=track_id)
+        analysis = _generate_analysis(track)
+        if existing and _is_error_fallback(analysis):
+            logger.warning("lyricist.analysis.retry_failed", track_id=track_id)
+            continue
+        r.set(analysis_key, analysis.model_dump_json())
+
+
 def main() -> None:
     if not YTMUSIC_PLAYLIST_ID:
         logger.info("lyricist.no_playlist_configured")
@@ -653,6 +721,7 @@ def main() -> None:
     tracks = _list_playlist_tracks(YTMUSIC_PLAYLIST_ID)
     if not tracks:
         logger.info("lyricist.sync.empty", playlist_id=YTMUSIC_PLAYLIST_ID)
+        _retry_failed_recent_analyses(r)
         return
 
     # YT Music playlists are typically returned newest-first. Process all new tracks until we hit last_seen.
@@ -664,6 +733,7 @@ def main() -> None:
 
     if not new_tracks:
         logger.info("lyricist.sync.noop", playlist_id=YTMUSIC_PLAYLIST_ID)
+        _retry_failed_recent_analyses(r)
         return
 
     logger.info("lyricist.sync.new_tracks", count=len(new_tracks))
@@ -672,6 +742,7 @@ def main() -> None:
         logger.info("lyricist.track.process", track_id=tr.id, title=tr.title, artist=tr.artist)
         _process_track(r, YTMUSIC_PLAYLIST_ID, tr)
 
+    _retry_failed_recent_analyses(r)
     logger.info("lyricist.sync.done", processed=len(new_tracks))
 
 
