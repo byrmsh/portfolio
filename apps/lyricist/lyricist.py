@@ -36,6 +36,8 @@ LYRICIST_LLM_PROVIDER = env.str("LYRICIST_LLM_PROVIDER", default="auto")
 GEMINI_API_KEY = env.str("GEMINI_API_KEY", default="")
 GEMINI_MODEL = env.str("GEMINI_MODEL", default="gemini-1.5-flash")
 GEMINI_API_BASE = env.str("GEMINI_API_BASE", default="https://generativelanguage.googleapis.com/v1beta")
+GEMINI_USE_SEARCH = env.bool("GEMINI_USE_SEARCH", default=False)
+GEMINI_SEARCH_DYNAMIC_THRESHOLD = env.float("GEMINI_SEARCH_DYNAMIC_THRESHOLD", default=0.7)
 
 OPENAI_API_KEY = env.str("OPENAI_API_KEY", default="")
 OPENAI_MODEL = env.str("OPENAI_MODEL", default="gpt-5")
@@ -279,6 +281,8 @@ def _llm_instructions() -> str:
         "\n"
         "Hard rules:\n"
         "- You MUST NOT quote lyrics or reproduce any lyric lines (even partial lines).\n"
+        "- Vocabulary terms MUST be words/phrases that appear verbatim in the lyrics for this exact track.\n"
+        "  Do not invent idioms or 'related' phrases that are not in the lyrics.\n"
         "- Do not fabricate factual claims about the artist/song history. If unsure, keep it generic.\n"
         "- Output must be JSON only and must match the provided schema exactly (no markdown).\n"
         "\n"
@@ -288,7 +292,7 @@ def _llm_instructions() -> str:
         "  Prefer: musical arrangement, cultural/historical context (only if confident), themes/imagery,\n"
         "  language/register, and why it is interesting.\n"
         "- vocabulary: 8-12 items. Avoid trivial A1 dictionary entries unless there is a non-obvious nuance.\n"
-        "  At least 4 items must be multiword expressions or collocations.\n"
+        "  At least 4 items must be multiword expressions or collocations (and must appear in the lyrics).\n"
         "  For each item:\n"
         "  - term: German word/phrase\n"
         "  - literal: literal gloss\n"
@@ -410,6 +414,7 @@ def _gemini_generate_content(
     system: str,
     user: str,
     response_schema: dict[str, Any] | None,
+    use_search: bool,
 ) -> dict[str, Any]:
     url = f"{GEMINI_API_BASE}/models/{model}:generateContent?key={api_key}"
     body: dict[str, Any] = {
@@ -421,6 +426,18 @@ def _gemini_generate_content(
     }
     if response_schema is not None:
         body["generationConfig"]["responseSchema"] = response_schema
+    if use_search:
+        # Prefer the newer google_search tool when available; fall back to legacy retrieval.
+        if model.startswith("gemini-1.5"):
+            body["tools"] = [
+                {
+                    "google_search_retrieval": {
+                        "dynamic_retrieval_config": {"mode": "MODE_DYNAMIC", "dynamic_threshold": GEMINI_SEARCH_DYNAMIC_THRESHOLD}
+                    }
+                }
+            ]
+        else:
+            body["tools"] = [{"google_search": {}}]
 
     req = urllib.request.Request(
         url,
@@ -471,6 +488,7 @@ def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
         "- 8-12 items\n"
         "- at least 4 multiword expressions or collocations\n"
         "- each item should include 2-4 usage bullets\n"
+        "- every vocabulary term MUST appear verbatim in the lyrics for this exact track\n"
     )
 
     base_user_input = (
@@ -479,6 +497,8 @@ def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
         f"title: {track.title}\n"
         f"artist: {track.artist}\n"
         f"album: {track.album or ''}\n"
+        "If tools are available, first use web search to find the lyrics for this exact track.\n"
+        "Do not quote lyrics. Use the lyrics only to choose vocabulary terms that actually appear.\n"
         f"{schema_hint}"
         "Return JSON only."
     )
@@ -496,6 +516,7 @@ def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
                 system=instructions,
                 user=user_input,
                 response_schema=schema_mode,
+                use_search=GEMINI_USE_SEARCH,
             )
             text = _gemini_extract_text(resp)
             payload = json.loads(_strip_code_fences(text))

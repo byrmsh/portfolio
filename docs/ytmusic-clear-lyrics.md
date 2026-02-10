@@ -144,6 +144,7 @@ Secrets (K8s secret, never committed to YAML):
 - `LYRICIST_LLM_PROVIDER` (`auto|gemini|openai|none`; `auto` prefers Gemini if configured)
 - `GEMINI_API_KEY` (optional; enables LLM analysis via Gemini)
 - `GEMINI_MODEL` (optional; defaults to `gemini-1.5-flash`)
+- `GEMINI_USE_SEARCH` (optional; enables Gemini Google Search grounding if the model supports it)
 - `OPENAI_API_KEY` (optional; enables LLM analysis via OpenAI fallback)
 
 ### Outputs
@@ -203,6 +204,7 @@ kubectl create secret generic lyricist-secrets \
   --from-literal=LYRICIST_LLM_PROVIDER='gemini' \
   --from-literal=GEMINI_API_KEY='YOUR_KEY' \
   --from-literal=GEMINI_MODEL='gemini-1.5-flash' \
+  --from-literal=GEMINI_USE_SEARCH='true' \
   --from-literal=OPENAI_API_KEY='YOUR_KEY'
 ```
 
