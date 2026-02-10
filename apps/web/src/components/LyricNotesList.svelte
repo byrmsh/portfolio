@@ -22,6 +22,8 @@
   let loading = false;
   let error: string | null = null;
 
+  let sectionEl: HTMLElement | null = null;
+
   const apiOrigin = import.meta.env.PUBLIC_API_ORIGIN || '';
 
   function buildHref(page: number): string {
@@ -33,6 +35,7 @@
   }
 
   async function loadPage(page: number): Promise<void> {
+    if (loading) return;
     loading = true;
     error = null;
     try {
@@ -62,7 +65,7 @@
   }
 </script>
 
-<section class="rounded-xl border border-neutral-200 bg-white p-6">
+<section bind:this={sectionEl} class="rounded-xl border border-neutral-200 bg-white p-6" style="overflow-anchor: none;">
   <div class="flex items-baseline justify-between gap-6">
     <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">All ({data.total || data.items.length})</h2>
     <div class="flex items-center gap-2 text-xxs font-mono text-neutral-500">
@@ -125,4 +128,3 @@
     {/if}
   </div>
 </section>
-
