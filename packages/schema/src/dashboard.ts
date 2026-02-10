@@ -59,8 +59,8 @@ export const ytmusicVocabularyItemSchema = z.object({
   term: z.string().min(1),
   literal: z.string().min(1),
   meaning: z.string().min(1),
-  cefr: z.string().min(1).optional(),
-  usage: z.array(z.string().min(1)).optional(),
+  cefr: z.string().min(1).nullable().optional(),
+  usage: z.array(z.string().min(1)).nullable().optional(),
 });
 
 export const ytmusicAnalysisSchema = z.object({
@@ -68,10 +68,10 @@ export const ytmusicAnalysisSchema = z.object({
   source: z.literal("ytmusic"),
   title: z.string().min(1),
   artist: z.string().min(1),
-  album: z.string().min(1).optional(),
+  album: z.string().min(1).nullable().optional(),
   albumArtUrl: z.string().url().nullable().optional(),
-  trackUrl: z.string().url().optional(),
-  lyricsUrl: z.string().url().optional(),
+  trackUrl: z.string().url().nullable().optional(),
+  lyricsUrl: z.string().url().nullable().optional(),
   background: ytmusicBackgroundSchema,
   vocabulary: z.array(ytmusicVocabularyItemSchema),
   updatedAt: isoDatetimeSchema,

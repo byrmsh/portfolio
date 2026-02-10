@@ -161,8 +161,11 @@ async function readYtMusicAnalysis(trackId: string): Promise<YtMusicAnalysis | n
   const key = redisKeys.statField('ytmusic', trackId, 'analysis');
   const raw = await redis.get(key);
   if (!raw) return null;
-  const parsed = ytmusicAnalysisSchema.parse(JSON.parse(raw) as unknown);
-  return parsed;
+  try {
+    return ytmusicAnalysisSchema.parse(JSON.parse(raw) as unknown);
+  } catch {
+    return null;
+  }
 }
 
 app.get('/api/ytmusic/saved/latest', async (c) => {
