@@ -14,11 +14,13 @@ RUN pnpm install --frozen-lockfile --filter web...
 # 2. Build Stage
 FROM base AS builder
 WORKDIR /app
+RUN apk add --no-cache git
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY . .
 # Build Astro SSR (Output: /apps/web/dist)
 RUN pnpm --filter web build
+RUN node ./apps/web/scripts/generate-git-meta.mjs
 
 # 3. Node Server Runtime
 FROM base AS runner

@@ -1,6 +1,7 @@
 ---
 import ArrowUpRight from '@lucide/astro/icons/arrow-up-right';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import type { SupportedLocale } from '../i18n';
 
 interface Props {
@@ -23,8 +24,15 @@ type ParsedCommit = {
   breaking: boolean;
 };
 
+type GitMetadata = {
+  commits: Commit[];
+  totalChanges: number;
+  repoUrl: string | null;
+};
+
 const { t, locale } = Astro.props;
 const RECENT_LIMIT = 3;
+const GIT_METADATA_FILE = process.env.GIT_METADATA_FILE ?? './apps/web/dist/git-meta.json';
 
 function runGit(args: string[]): string {
   return execFileSync('git', args, { encoding: 'utf8' }).trim();
@@ -62,6 +70,22 @@ function getTotalCommitCount(): number {
     return Number.isFinite(value) && value >= 0 ? value : 0;
   } catch {
     return 0;
+  }
+}
+
+function getGitMetadataFromFile(): GitMetadata | null {
+  try {
+    const raw = readFileSync(GIT_METADATA_FILE, 'utf8');
+    const parsed = JSON.parse(raw) as Partial<GitMetadata>;
+    const commits = Array.isArray(parsed.commits) ? parsed.commits : [];
+    const totalChanges =
+      typeof parsed.totalChanges === 'number' && parsed.totalChanges >= 0
+        ? parsed.totalChanges
+        : 0;
+    const repoUrl = typeof parsed.repoUrl === 'string' ? parsed.repoUrl : null;
+    return { commits, totalChanges, repoUrl };
+  } catch {
+    return null;
   }
 }
 
@@ -139,9 +163,10 @@ function labelForType(type: string): string {
   return type.toUpperCase();
 }
 
-const commits = getRecentCommits();
-const totalChanges = getTotalCommitCount();
-const repoUrl = getRepoUrlFromOrigin();
+const metadata = getGitMetadataFromFile();
+const commits = metadata?.commits.length ? metadata.commits : getRecentCommits();
+const totalChanges = metadata ? metadata.totalChanges : getTotalCommitCount();
+const repoUrl = metadata?.repoUrl ?? getRepoUrlFromOrigin();
 const dateFormatter = new Intl.DateTimeFormat(locale, {
   year: 'numeric',
   month: 'short',

@@ -133,6 +133,18 @@ Services:
 
 ### Local Minikube (Recommended for this repo)
 
+`deploy/k8s/04-web.yaml` uses `image: portfolio-web:dev`, so your local build must use the same tag unless you change the manifest.
+
+Quick commands:
+
+```bash
+# First-time/full local deploy (build all images, load, apply, wait)
+pnpm k8s:local:apply
+
+# Fast web-only update loop (build web image, load, restart, wait)
+pnpm k8s:local:web
+```
+
 1. Build local images:
 
 ```bash
