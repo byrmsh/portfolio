@@ -21,7 +21,10 @@ interface Props {
 const { t, locale } = Astro.props;
 
 const apiOrigin =
-  import.meta.env.API_ORIGIN ?? import.meta.env.PUBLIC_API_ORIGIN ?? 'http://localhost:3000';
+  process.env.API_ORIGIN ??
+  import.meta.env.API_ORIGIN ??
+  import.meta.env.PUBLIC_API_ORIGIN ??
+  'http://localhost:3000';
 
 let saved: SavedLyricNote | null = null;
 try {

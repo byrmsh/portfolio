@@ -131,6 +131,95 @@ Services:
 
 ## Deployment Workflow (Manual GitOps)
 
+### Local Minikube (Recommended for this repo)
+
+1. Build local images:
+
+```bash
+docker build -f apps/api/Dockerfile -t portfolio-api:dev .
+docker build -f apps/web/Dockerfile -t portfolio-web:dev .
+docker build -f apps/collector/Dockerfile -t portfolio-collector:dev .
+docker build -f apps/ankiworker/Dockerfile -t portfolio-ankiworker:dev .
+docker build -f apps/lyricist/Dockerfile -t portfolio-lyricist:dev .
+```
+
+2. Load images into Minikube:
+
+```bash
+minikube image load portfolio-api:dev
+minikube image load portfolio-web:dev
+minikube image load portfolio-collector:dev
+minikube image load portfolio-ankiworker:dev
+minikube image load portfolio-lyricist:dev
+```
+
+3. Create/update secrets from local `.env` files (no values in YAML):
+
+```bash
+python3 - <<'PY'
+from pathlib import Path
+
+def normalize_env(src: str, dst: str) -> None:
+    out = []
+    for raw in Path(src).read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export "):].strip()
+        if "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k = k.strip()
+        v = v.strip()
+        if len(v) >= 2 and ((v[0] == '"' and v[-1] == '"') or (v[0] == "'" and v[-1] == "'")):
+            v = v[1:-1]
+        out.append(f"{k}={v}")
+    Path(dst).write_text("\n".join(out) + ("\n" if out else ""))
+
+normalize_env("apps/collector/.env", "/tmp/collector.k8s.env")
+normalize_env("apps/lyricist/.env", "/tmp/lyricist.k8s.env")
+PY
+
+kubectl -n portfolio create secret generic collector-secrets \
+  --from-env-file=/tmp/collector.k8s.env \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n portfolio create secret generic lyricist-secrets \
+  --from-env-file=/tmp/lyricist.k8s.env \
+  --dry-run=client -o yaml | kubectl apply -f -
+rm -f /tmp/collector.k8s.env /tmp/lyricist.k8s.env
+```
+
+4. Apply manifests:
+
+```bash
+kubectl apply -f deploy/k8s/
+```
+
+5. Check rollout:
+
+```bash
+kubectl -n portfolio rollout status deploy/db-deployment
+kubectl -n portfolio rollout status deploy/api-deployment
+kubectl -n portfolio rollout status deploy/web-deployment
+```
+
+6. Trigger CronJobs manually (while `suspend: true`):
+
+```bash
+ts=$(date +%s)
+for cj in collector-anki-cronjob collector-cluster-cronjob collector-github-cronjob lyricist-cronjob; do
+  kubectl -n portfolio create job --from=cronjob/$cj ${cj/-cronjob/}-manual-$ts
+done
+```
+
+7. Optional local access:
+
+```bash
+kubectl -n portfolio port-forward svc/api-service 3000:3000
+kubectl -n portfolio port-forward svc/web-service 8080:80
+```
+
 1. Build images:
 
 ```bash
@@ -160,5 +249,6 @@ kubectl apply -f deploy/k8s/
 4. Restart (if needed):
 
 ```bash
-kubectl rollout restart deployment/portfolio-api -n portfolio
+kubectl -n portfolio rollout restart deployment/api-deployment
+kubectl -n portfolio rollout restart deployment/web-deployment
 ```

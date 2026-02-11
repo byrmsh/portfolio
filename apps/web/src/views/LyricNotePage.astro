@@ -18,7 +18,10 @@ const locale = getLocaleFromUrl(url);
 const t = getTranslator(locale);
 
 const apiOrigin =
-  import.meta.env.API_ORIGIN ?? import.meta.env.PUBLIC_API_ORIGIN ?? 'http://localhost:3000';
+  process.env.API_ORIGIN ??
+  import.meta.env.API_ORIGIN ??
+  import.meta.env.PUBLIC_API_ORIGIN ??
+  'http://localhost:3000';
 
 let analysis: YtMusicAnalysis | null = null;
 let error: string | null = null;

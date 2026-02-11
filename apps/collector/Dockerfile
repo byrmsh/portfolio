@@ -11,10 +11,8 @@ COPY apps/collector/*.py apps/collector/.env.sample ./apps/collector/
 
 WORKDIR /app/apps/collector
 
-RUN uv venv /app/.venv && \
-    . /app/.venv/bin/activate && \
-    uv sync --frozen
+RUN uv sync --frozen
 
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/apps/collector/.venv/bin:$PATH"
 
 CMD ["collector-github"]

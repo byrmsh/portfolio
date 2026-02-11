@@ -11,10 +11,8 @@ COPY apps/ankiworker/*.py apps/ankiworker/.env.sample ./apps/ankiworker/
 
 WORKDIR /app/apps/ankiworker
 
-RUN uv venv /app/.venv && \
-    . /app/.venv/bin/activate && \
-    uv sync --frozen
+RUN uv sync --frozen
 
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/apps/ankiworker/.venv/bin:$PATH"
 
 CMD ["ankiworker-activity"]

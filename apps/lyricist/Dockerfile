@@ -1,15 +1,19 @@
-FROM python:3.12-slim
-
-WORKDIR /app
+FROM python:3.12-slim AS runtime
 
 RUN pip install --no-cache-dir uv==0.10.0
 
-COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev
+WORKDIR /app
 
-COPY lyricist.py schema.py README.md ./
+COPY packages/schema-py ./packages/schema-py
+COPY packages/common-py ./packages/common-py
+COPY apps/lyricist/pyproject.toml apps/lyricist/uv.lock apps/lyricist/README.md ./apps/lyricist/
+COPY apps/lyricist/*.py ./apps/lyricist/
 
+WORKDIR /app/apps/lyricist
+
+RUN uv sync --frozen
+
+ENV PATH="/app/apps/lyricist/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
 CMD ["lyricist"]
-

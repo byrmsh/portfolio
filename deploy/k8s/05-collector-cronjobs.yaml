@@ -1,13 +1,14 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: collector-github-cron
+  name: collector-github-cronjob
   namespace: portfolio
   labels:
     app: portfolio
     component: collector
 spec:
   schedule: "15 3 * * *"
+  suspend: true
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
@@ -22,35 +23,36 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: collector-github
-              image: ghcr.io/byrmsh/portfolio-collector:latest
-              imagePullPolicy: Always
-              command: ["collector-github"]
+              image: portfolio-collector:dev
+              imagePullPolicy: IfNotPresent
+              command: ["python", "github_activity.py"]
               env:
                 - name: REDIS_URL
-                  value: "redis://db:6379/0"
+                  value: redis://db-service:6379/0
                 - name: REDIS_EVENTS_STREAM
-                  value: "events"
+                  value: events
               envFrom:
                 - secretRef:
                     name: collector-secrets
               resources:
                 requests:
-                  memory: "128Mi"
-                  cpu: "100m"
+                  memory: 128Mi
+                  cpu: 100m
                 limits:
-                  memory: "256Mi"
-                  cpu: "500m"
+                  memory: 256Mi
+                  cpu: 500m
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: collector-anki-cron
+  name: collector-anki-cronjob
   namespace: portfolio
   labels:
     app: portfolio
     component: collector
 spec:
   schedule: "5 * * * *"
+  suspend: true
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
@@ -65,35 +67,36 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: collector-anki
-              image: ghcr.io/byrmsh/portfolio-ankiworker:latest
-              imagePullPolicy: Always
-              command: ["ankiworker-activity"]
+              image: portfolio-ankiworker:dev
+              imagePullPolicy: IfNotPresent
+              command: ["python", "anki_activity.py"]
               env:
                 - name: REDIS_URL
-                  value: "redis://db:6379/0"
+                  value: redis://db-service:6379/0
                 - name: REDIS_EVENTS_STREAM
-                  value: "events"
+                  value: events
               envFrom:
                 - secretRef:
                     name: collector-secrets
               resources:
                 requests:
-                  memory: "128Mi"
-                  cpu: "100m"
+                  memory: 128Mi
+                  cpu: 100m
                 limits:
-                  memory: "256Mi"
-                  cpu: "500m"
+                  memory: 256Mi
+                  cpu: 500m
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: collector-cluster-cron
+  name: collector-cluster-cronjob
   namespace: portfolio
   labels:
     app: portfolio
     component: collector
 spec:
   schedule: "*/10 * * * *"
+  suspend: true
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
@@ -108,21 +111,21 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: collector-cluster
-              image: ghcr.io/byrmsh/portfolio-collector:latest
-              imagePullPolicy: Always
-              command: ["collector-cluster"]
+              image: portfolio-collector:dev
+              imagePullPolicy: IfNotPresent
+              command: ["python", "cluster.py"]
               env:
                 - name: REDIS_URL
-                  value: "redis://db:6379/0"
+                  value: redis://db-service:6379/0
                 - name: REDIS_EVENTS_STREAM
-                  value: "events"
+                  value: events
               envFrom:
                 - secretRef:
                     name: collector-secrets
               resources:
                 requests:
-                  memory: "128Mi"
-                  cpu: "100m"
+                  memory: 128Mi
+                  cpu: 100m
                 limits:
-                  memory: "256Mi"
-                  cpu: "500m"
+                  memory: 256Mi
+                  cpu: 500m

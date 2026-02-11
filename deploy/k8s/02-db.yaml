@@ -1,13 +1,27 @@
-apiVersion: apps/v1
-kind: StatefulSet
+apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
-  name: db-statefulset
+  name: db-pvc
   namespace: portfolio
   labels:
     app: portfolio
     component: db
 spec:
-  serviceName: "db"
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deployment
+  namespace: portfolio
+  labels:
+    app: portfolio
+    component: db
+spec:
   replicas: 1
   selector:
     matchLabels:
@@ -20,51 +34,52 @@ spec:
         component: db
     spec:
       containers:
-      - name: dragonfly
-        image: docker.dragonflydb.io/dragonflydb/dragonfly
-        ports:
-        - containerPort: 6379
-          name: redis
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "500m"
-        livenessProbe:
-          tcpSocket:
-            port: 6379
-          initialDelaySeconds: 5
-        readinessProbe:
-          tcpSocket:
-            port: 6379
-          initialDelaySeconds: 3
-        volumeMounts:
+        - name: dragonfly
+          image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: db-storage
+              mountPath: /data
+      volumes:
         - name: db-storage
-          mountPath: /data
-  volumeClaimTemplates:
-  - metadata:
-      name: db-storage
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: 1Gi
+          persistentVolumeClaim:
+            claimName: db-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: db
+  name: db-service
   namespace: portfolio
   labels:
     app: portfolio
     component: db
 spec:
-  clusterIP: None
-  ports:
-  - port: 6379
-    targetPort: 6379
+  type: ClusterIP
   selector:
     app: portfolio
     component: db
+  ports:
+    - name: redis
+      protocol: TCP
+      port: 6379
+      targetPort: redis
