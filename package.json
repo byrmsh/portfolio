@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "dev": "./scripts/dev-web-k8s.sh",
+    "dev:web:k8s": "./scripts/dev-web-k8s.sh",
+    "dev:web:local": "pnpm -C apps/web dev",
     "format": "prettier --write \"apps/web/**/*\" \"apps/api/**/*\"",
     "format:check": "prettier --check \"apps/web/**/*\" \"apps/api/**/*\"",
     "lint": "pnpm lint:ts && pnpm lint:web && pnpm lint:py",
@@ -10,6 +13,7 @@
     "lint:web": "pnpm -C apps/web check",
     "lint:py": "XDG_DATA_HOME=/tmp/.xdg XDG_CACHE_HOME=/tmp/.xdg-cache UV_CACHE_DIR=/tmp/.uv-cache uvx ruff check apps/collector apps/ankiworker apps/upworker apps/lyricist packages/schema-py/src",
     "k8s:local:apply": "./scripts/k8s-local-apply.sh",
+    "k8s:local:helm": "./scripts/k8s-local-apply.sh",
     "k8s:local:web": "./scripts/k8s-local-web-update.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: portfolio
+description: Helm chart for the portfolio stack (db, api, web, and collectors)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

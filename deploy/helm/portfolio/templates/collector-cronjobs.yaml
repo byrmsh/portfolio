@@ -1,0 +1,44 @@
+{{- if .Values.collectorCronJobs.enabled }}
+{{- range $job := .Values.collectorCronJobs.jobs }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $job.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: {{ include "portfolio.appLabel" $ }}
+    component: {{ $job.component }}
+spec:
+  schedule: {{ $job.schedule | quote }}
+  suspend: {{ $job.suspend }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: {{ include "portfolio.appLabel" $ }}
+            component: {{ $job.component }}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: {{ $job.name | trimSuffix "-cronjob" }}
+              image: "{{ $job.image.repository }}:{{ $job.image.tag }}"
+              imagePullPolicy: {{ $job.image.pullPolicy }}
+              command:
+                {{- toYaml $job.command | nindent 16 }}
+              env:
+                - name: REDIS_URL
+                  value: {{ $.Values.collectorCronJobs.sharedEnv.redisUrl | quote }}
+                - name: REDIS_EVENTS_STREAM
+                  value: {{ $.Values.collectorCronJobs.sharedEnv.eventsStream | quote }}
+              envFrom:
+                - secretRef:
+                    name: {{ $job.secretRef }}
+              resources:
+                {{- toYaml $.Values.collectorCronJobs.resources | nindent 16 }}
+---
+{{- end }}
+{{- end }}

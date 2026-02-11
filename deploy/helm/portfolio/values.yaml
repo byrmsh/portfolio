@@ -1,0 +1,114 @@
+global:
+  appLabel: portfolio
+
+db:
+  pvc:
+    storage: 1Gi
+  image:
+    repository: docker.dragonflydb.io/dragonflydb/dragonfly
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+api:
+  replicas: 1
+  image:
+    repository: portfolio-api
+    tag: dev
+    pullPolicy: IfNotPresent
+  env:
+    redisUrl: redis://db-service:6379/0
+    port: "3000"
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 500m
+
+web:
+  replicas: 1
+  image:
+    repository: portfolio-web
+    tag: dev
+    pullPolicy: IfNotPresent
+  env:
+    host: 0.0.0.0
+    port: "8080"
+    apiOrigin: http://api-service:3000
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 500m
+
+collectorCronJobs:
+  enabled: true
+  jobs:
+    - name: collector-github-cronjob
+      component: collector
+      schedule: "15 3 * * *"
+      suspend: true
+      image:
+        repository: portfolio-collector
+        tag: dev
+        pullPolicy: IfNotPresent
+      command:
+        - python
+        - github_activity.py
+      secretRef: collector-secrets
+    - name: collector-anki-cronjob
+      component: collector
+      schedule: "5 * * * *"
+      suspend: true
+      image:
+        repository: portfolio-ankiworker
+        tag: dev
+        pullPolicy: IfNotPresent
+      command:
+        - python
+        - anki_activity.py
+      secretRef: collector-secrets
+    - name: collector-cluster-cronjob
+      component: collector
+      schedule: "*/10 * * * *"
+      suspend: true
+      image:
+        repository: portfolio-collector
+        tag: dev
+        pullPolicy: IfNotPresent
+      command:
+        - python
+        - cluster.py
+      secretRef: collector-secrets
+    - name: lyricist-cronjob
+      component: collector
+      schedule: "10 5 * * *"
+      suspend: true
+      image:
+        repository: portfolio-lyricist
+        tag: dev
+        pullPolicy: IfNotPresent
+      command:
+        - python
+        - lyricist.py
+      secretRef: lyricist-secrets
+  sharedEnv:
+    redisUrl: redis://db-service:6379/0
+    eventsStream: events
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 500m

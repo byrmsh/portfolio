@@ -44,6 +44,18 @@ livenessProbe:
   initialDelaySeconds: 5
 ```
 
+### 4.1 Helm-First Deployment
+
+- Preferred deployment source is `deploy/helm/portfolio`.
+- Keep `deploy/k8s` raw manifests usable as fallback/reference.
+- When changing workloads, update Helm and any mirrored raw manifests/docs in the same task.
+
+### 4.2 Default Local Dev Workflow
+
+- Default loop: run web on host and connect to minikube API via port-forward.
+- Command: `pnpm dev` (root).
+- Bootstrap/update local cluster workloads with: `pnpm k8s:local:apply`.
+
 ---
 
 ## 5. Secret Management

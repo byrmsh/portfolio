@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "portfolio.appLabel" . }}
+    component: db
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.db.pvc.storage }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deployment
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "portfolio.appLabel" . }}
+    component: db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "portfolio.appLabel" . }}
+      component: db
+  template:
+    metadata:
+      labels:
+        app: {{ include "portfolio.appLabel" . }}
+        component: db
+    spec:
+      containers:
+        - name: dragonfly
+          image: "{{ .Values.db.image.repository }}:{{ .Values.db.image.tag }}"
+          imagePullPolicy: {{ .Values.db.image.pullPolicy }}
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:
+            {{- toYaml .Values.db.resources | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: db-storage
+              mountPath: /data
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "portfolio.appLabel" . }}
+    component: db
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "portfolio.appLabel" . }}
+    component: db
+  ports:
+    - name: redis
+      protocol: TCP
+      port: 6379
+      targetPort: redis

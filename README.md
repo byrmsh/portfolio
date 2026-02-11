@@ -22,12 +22,8 @@ This is a polyglot monorepo containing application code and deployment manifests
 │   ├── collector/          # Personal data collectors (Python)
 │   └── upworker/           # Upwork ingestion worker (Python)
 ├── deploy/
-│   └── k8s/                # Kubernetes Manifests (GitOps state)
-│       ├── 01-namespace.yaml
-│       ├── 02-db.yaml
-│       ├── 03-api.yaml
-│       ├── 04-web.yaml
-│       └── 05-collector-cronjobs.yaml
+│   ├── helm/portfolio/     # Helm chart (recommended deployment path)
+│   └── k8s/                # Raw Kubernetes manifests (fallback/reference)
 ├── packages/               # Reserved for shared UI/Types
 └── AGENTS.md               # Coding agent rules
 ```
@@ -54,7 +50,7 @@ Containerization:
 
 ## TODO / Roadmap
 
-- [ ] Harden local-dev + preview: one command to boot web/api/db/workers and a single env var source-of-truth for origins.
+- [x] Harden local-dev + preview: one command for web-on-host + API-in-minikube loop (`pnpm dev`).
 - [ ] Formalize Redis schemas + migrations for “content” records (jobs, writing, lyric notes) so changes are forwards-compatible.
 - [ ] Add a minimal admin workflow for content curation (approve/hide/pin items; fix metadata) without hand-editing Redis keys.
 - [ ] Improve the lyric note page content process: tighten the workflow + system prompt so notes are consistently useful (better background sections, better vocabulary “usage” guidance, fewer generic filler entries).
@@ -71,14 +67,23 @@ Containerization:
 pnpm install
 ```
 
-2. Start services:
+2. Start the default dev workflow (web on host, API in Minikube via port-forward):
 
 ```bash
-pnpm --filter api dev
-pnpm --filter web dev
+pnpm dev
 ```
 
-3. Optional: run DragonflyDB locally:
+This command:
+- starts `kubectl port-forward svc/api-service 3000:3000` in `portfolio`
+- runs `apps/web` dev server with `API_ORIGIN=http://127.0.0.1:3000`
+
+3. Bootstrap or refresh local Minikube workloads when needed:
+
+```bash
+pnpm k8s:local:apply
+```
+
+4. Optional: run DragonflyDB locally (non-k8s mode):
 
 ```bash
 docker run -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly
@@ -129,43 +134,21 @@ Services:
 - `upworker`: Upwork ingestion worker
 - `collector`: personal data collectors
 
-## Deployment Workflow (Manual GitOps)
+## Deployment Workflow
 
-### Local Minikube (Recommended for this repo)
-
-`deploy/k8s/04-web.yaml` uses `image: portfolio-web:dev`, so your local build must use the same tag unless you change the manifest.
+### Local Minikube + Helm (Recommended)
 
 Quick commands:
 
 ```bash
-# First-time/full local deploy (build all images, load, apply, wait)
+# Full local deploy/update: build images, load minikube cache, helm upgrade/install, wait for rollouts.
 pnpm k8s:local:apply
 
-# Fast web-only update loop (build web image, load, restart, wait)
+# Fast web-only update loop.
 pnpm k8s:local:web
 ```
 
-1. Build local images:
-
-```bash
-docker build -f apps/api/Dockerfile -t portfolio-api:dev .
-docker build -f apps/web/Dockerfile -t portfolio-web:dev .
-docker build -f apps/collector/Dockerfile -t portfolio-collector:dev .
-docker build -f apps/ankiworker/Dockerfile -t portfolio-ankiworker:dev .
-docker build -f apps/lyricist/Dockerfile -t portfolio-lyricist:dev .
-```
-
-2. Load images into Minikube:
-
-```bash
-minikube image load portfolio-api:dev
-minikube image load portfolio-web:dev
-minikube image load portfolio-collector:dev
-minikube image load portfolio-ankiworker:dev
-minikube image load portfolio-lyricist:dev
-```
-
-3. Create/update secrets from local `.env` files (no values in YAML):
+Create/update secrets from local `.env` files (no values in YAML):
 
 ```bash
 python3 - <<'PY'
@@ -202,13 +185,15 @@ kubectl -n portfolio create secret generic lyricist-secrets \
 rm -f /tmp/collector.k8s.env /tmp/lyricist.k8s.env
 ```
 
-4. Apply manifests:
+Deploy manually with Helm (equivalent to script):
 
 ```bash
-kubectl apply -f deploy/k8s/
+helm upgrade --install portfolio ./deploy/helm/portfolio \
+  --namespace portfolio \
+  --create-namespace
 ```
 
-5. Check rollout:
+Check rollout:
 
 ```bash
 kubectl -n portfolio rollout status deploy/db-deployment
@@ -216,7 +201,7 @@ kubectl -n portfolio rollout status deploy/api-deployment
 kubectl -n portfolio rollout status deploy/web-deployment
 ```
 
-6. Trigger CronJobs manually (while `suspend: true`):
+Trigger CronJobs manually (while `suspend: true`):
 
 ```bash
 ts=$(date +%s)
@@ -225,14 +210,16 @@ for cj in collector-anki-cronjob collector-cluster-cronjob collector-github-cron
 done
 ```
 
-7. Optional local access:
+Optional local access:
 
 ```bash
 kubectl -n portfolio port-forward svc/api-service 3000:3000
 kubectl -n portfolio port-forward svc/web-service 8080:80
 ```
 
-1. Build images:
+### Production (Manual)
+
+Build images:
 
 ```bash
 docker build -f apps/api/Dockerfile -t ghcr.io/byrmsh/portfolio-api:latest .
@@ -242,7 +229,7 @@ docker build -f apps/ankiworker/Dockerfile -t ghcr.io/byrmsh/portfolio-ankiworke
 docker build -f apps/upworker/Dockerfile -t ghcr.io/byrmsh/portfolio-upworker:latest .
 ```
 
-2. Push images:
+Push images:
 
 ```bash
 docker push ghcr.io/byrmsh/portfolio-api:latest
@@ -252,15 +239,19 @@ docker push ghcr.io/byrmsh/portfolio-ankiworker:latest
 docker push ghcr.io/byrmsh/portfolio-upworker:latest
 ```
 
-3. Apply manifests:
+Deploy with Helm using prod values:
+
+```bash
+helm upgrade --install portfolio ./deploy/helm/portfolio \
+  --namespace portfolio \
+  --create-namespace \
+  -f deploy/helm/portfolio/values-prod.yaml
+```
+
+### Raw YAML Fallback
+
+Raw manifests are kept in `deploy/k8s/` as a fallback:
 
 ```bash
 kubectl apply -f deploy/k8s/
-```
-
-4. Restart (if needed):
-
-```bash
-kubectl -n portfolio rollout restart deployment/api-deployment
-kubectl -n portfolio rollout restart deployment/web-deployment
 ```

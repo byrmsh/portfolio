@@ -1,0 +1,62 @@
+api:
+  image:
+    repository: ghcr.io/byrmsh/portfolio-api
+    tag: latest
+    pullPolicy: Always
+
+web:
+  image:
+    repository: ghcr.io/byrmsh/portfolio-web
+    tag: latest
+    pullPolicy: Always
+
+collectorCronJobs:
+  jobs:
+    - name: collector-github-cronjob
+      component: collector
+      schedule: "15 3 * * *"
+      suspend: true
+      image:
+        repository: ghcr.io/byrmsh/portfolio-collector
+        tag: latest
+        pullPolicy: Always
+      command:
+        - python
+        - github_activity.py
+      secretRef: collector-secrets
+    - name: collector-anki-cronjob
+      component: collector
+      schedule: "5 * * * *"
+      suspend: true
+      image:
+        repository: ghcr.io/byrmsh/portfolio-ankiworker
+        tag: latest
+        pullPolicy: Always
+      command:
+        - python
+        - anki_activity.py
+      secretRef: collector-secrets
+    - name: collector-cluster-cronjob
+      component: collector
+      schedule: "*/10 * * * *"
+      suspend: true
+      image:
+        repository: ghcr.io/byrmsh/portfolio-collector
+        tag: latest
+        pullPolicy: Always
+      command:
+        - python
+        - cluster.py
+      secretRef: collector-secrets
+    - name: lyricist-cronjob
+      component: collector
+      schedule: "10 5 * * *"
+      suspend: true
+      image:
+        repository: ghcr.io/byrmsh/portfolio-lyricist
+        tag: latest
+        pullPolicy: Always
+      command:
+        - python
+        - lyricist.py
+      secretRef: lyricist-secrets
