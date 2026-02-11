@@ -32,7 +32,7 @@ This file defines constraints and operating rules for coding agents. Project arc
 
 - Namespace: `portfolio`.
 - Naming: `app-name-resource` (e.g., `api-deployment`, `web-service`).
-- Mandatory labels: `app: portfolio`, `component: [api|web|db|collector|upworker]`.
+- Mandatory labels: `app: portfolio`, `component: [api|web|db|collector|upworker|lyricist]`.
 - Resources: always define requests/limits (start low: 128Mi RAM).
 - Probes:
 

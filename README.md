@@ -20,6 +20,8 @@ This is a polyglot monorepo containing application code and deployment manifests
 │   ├── web/                # Frontend (Astro 5 + Svelte 5)
 │   ├── api/                # Backend (Hono)
 │   ├── collector/          # Personal data collectors (Python)
+│   ├── ankiworker/         # Anki activity worker (Python)
+│   ├── lyricist/           # YT Music lyric-note worker (Python)
 │   └── upworker/           # Upwork ingestion worker (Python)
 ├── deploy/
 │   ├── helm/portfolio/     # Helm chart (recommended deployment path)
@@ -67,7 +69,13 @@ Containerization:
 pnpm install
 ```
 
-2. Start the default dev workflow (web on host, API in Minikube via port-forward):
+2. Bootstrap/refresh local Minikube workloads:
+
+```bash
+pnpm k8s:local:apply
+```
+
+3. Start the default dev workflow (web on host, API in Minikube via port-forward):
 
 ```bash
 pnpm dev
@@ -76,12 +84,6 @@ pnpm dev
 This command:
 - starts `kubectl port-forward svc/api-service 3000:3000` in `portfolio`
 - runs `apps/web` dev server with `API_ORIGIN=http://127.0.0.1:3000`
-
-3. Bootstrap or refresh local Minikube workloads when needed:
-
-```bash
-pnpm k8s:local:apply
-```
 
 4. Optional: run DragonflyDB locally (non-k8s mode):
 
@@ -226,7 +228,7 @@ docker build -f apps/api/Dockerfile -t ghcr.io/byrmsh/portfolio-api:latest .
 docker build -f apps/web/Dockerfile -t ghcr.io/byrmsh/portfolio-web:latest .
 docker build -f apps/collector/Dockerfile -t ghcr.io/byrmsh/portfolio-collector:latest .
 docker build -f apps/ankiworker/Dockerfile -t ghcr.io/byrmsh/portfolio-ankiworker:latest .
-docker build -f apps/upworker/Dockerfile -t ghcr.io/byrmsh/portfolio-upworker:latest .
+docker build -f apps/lyricist/Dockerfile -t ghcr.io/byrmsh/portfolio-lyricist:latest .
 ```
 
 Push images:
@@ -236,7 +238,7 @@ docker push ghcr.io/byrmsh/portfolio-api:latest
 docker push ghcr.io/byrmsh/portfolio-web:latest
 docker push ghcr.io/byrmsh/portfolio-collector:latest
 docker push ghcr.io/byrmsh/portfolio-ankiworker:latest
-docker push ghcr.io/byrmsh/portfolio-upworker:latest
+docker push ghcr.io/byrmsh/portfolio-lyricist:latest
 ```
 
 Deploy with Helm using prod values:

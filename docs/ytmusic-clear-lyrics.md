@@ -1,8 +1,8 @@
 # YT Music: Clear Lyrics + Saved Lyric Notes
 
-**Status:** Draft / Planned (updated 2026-02-10)
+**Status:** Implemented baseline, iterating (updated 2026-02-11)
 **Components:**
-- Worker (new): `apps/lyricist` (Python + uv, CronJob)
+- Worker: `apps/lyricist` (Python + uv, CronJob)
 - API: `apps/api` (Hono + ioredis)
 - Web: `apps/web` (Astro + Svelte islands)
 
@@ -183,9 +183,12 @@ MVP:
 No `/music` route needed for MVP.
 If we later add a dedicated route (e.g. `/lyrics/:trackId`), it should render only the analysis record plus outbound links to the lyric source.
 
-## 7) Kubernetes
+## 7) Kubernetes / Helm
 
-Add a new manifest:
+Primary deployment path:
+- Helm chart: `deploy/helm/portfolio` (`collectorCronJobs.jobs` includes `lyricist-cronjob`)
+
+Fallback/raw manifest:
 - `deploy/k8s/06-lyricist-cronjob.yaml`
 
 Constraints (from `AGENTS.md`):
@@ -219,4 +222,4 @@ Note: `YTMUSIC_AUTH_JSON` is usually multiline; prefer `--from-file` when we wir
    - store cursor at `stat:ytmusic:cursor`
 3. API: choose Option A or B and implement it in `apps/api`
 4. Web: make `SavedLyricsCard` dynamic
-5. K8s: add CronJob manifest + secret creation command in this doc
+5. K8s/Helm: keep `lyricist-cronjob` wired in Helm values/templates and maintain raw manifest fallback
