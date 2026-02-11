@@ -154,7 +154,7 @@
         {loading ? '…' : labels.prev}
       </a>
     {:else}
-      <span />
+      <span></span>
     {/if}
 
     {#if data.page < data.totalPages}
@@ -167,7 +167,7 @@
         {loading ? '…' : labels.next}
       </a>
     {:else}
-      <span />
+      <span></span>
     {/if}
   </div>
 </section>
