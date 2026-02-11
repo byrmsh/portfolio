@@ -80,6 +80,15 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       serviceUpworker: 'Scraper Active',
       serviceDb: 'Redis-compatible',
     },
+    gitCommits: {
+      title: 'Latest Updates',
+      totalChanges: 'TOTAL CHANGES: {value}',
+      author: 'AUTHOR',
+      date: 'DATE',
+      hash: 'HASH',
+      openCommit: 'Open commit {hash}',
+      empty: 'No commit history available.',
+    },
     footer: {
       source: 'Source',
       rss: 'RSS',
@@ -187,6 +196,15 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       serviceUpworker: 'Scraper aktiv',
       serviceDb: 'Redis-kompatibel',
     },
+    gitCommits: {
+      title: 'Neueste Updates',
+      totalChanges: 'GESAMTANDERUNGEN: {value}',
+      author: 'AUTOR',
+      date: 'DATUM',
+      hash: 'HASH',
+      openCommit: 'Commit {hash} offnen',
+      empty: 'Keine Commit-Historie verfügbar.',
+    },
     footer: {
       source: 'Quellcode',
       rss: 'RSS',
@@ -293,6 +311,15 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       serviceCollector: 'Python Worker',
       serviceUpworker: 'Scraper aktif',
       serviceDb: 'Redis uyumlu',
+    },
+    gitCommits: {
+      title: 'Son Guncellemeler',
+      totalChanges: 'TOPLAM DEGISIKLIK: {value}',
+      author: 'YAZAR',
+      date: 'TARIH',
+      hash: 'HASH',
+      openCommit: '{hash} commitini ac',
+      empty: 'Commit gecmisi kullanilamiyor.',
     },
     footer: {
       source: 'Kaynak',

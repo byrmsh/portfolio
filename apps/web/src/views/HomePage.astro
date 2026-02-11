@@ -8,6 +8,7 @@ import WritingCard from '../components/WritingCard.astro';
 import KnowledgeGraphCard from '../components/KnowledgeGraphCard.astro';
 import JobScoutCard from '../components/JobScoutCard.astro';
 import SystemHealthCard from '../components/SystemHealthCard.astro';
+import GitCommitsCard from '../components/GitCommitsCard.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import { SITE } from '../config/site';
 import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
@@ -46,6 +47,7 @@ const writingPosts = (await getCollection('blog'))
         <KnowledgeGraphCard t={t} />
         <JobScoutCard t={t} />
         <SystemHealthCard t={t} />
+        <GitCommitsCard t={t} locale={locale} />
       </div>
 
       <SiteFooter t={t} locale={locale} />
