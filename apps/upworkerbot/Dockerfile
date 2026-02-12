@@ -8,9 +8,9 @@ COPY apps/upworkerbot/pyproject.toml apps/upworkerbot/README.md apps/upworkerbot
 
 WORKDIR /app/apps/upworkerbot
 
-RUN uv venv /app/.venv && \
-    . /app/.venv/bin/activate && \
-    uv sync
+ENV UV_PROJECT_ENVIRONMENT="/app/.venv"
+
+RUN uv sync --frozen
 
 COPY apps/upworkerbot/.env.sample ./
 

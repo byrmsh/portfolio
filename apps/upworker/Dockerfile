@@ -11,9 +11,9 @@ COPY packages/schema-py ./packages/schema-py
 
 WORKDIR /app/apps/upworker
 
-RUN uv venv /app/.venv && \
-    . /app/.venv/bin/activate && \
-    uv sync
+ENV UV_PROJECT_ENVIRONMENT="/app/.venv"
+
+RUN uv sync --frozen
 
 COPY apps/upworker/.env.sample ./
 
