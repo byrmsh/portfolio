@@ -1,5 +1,5 @@
 export type ServiceStatus = 'healthy' | 'partial' | 'degraded' | 'unknown';
-export type ServiceKey = 'web' | 'api' | 'dragonfly' | 'collector' | 'upworker';
+export type ServiceKey = 'web' | 'api' | 'dragonfly' | 'collector' | 'upworker' | 'lyricist';
 
 export type StatusNode = {
   status: ServiceStatus;
@@ -15,6 +15,7 @@ export type ApiStatusResponse = {
   dragonfly: StatusNode;
   collector: StatusNode;
   upworker: StatusNode;
+  lyricist: StatusNode;
 };
 
 export type NormalizedPayload = {
@@ -28,6 +29,7 @@ export const serviceNames: Record<ServiceKey, string> = {
   dragonfly: 'dragonfly',
   collector: 'apps/collector',
   upworker: 'apps/upworker',
+  lyricist: 'apps/lyricist',
 };
 
 export const serviceTech: Record<ServiceKey, string> = {
@@ -35,10 +37,11 @@ export const serviceTech: Record<ServiceKey, string> = {
   api: 'Portfolio backend API (Hono)',
   collector: 'Personal data collectors',
   upworker: 'Upwork ingestion worker',
+  lyricist: 'Lyrics analysis worker',
   dragonfly: 'Redis-compatible KV store',
 };
 
-export const serviceOrder: ServiceKey[] = ['web', 'api', 'collector', 'upworker', 'dragonfly'];
+export const serviceOrder: ServiceKey[] = ['web', 'api', 'collector', 'upworker', 'lyricist', 'dragonfly'];
 
 export const DEFAULT_DATA: ApiStatusResponse = {
   web: { status: 'unknown', message: '' },
@@ -46,6 +49,7 @@ export const DEFAULT_DATA: ApiStatusResponse = {
   dragonfly: { status: 'unknown', message: '' },
   collector: { status: 'unknown', message: '', runs: 0, meta: '' },
   upworker: { status: 'unknown', message: '', runs: 0, meta: '' },
+  lyricist: { status: 'unknown', message: '', runs: 0, meta: '' },
 };
 
 export function asStatus(value: unknown): ServiceStatus {
@@ -136,13 +140,21 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
   if (!payload || typeof payload !== 'object') return {};
   const direct = payload as Partial<Record<ServiceKey, Partial<StatusNode>>> & {
     upworker?: Partial<StatusNode> & { lastFetchedAt?: unknown };
+    lyricist?: Partial<StatusNode> & { lastFetchedAt?: unknown };
   };
-  if (direct.web || direct.api || direct.dragonfly || direct.collector || direct.upworker) {
+  if (direct.web || direct.api || direct.dragonfly || direct.collector || direct.upworker || direct.lyricist) {
     const upworkerLastFetchedAt = asIso(direct.upworker?.lastFetchedAt);
     if (upworkerLastFetchedAt) {
       direct.upworker = {
         ...direct.upworker,
         meta: ageMetricFromIso(upworkerLastFetchedAt),
+      };
+    }
+    const lyricistLastFetchedAt = asIso(direct.lyricist?.lastFetchedAt);
+    if (lyricistLastFetchedAt) {
+      direct.lyricist = {
+        ...direct.lyricist,
+        meta: ageMetricFromIso(lyricistLastFetchedAt),
       };
     }
     return direct;
@@ -193,6 +205,12 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
       message: asText(byId.upworker?.detail, ''),
       meta: ageMetricFromIso(latestUpdatedAtFromChecks(byId.upworker)),
     },
+    lyricist: {
+      status: asStatus(byId.lyricist?.status),
+      runs: runsFromChecks(byId.lyricist),
+      message: asText(byId.lyricist?.detail, ''),
+      meta: ageMetricFromIso(latestUpdatedAtFromChecks(byId.lyricist)),
+    },
   };
 }
 
@@ -215,6 +233,7 @@ function normalizeStatus(source: Partial<Record<ServiceKey, Partial<StatusNode>>
     dragonfly: pick('dragonfly'),
     collector: pick('collector'),
     upworker: pick('upworker'),
+    lyricist: pick('lyricist'),
   };
 }
 
@@ -231,7 +250,7 @@ export function dotClass(status: ServiceStatus): string {
 
 export function metricFor(key: ServiceKey, node: StatusNode): string {
   if (key === 'collector') return collectorMetric(asText(node.meta, ''));
-  if (key === 'upworker') {
+  if (key === 'upworker' || key === 'lyricist') {
     const freshness = asText(node.meta, 'N/A');
     if (freshness !== 'N/A') return freshness;
     const runs = asCount(node.runs);
@@ -249,7 +268,7 @@ export function metricClass(value: string): string {
 }
 
 export function labelFor(key: ServiceKey): string {
-  if (key === 'collector' || key === 'upworker') return 'RECENCY';
+  if (key === 'collector' || key === 'upworker' || key === 'lyricist') return 'RECENCY';
   return 'LATENCY';
 }
 

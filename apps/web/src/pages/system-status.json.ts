@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 
 type ServiceStatus = 'healthy' | 'degraded' | 'unknown';
-type ServiceId = 'web' | 'api' | 'collector' | 'upworker' | 'db';
+type ServiceId = 'web' | 'api' | 'collector' | 'upworker' | 'lyricist' | 'db';
 
 type ServiceCheck = {
   id: string;
@@ -33,6 +33,12 @@ type ApiStatusPayload = {
       lastFetchedAt?: string | null;
     };
   };
+};
+
+type LatestLyricPayload = {
+  data?: {
+    savedAt?: string | null;
+  } | null;
 };
 
 type ActivityMonitorPayload = {
@@ -145,6 +151,26 @@ async function readApiStatus(url: string): Promise<ApiStatusPayload | null> {
   }
 }
 
+async function readLatestLyricSavedAt(url: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1500);
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: { accept: 'application/json' },
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as LatestLyricPayload;
+    return parseIsoDate(payload?.data?.savedAt)?.toISOString() ?? null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function overallStatus(services: ServiceProbe[]): ServiceStatus {
   if (services.some((service) => service.status === 'degraded')) return 'degraded';
   if (services.some((service) => service.status === 'unknown')) return 'unknown';
@@ -162,12 +188,14 @@ export const GET: APIRoute = async ({ request }) => {
   const apiHealthUrl = `${apiOrigin.replace(/\/$/, '')}/health`;
   const apiActivityUrl = `${apiOrigin.replace(/\/$/, '')}/api/activity-monitor`;
   const apiStatusUrl = `${apiOrigin.replace(/\/$/, '')}/api/status`;
+  const apiLyricUrl = `${apiOrigin.replace(/\/$/, '')}/api/ytmusic/saved/latest`;
 
-  const [webProbe, apiProbe, activityMonitor, apiStatus] = await Promise.all([
+  const [webProbe, apiProbe, activityMonitor, apiStatus, lyricistLastSavedAt] = await Promise.all([
     probe(webHealthUrl, 1200),
     probe(apiHealthUrl, 1200),
     fetchActivityMonitor(apiActivityUrl),
     readApiStatus(apiStatusUrl),
+    readLatestLyricSavedAt(apiLyricUrl),
   ]);
 
   const apiUptimeSeconds = clampNonNegativeInt(apiStatus?.data?.uptimeSeconds);
@@ -181,11 +209,13 @@ export const GET: APIRoute = async ({ request }) => {
       .at(-1) ??
     null;
   const upworkerUpdatedAt = parseIsoDate(apiStatus?.data?.upworker?.lastFetchedAt ?? null);
+  const lyricistUpdatedAt = parseIsoDate(lyricistLastSavedAt);
 
   const workerFreshnessMs = 24 * 60 * 60 * 1000;
   const githubCheckStatus = statusFromFreshness(githubUpdatedAt, workerFreshnessMs);
   const ankiCheckStatus = statusFromFreshness(ankiUpdatedAt, workerFreshnessMs);
   const upworkerCheckStatus = statusFromFreshness(upworkerUpdatedAt, workerFreshnessMs);
+  const lyricistCheckStatus = statusFromFreshness(lyricistUpdatedAt, workerFreshnessMs);
 
   const services: ServiceProbe[] = [
     {
@@ -231,6 +261,20 @@ export const GET: APIRoute = async ({ request }) => {
           label: 'Jobs stream',
           status: upworkerCheckStatus,
           updatedAt: upworkerUpdatedAt ? upworkerUpdatedAt.toISOString() : null,
+        },
+      ],
+    },
+    {
+      id: 'lyricist',
+      status: lyricistCheckStatus,
+      detail: lyricistUpdatedAt ? 'Lyrics analysis is active' : 'Lyricist has no run record',
+      latencyMs: null,
+      checks: [
+        {
+          id: 'tracks',
+          label: 'Track analysis',
+          status: lyricistCheckStatus,
+          updatedAt: lyricistUpdatedAt ? lyricistUpdatedAt.toISOString() : null,
         },
       ],
     },
