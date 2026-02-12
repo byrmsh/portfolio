@@ -7,8 +7,8 @@ import SavedLyricsCard from '../components/SavedLyricsCard.astro';
 import WritingCard from '../components/WritingCard.astro';
 import KnowledgeGraphCard from '../components/KnowledgeGraphCard.astro';
 import JobScoutCard from '../components/JobScoutCard.astro';
-import SystemHealthCard from '../components/SystemHealthCard.astro';
-import GitCommitsCard from '../components/GitCommitsCard.astro';
+import LiveInfrastructureCard from '../components/LiveInfrastructureCard.astro';
+import LatestUpdatesCard from '../components/LatestUpdatesCard.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import { SITE } from '../config/site';
 import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
@@ -46,8 +46,8 @@ const writingPosts = (await getCollection('blog'))
         <WritingCard posts={writingPosts} allHref={localizedPath(locale, '/blog')} t={t} />
         <KnowledgeGraphCard t={t} />
         <JobScoutCard t={t} />
-        <SystemHealthCard t={t} />
-        <GitCommitsCard t={t} locale={locale} />
+        <LiveInfrastructureCard t={t} />
+        <LatestUpdatesCard t={t} locale={locale} />
       </div>
 
       <SiteFooter t={t} locale={locale} />
