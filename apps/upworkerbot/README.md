@@ -1,0 +1,34 @@
+# UpworkerBot
+
+Telegram bot that stores Upwork auth material in Redis for `apps/upworker` to use.
+
+## Commands
+
+- `/upwork_status`
+- `/upwork_set_token <bearer_token>`
+- `/upwork_set_cookie <cookie_header_value>`
+- `/upwork_set_tenant <tenant_id>`
+- `/upwork_clear_token`
+- `/upwork_clear_cookie`
+- `/upwork_clear_tenant`
+
+The bot never echoes back full secrets; it only reports lengths/prefixes.
+
+## Env
+
+- `REDIS_URL` (required)
+- `TELEGRAM_BOT_TOKEN` (required)
+- `TELEGRAM_ALLOWED_CHAT_ID` (recommended; numeric chat id)
+
+Redis keys (defaults match `upworker`):
+
+- `UPWORK_TOKEN_REDIS_KEY` (default `upwork_token`)
+- `UPWORK_COOKIE_REDIS_KEY` (default `upwork_cookie`)
+- `UPWORK_API_TENANT_REDIS_KEY` (default `upwork_api_tenant_id`)
+
+Optional:
+
+- `TELEGRAM_POLL_SECONDS` (default `2`)
+- `CURL_CFFI_IMPERSONATE` (default `chrome`)
+- `PORT` (health server, default `3000`)
+
