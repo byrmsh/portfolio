@@ -160,7 +160,15 @@ function commitTypeClass(type: string): string {
 }
 
 function labelForType(type: string): string {
-  return type.toUpperCase();
+  const labels: Record<string, string> = {
+    feat: 'FEATURE',
+    fix: 'FIX',
+    docs: 'DOCUMENTATION',
+    chore: 'MAINTENANCE',
+    refactor: 'REFACTOR',
+    test: 'TEST',
+  };
+  return labels[type] ?? type.toUpperCase();
 }
 
 const metadata = getGitMetadataFromFile();
@@ -168,11 +176,9 @@ const commits = metadata?.commits.length ? metadata.commits : getRecentCommits()
 const totalChanges = metadata ? metadata.totalChanges : getTotalCommitCount();
 const repoUrl = metadata?.repoUrl ?? getRepoUrlFromOrigin();
 const dateFormatter = new Intl.DateTimeFormat(locale, {
-  year: 'numeric',
   month: 'short',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
+  day: 'numeric',
+  year: 'numeric',
 });
 ---
 
@@ -190,63 +196,120 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
 
   {
     commits.length > 0 ? (
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div class="space-y-6 md:space-y-1.5">
         {commits.map((commit) => {
           const parsed = parseConventionalSubject(commit.subject);
           return (
-            <article class="rounded-lg border border-neutral-200 bg-neutral-50 p-4 flex flex-col gap-3">
-              <div class="flex items-center gap-2 min-w-0">
-                <span
-                  class:list={[
-                    'inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-bold tracking-wide shrink-0',
-                    commitTypeClass(parsed.type),
-                  ]}
-                >
-                  {labelForType(parsed.type)}
-                </span>
-                {parsed.scope ? (
-                  <span class="inline-flex items-center rounded-md border border-neutral-300 bg-white px-2 py-1 text-[11px] font-mono text-neutral-600 shrink-0">
-                    {parsed.scope}
+            <article class="border-b border-neutral-100 px-2 pb-4 pt-1.5 transition-colors hover:bg-neutral-50 last:border-b-0 md:border-b-0 md:py-1.5">
+              <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div class="min-w-0 flex-1">
+                  <p class="mb-2 text-sm font-semibold font-sans text-neutral-900 leading-snug break-words md:mb-0">
+                    {parsed.description}
+                  </p>
+                  <div class="md:hidden">
+                    <div class="mb-3 flex flex-wrap gap-2">
+                      <span
+                        class:list={[
+                          'inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap',
+                          commitTypeClass(parsed.type),
+                        ]}
+                      >
+                        {labelForType(parsed.type)}
+                      </span>
+                      {parsed.scope ? (
+                        <span class="inline-flex shrink-0 items-center rounded-md border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] font-mono text-neutral-600 whitespace-nowrap">
+                          {parsed.scope}
+                        </span>
+                      ) : null}
+                      {parsed.breaking ? (
+                        <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
+                          BREAKING
+                        </span>
+                      ) : null}
+                    </div>
+                    <div class="grid grid-cols-[min-content_1fr] gap-x-3 gap-y-1 text-xs">
+                      <span class="text-right font-mono text-[11px] uppercase tracking-wide text-neutral-400">
+                        HASH:
+                      </span>
+                      <span class="inline-flex min-w-0 items-center gap-1.5 font-mono text-[11px] text-neutral-800">
+                        <code title={commit.hash}>{commit.shortHash}</code>
+                        {repoUrl ? (
+                          <a
+                            href={`${repoUrl}/commit/${commit.hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex shrink-0 text-neutral-400 transition-colors hover:text-neutral-700"
+                            aria-label={t('gitCommits.openCommit', { hash: commit.shortHash })}
+                            title={t('gitCommits.openCommit', { hash: commit.shortHash })}
+                          >
+                            <ArrowUpRight class="w-3.5 h-3.5" />
+                          </a>
+                        ) : null}
+                      </span>
+
+                      <span class="text-right font-mono text-[11px] uppercase tracking-wide text-neutral-400">
+                        DATE:
+                      </span>
+                      <time class="font-mono text-[11px] text-neutral-800" datetime={commit.authoredAt}>
+                        {dateFormatter.format(new Date(commit.authoredAt))}
+                      </time>
+
+                      <span class="text-right font-mono text-[11px] uppercase tracking-wide text-neutral-400">
+                        AUTH:
+                      </span>
+                      <span class="font-mono text-[11px] text-neutral-800 break-words">{commit.author}</span>
+                    </div>
+                  </div>
+                  <div class="mt-1 hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs md:flex">
+                    <span class="inline-flex items-center gap-1.5">
+                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">HASH:</span>
+                      <code class="font-mono text-[11px] text-neutral-600" title={commit.hash}>
+                        {commit.shortHash}
+                      </code>
+                      {repoUrl ? (
+                        <a
+                          href={`${repoUrl}/commit/${commit.hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="inline-flex text-neutral-400 hover:text-neutral-700 transition-colors"
+                          aria-label={t('gitCommits.openCommit', { hash: commit.shortHash })}
+                          title={t('gitCommits.openCommit', { hash: commit.shortHash })}
+                        >
+                          <ArrowUpRight class="w-3.5 h-3.5" />
+                        </a>
+                      ) : null}
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">AUTHOR:</span>
+                      <span class="text-neutral-700">{commit.author}</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">DATE:</span>
+                      <time class="text-neutral-700" datetime={commit.authoredAt}>
+                        {dateFormatter.format(new Date(commit.authoredAt))}
+                      </time>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="hidden shrink-0 flex-wrap items-center justify-end gap-1.5 md:flex">
+                  <span
+                    class:list={[
+                      'inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap',
+                      commitTypeClass(parsed.type),
+                    ]}
+                  >
+                    {labelForType(parsed.type)}
                   </span>
-                ) : null}
-                {parsed.breaking ? (
-                  <span class="inline-flex items-center rounded-md border border-rose-300 bg-rose-100 px-2 py-1 text-[11px] font-bold text-rose-800 shrink-0">
-                    BREAKING
-                  </span>
-                ) : null}
-                <p
-                  class="text-sm font-semibold text-neutral-900 leading-snug truncate min-w-0"
-                  title={parsed.description}
-                >
-                  {parsed.description}
-                </p>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs text-neutral-600">
-                <span class="font-mono text-neutral-400">{t('gitCommits.author')}</span>
-                <span>{commit.author}</span>
-
-                <span class="font-mono text-neutral-400">{t('gitCommits.date')}</span>
-                <time datetime={commit.authoredAt}>
-                  {dateFormatter.format(new Date(commit.authoredAt))}
-                </time>
-
-                <span class="font-mono text-neutral-400">{t('gitCommits.hash')}</span>
-                <div class="flex items-center gap-1.5">
-                  <code class="font-mono text-[11px] text-neutral-700" title={commit.hash}>
-                    {commit.shortHash}
-                  </code>
-                  {repoUrl ? (
-                    <a
-                      href={`${repoUrl}/commit/${commit.hash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="inline-flex text-neutral-400 hover:text-neutral-700 transition-colors"
-                      aria-label={t('gitCommits.openCommit', { hash: commit.shortHash })}
-                      title={t('gitCommits.openCommit', { hash: commit.shortHash })}
-                    >
-                      <ArrowUpRight class="w-3.5 h-3.5" />
-                    </a>
+                  {parsed.scope ? (
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] font-mono text-neutral-600 whitespace-nowrap">
+                      {parsed.scope}
+                    </span>
+                  ) : null}
+                  {parsed.breaking ? (
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
+                      BREAKING
+                    </span>
                   ) : null}
                 </div>
               </div>
