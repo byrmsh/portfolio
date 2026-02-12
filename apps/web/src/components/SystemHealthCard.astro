@@ -56,7 +56,7 @@ const DEFAULT_DATA: ApiStatusResponse = {
     message: 'Collector tasks reported',
     meta: 'GitHub 12m ago • Anki 45m ago',
   },
-  upworker: { status: 'partial', runs: 1, message: 'Jobs stream n/a' },
+  upworker: { status: 'partial', runs: 0, message: 'Jobs stream n/a' },
 };
 
 function asStatus(value: unknown): ServiceStatus {
@@ -108,10 +108,42 @@ function parseCheckedAt(payload: unknown): string | null {
   );
 }
 
+function latestUpdatedAtFromChecks(service: Record<string, unknown> | undefined): string | null {
+  const checks = service?.checks;
+  if (!Array.isArray(checks)) return null;
+  for (const check of checks) {
+    if (!check || typeof check !== 'object') continue;
+    const updatedAt = (check as { updatedAt?: unknown }).updatedAt;
+    if (typeof updatedAt === 'string' && updatedAt.length > 0) return updatedAt;
+  }
+  return null;
+}
+
+function ageMetricFromIso(value: string | null): string {
+  if (!value) return '-';
+  const ts = Date.parse(value);
+  if (Number.isNaN(ts)) return '-';
+  const ageMs = Math.max(0, Date.now() - ts);
+  const minutes = Math.floor(ageMs / 60000);
+  if (minutes < 60) return `${Math.max(1, minutes)}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
 function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial<StatusNode>>> {
   if (!payload || typeof payload !== 'object') return {};
-  const direct = payload as Partial<Record<ServiceKey, Partial<StatusNode>>>;
+  const direct = payload as Partial<Record<ServiceKey, Partial<StatusNode>>> & {
+    upworker?: Partial<StatusNode> & { lastFetchedAt?: unknown };
+  };
   if (direct.web || direct.api || direct.dragonfly || direct.collector || direct.upworker) {
+    const upworkerLastFetchedAt = asIso(direct.upworker?.lastFetchedAt);
+    if (upworkerLastFetchedAt) {
+      direct.upworker = {
+        ...direct.upworker,
+        meta: ageMetricFromIso(upworkerLastFetchedAt),
+      };
+    }
     return direct;
   }
 
@@ -160,6 +192,7 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
       status: asStatus(byId.upworker?.status),
       runs: runsFromChecks(byId.upworker),
       message: asText(byId.upworker?.detail, DEFAULT_DATA.upworker.message),
+      meta: ageMetricFromIso(latestUpdatedAtFromChecks(byId.upworker)),
     },
   };
 }
@@ -200,8 +233,10 @@ function dotClass(status: ServiceStatus): string {
 function metricFor(key: ServiceKey, node: StatusNode): string {
   if (key === 'collector') return collectorMetric(asText(node.meta, DEFAULT_DATA.collector.meta ?? ''));
   if (key === 'upworker') {
+    const freshness = asText(node.meta, 'N/A');
+    if (freshness !== 'N/A') return freshness;
     const runs = asCount(node.runs);
-    return runs > 0 ? `${runs}` : '-';
+    return runs > 0 ? `${runs} run${runs === 1 ? '' : 's'}` : 'N/A';
   }
   const latency = asCount(node.latency);
   return latency > 0 ? `${latency}ms` : '-';
@@ -215,7 +250,7 @@ function metricClass(value: string): string {
 
 function labelFor(key: ServiceKey, node: StatusNode): string {
   if (key === 'collector') return collectorLine(asText(node.meta, DEFAULT_DATA.collector.meta ?? ''));
-  if (key === 'upworker') return /active/i.test(node.message) ? 'STREAM ACTIVE' : 'STREAM N/A';
+  if (key === 'upworker') return /active/i.test(node.message) ? 'LAST FETCH' : 'STREAM N/A';
   return 'LATENCY';
 }
 
@@ -253,7 +288,7 @@ const initial = await loadInitialStatus();
 <section
   data-system-health
   data-endpoint={endpoint}
-  data-client-endpoint="/api/status"
+  data-client-endpoint="/system-status.json"
   data-initial-checked-at={initial.checkedAt ?? ''}
   data-label-checked-prefix={t('health.checkedPrefix')}
   class="col-span-1 rounded-xl border border-neutral-200 bg-white p-6 md:col-span-6 lg:col-span-12"
@@ -340,11 +375,39 @@ const initial = await loadInitialStatus();
   const parseCheckedAt = (payload) =>
     asIso(payload?.checkedAt) ?? asIso(payload?.data?.checkedAt) ?? asIso(payload?.data?.timestamp) ?? asIso(payload?.meta?.ts) ?? null;
 
+  const latestUpdatedAtFromChecks = (service) => {
+    const checks = service?.checks;
+    if (!Array.isArray(checks)) return null;
+    for (const check of checks) {
+      if (typeof check?.updatedAt === 'string' && check.updatedAt.length > 0) return check.updatedAt;
+    }
+    return null;
+  };
+
+  const ageMetricFromIso = (value) => {
+    if (!value) return '-';
+    const ts = Date.parse(value);
+    if (Number.isNaN(ts)) return '-';
+    const ageMs = Math.max(0, Date.now() - ts);
+    const minutes = Math.floor(ageMs / 60000);
+    if (minutes < 60) return `${Math.max(1, minutes)}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    return `${Math.floor(hours / 24)}d`;
+  };
+
   let lastCheckedAt = asIso(root.dataset.initialCheckedAt ?? null);
 
   const sourceFromPayload = (payload) => {
     if (!payload || typeof payload !== 'object') return {};
     if (payload.web || payload.api || payload.dragonfly || payload.collector || payload.upworker) {
+      const upworkerLastFetchedAt = asIso(payload?.upworker?.lastFetchedAt);
+      if (upworkerLastFetchedAt) {
+        payload.upworker = {
+          ...payload.upworker,
+          meta: ageMetricFromIso(upworkerLastFetchedAt),
+        };
+      }
       return payload;
     }
 
@@ -378,6 +441,7 @@ const initial = await loadInitialStatus();
         status: byId.upworker?.status,
         runs: runsFromChecks(byId.upworker),
         message: byId.upworker?.detail,
+        meta: ageMetricFromIso(latestUpdatedAtFromChecks(byId.upworker)),
       },
     };
   };
@@ -407,8 +471,10 @@ const initial = await loadInitialStatus();
   const metricFor = (key, node) => {
     if (key === 'collector') return collectorMetric(asText(node?.meta, 'GitHub 12m ago • Anki 45m ago'));
     if (key === 'upworker') {
+      const freshness = asText(node?.meta, 'N/A');
+      if (freshness !== 'N/A') return freshness;
       const runs = asCount(node?.runs);
-      return runs > 0 ? `${runs}` : '-';
+      return runs > 0 ? `${runs} run${runs === 1 ? '' : 's'}` : 'N/A';
     }
     const latency = asCount(node?.latency);
     return latency > 0 ? `${latency}ms` : '-';
@@ -421,7 +487,7 @@ const initial = await loadInitialStatus();
 
   const labelFor = (key, node) => {
     if (key === 'collector') return collectorLine(asText(node?.meta, 'GitHub 12m ago • Anki 45m ago'));
-    if (key === 'upworker') return /active/i.test(asText(node?.message, '')) ? 'STREAM ACTIVE' : 'STREAM N/A';
+    if (key === 'upworker') return /active/i.test(asText(node?.message, '')) ? 'LAST FETCH' : 'STREAM N/A';
     return 'LATENCY';
   };
 
@@ -466,7 +532,7 @@ const initial = await loadInitialStatus();
     api: { status: 'healthy', latency: 12, message: 'Hono endpoint reachable' },
     dragonfly: { status: 'healthy', latency: 4, message: 'Redis-backed activity read OK' },
     collector: { status: 'healthy', runs: 2, message: 'Collector tasks reported', meta: 'GitHub 12m ago • Anki 45m ago' },
-    upworker: { status: 'partial', runs: 1, message: 'Jobs stream n/a' },
+    upworker: { status: 'partial', runs: 0, message: 'Jobs stream n/a' },
   };
 
   try {
@@ -504,6 +570,6 @@ const initial = await loadInitialStatus();
     }
   };
 
-  refresh();
-  window.setInterval(refresh, 30000);
+  const pollMs = 30000;
+  window.setInterval(refresh, pollMs);
 </script>
