@@ -17,9 +17,19 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! kubectl version --request-timeout=5s >/dev/null 2>&1; then
+  echo "Kubernetes cluster is unreachable." >&2
+  echo "If you use minikube, start it first: minikube start" >&2
+  exit 1
+fi
+
 if ! kubectl -n "${NAMESPACE}" get svc "${API_SERVICE}" >/dev/null 2>&1; then
-  echo "Service ${API_SERVICE} not found in namespace ${NAMESPACE}." >&2
-  echo "Run: pnpm k8s:local:apply" >&2
+  echo "Service ${API_SERVICE} not found in namespace ${NAMESPACE}; bootstrapping local workloads..." >&2
+  pnpm k8s:local:apply
+fi
+
+if ! kubectl -n "${NAMESPACE}" get svc "${API_SERVICE}" >/dev/null 2>&1; then
+  echo "Service ${API_SERVICE} is still missing in namespace ${NAMESPACE} after bootstrap." >&2
   exit 1
 fi
 
