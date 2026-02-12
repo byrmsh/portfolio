@@ -77,11 +77,30 @@ function extractSourceFromMeta(meta: string, source: 'github' | 'anki'): string 
   return match[1].replace(/ago/gi, '').trim() || '--';
 }
 
+function metricMinutes(value: string): number | null {
+  const trimmed = value.trim().toLowerCase();
+  const match = /^(\d+)\s*([mhd])$/.exec(trimmed);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  const unit = match[2];
+  if (unit === 'm') return amount;
+  if (unit === 'h') return amount * 60;
+  if (unit === 'd') return amount * 24 * 60;
+  return null;
+}
+
 export function collectorMetric(meta: string): string {
   const github = extractSourceFromMeta(meta, 'github');
   const anki = extractSourceFromMeta(meta, 'anki');
-  if (github !== '--') return github;
-  if (anki !== '--') return anki;
+  const githubMinutes = metricMinutes(github);
+  const ankiMinutes = metricMinutes(anki);
+
+  if (githubMinutes !== null && ankiMinutes !== null) {
+    return githubMinutes <= ankiMinutes ? github : anki;
+  }
+  if (githubMinutes !== null) return github;
+  if (ankiMinutes !== null) return anki;
   return 'N/A';
 }
 
