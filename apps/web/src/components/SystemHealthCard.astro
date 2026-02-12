@@ -3,49 +3,382 @@ interface Props {
   t: (path: string, vars?: Record<string, string | number>) => string;
 }
 
-const { t } = Astro.props;
+type ServiceStatus = 'healthy' | 'degraded' | 'unknown';
+type ServiceId = 'web' | 'api' | 'collector' | 'upworker' | 'db';
 
-const services = [
-  { name: 'apps/web', detail: t('health.serviceWeb'), pulse: false },
-  { name: 'apps/api', detail: t('health.serviceApi'), pulse: false },
-  { name: 'apps/collector', detail: t('health.serviceCollector'), pulse: false },
-  { name: 'apps/upworker', detail: t('health.serviceUpworker'), pulse: true },
-  { name: 'dragonfly', detail: t('health.serviceDb'), pulse: false },
-];
+type ServiceCheck = {
+  id: string;
+  label: string;
+  status: ServiceStatus;
+  updatedAt: string | null;
+};
+
+type ServiceProbe = {
+  id: ServiceId;
+  status: ServiceStatus;
+  detail: string;
+  latencyMs: number | null;
+  checks?: ServiceCheck[];
+};
+
+type SystemStatusData = {
+  overallStatus?: ServiceStatus;
+  checkedAt?: string;
+  apiUptimeSeconds?: number | null;
+  services?: ServiceProbe[];
+};
+
+const { t } = Astro.props;
+const endpoint = '/system-status.json';
+
+const defaults: Record<ServiceId, ServiceProbe> = {
+  web: { id: 'web', status: 'unknown', detail: t('health.serviceWeb'), latencyMs: null },
+  api: { id: 'api', status: 'unknown', detail: t('health.serviceApi'), latencyMs: null },
+  collector: {
+    id: 'collector',
+    status: 'unknown',
+    detail: t('health.serviceCollector'),
+    latencyMs: null,
+    checks: [],
+  },
+  upworker: {
+    id: 'upworker',
+    status: 'unknown',
+    detail: t('health.serviceUpworker'),
+    latencyMs: null,
+    checks: [],
+  },
+  db: { id: 'db', status: 'unknown', detail: t('health.serviceDb'), latencyMs: null },
+};
+
+const names: Record<ServiceId, string> = {
+  web: 'apps/web',
+  api: 'apps/api',
+  collector: 'apps/collector',
+  upworker: 'apps/upworker',
+  db: 'dragonfly',
+};
+
+function toStatus(value: unknown): ServiceStatus {
+  return value === 'healthy' || value === 'degraded' ? value : 'unknown';
+}
+
+function toIsoOrNull(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  return Number.isNaN(Date.parse(value)) ? null : value;
+}
+
+function formatUptime(seconds: number | null | undefined): string {
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) {
+    return `${t('health.uptimePrefix')} ${t('health.uptimeUnknown')}`;
+  }
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${t('health.uptimePrefix')} ${hours}h ${minutes}m`;
+}
+
+function formatChecked(checkedAt: string | null): string {
+  if (!checkedAt) return `${t('health.checkedPrefix')} -`;
+  const value = new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(new Date(checkedAt));
+  return `${t('health.checkedPrefix')} ${value}`;
+}
+
+async function loadInitialStatus(): Promise<SystemStatusData | null> {
+  try {
+    const response = await fetch(new URL(endpoint, Astro.url));
+    if (!response.ok) return null;
+    const json = (await response.json()) as { data?: SystemStatusData };
+    return json?.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+const initialStatus = await loadInitialStatus();
+const initialById = Object.fromEntries(
+  (initialStatus?.services ?? []).map((service) => [service.id, service]),
+) as Partial<Record<ServiceId, ServiceProbe>>;
+
+const order: ServiceId[] = ['web', 'api', 'collector', 'upworker', 'db'];
+const initialServices = order.map((id) => {
+  const source = initialById[id] ?? defaults[id];
+  return {
+    ...defaults[id],
+    ...source,
+    status: toStatus(source.status),
+    checks: Array.isArray(source.checks)
+      ? source.checks.map((check) => ({
+          ...check,
+          status: toStatus(check.status),
+          updatedAt: toIsoOrNull(check.updatedAt),
+        }))
+      : [],
+  } satisfies ServiceProbe;
+});
+
+const initialOverall = toStatus(initialStatus?.overallStatus);
+const initialCheckedAt = toIsoOrNull(initialStatus?.checkedAt);
+const initialUptime =
+  typeof initialStatus?.apiUptimeSeconds === 'number' ? initialStatus.apiUptimeSeconds : null;
 ---
 
 <section
+  data-system-health
+  data-endpoint={endpoint}
+  data-overall-healthy={t('health.overallHealthy')}
+  data-overall-degraded={t('health.overallDegraded')}
+  data-overall-unknown={t('health.overallUnknown')}
+  data-label-latency={t('health.latencyLabel')}
+  data-label-runs={t('health.runsLabel')}
+  data-label-not-available={t('health.notAvailable')}
+  data-label-checked-prefix={t('health.checkedPrefix')}
+  data-label-uptime-prefix={t('health.uptimePrefix')}
+  data-label-uptime-unknown={t('health.uptimeUnknown')}
+  data-label-probe-failed={t('health.probeFailed')}
+  data-initial-overall={initialOverall}
   class="col-span-1 md:col-span-6 lg:col-span-12 rounded-xl border border-neutral-200 bg-white p-6"
 >
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+  <script
+    is:inline
+    type="application/json"
+    data-initial-payload
+    set:html={JSON.stringify(initialStatus ?? null)}></script>
+
+  <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-center gap-3">
-      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">
-        {t('health.title')}
-      </h2>
-      <span class="text-xxs font-mono text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded"
-        >{t('health.namespace')}</span
-      >
+      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">{t('health.title')}</h2>
+      <span class="rounded bg-neutral-100 px-2 py-0.5 text-xxs font-mono text-neutral-500">
+        {t('health.namespace')}
+      </span>
     </div>
-    <div class="text-xxs font-mono text-neutral-400">{t('health.uptime', { value: '99.9%' })}</div>
+
+    <div class="flex flex-wrap items-center gap-2 text-xxs font-mono text-neutral-500">
+      <span data-overall-badge class="inline-flex items-center gap-1 rounded px-2 py-1">
+        <span data-overall-dot class="h-1.5 w-1.5 rounded-full"></span>
+        <span data-overall-label></span>
+      </span>
+      <span data-uptime>{formatUptime(initialUptime)}</span>
+      <span class="text-neutral-300">|</span>
+      <span data-last-check>{formatChecked(initialCheckedAt)}</span>
+    </div>
   </div>
 
-  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+  <div class="rounded-lg border border-neutral-200 bg-neutral-50/60">
     {
-      services.map((service) => (
-        <div class="flex flex-col gap-1">
-          <div class="flex items-center gap-2">
-            <div
-              class={
-                service.pulse
-                  ? 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse'
-                  : 'w-1.5 h-1.5 rounded-full bg-emerald-500'
-              }
-            />
-            <span class="text-sm font-semibold text-neutral-800">{service.name}</span>
+      initialServices.map((service, idx) => (
+        <article
+          data-service-row={service.id}
+          data-state={service.status}
+          class:list={[
+            'grid grid-cols-1 gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center',
+            idx < initialServices.length - 1 ? 'border-b border-neutral-200' : '',
+          ]}
+        >
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span data-service-dot class="h-2 w-2 rounded-full"></span>
+              <h3 class="truncate text-sm font-semibold text-neutral-800">{names[service.id]}</h3>
+              <span
+                data-service-state
+                class="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-600"></span>
+            </div>
+
+            <p data-service-detail class="mt-1 text-sm text-neutral-600">{service.detail}</p>
+            <p data-service-checks class="mt-1 text-xs text-neutral-500"></p>
           </div>
-          <span class="text-xs text-neutral-500 pl-3.5">{service.detail}</span>
-        </div>
+
+          <div class="text-left md:text-right">
+            <p data-service-metric class="text-xxs font-mono text-neutral-500"></p>
+          </div>
+        </article>
       ))
     }
   </div>
 </section>
+
+<script is:inline type="module">
+  const root = document.querySelector('[data-system-health]');
+  if (!root) throw new Error('System health root not found');
+
+  const endpoint = root.dataset.endpoint ?? '/system-status.json';
+  const payloadNode = root.querySelector('[data-initial-payload]');
+
+  const labels = {
+    overall: {
+      healthy: root.dataset.overallHealthy ?? 'Healthy',
+      degraded: root.dataset.overallDegraded ?? 'Degraded',
+      unknown: root.dataset.overallUnknown ?? 'Unknown',
+    },
+    latency: root.dataset.labelLatency ?? 'LATENCY',
+    runs: root.dataset.labelRuns ?? 'RUNS',
+    notAvailable: root.dataset.labelNotAvailable ?? 'n/a',
+    checkedPrefix: root.dataset.labelCheckedPrefix ?? 'CHECKED',
+    uptimePrefix: root.dataset.labelUptimePrefix ?? 'UPTIME',
+    uptimeUnknown: root.dataset.labelUptimeUnknown ?? 'n/a',
+    probeFailed: root.dataset.labelProbeFailed ?? 'Probe failed',
+  };
+
+  const stateClass = {
+    healthy: {
+      dot: 'bg-emerald-500',
+      badge: 'bg-emerald-100 text-emerald-700',
+    },
+    degraded: {
+      dot: 'bg-amber-500',
+      badge: 'bg-amber-100 text-amber-700',
+    },
+    unknown: {
+      dot: 'bg-neutral-400',
+      badge: 'bg-neutral-200 text-neutral-600',
+    },
+  };
+
+  const asStatus = (value) => (value === 'healthy' || value === 'degraded' ? value : 'unknown');
+
+  const formatAgo = (iso) => {
+    if (!iso) return labels.notAvailable;
+    const ts = Date.parse(iso);
+    if (Number.isNaN(ts)) return labels.notAvailable;
+    const mins = Math.max(0, Math.floor((Date.now() - ts) / 60000));
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 48) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  };
+
+  const shortLabel = (value) => String(value ?? '').replace(/\s+collector$/i, '').trim() || 'check';
+
+  const overallBadge = root.querySelector('[data-overall-badge]');
+  const overallDot = root.querySelector('[data-overall-dot]');
+  const overallLabel = root.querySelector('[data-overall-label]');
+  const uptimeEl = root.querySelector('[data-uptime]');
+  const lastCheckEl = root.querySelector('[data-last-check]');
+
+  const setOverall = (status) => {
+    const s = asStatus(status);
+    if (overallBadge) overallBadge.className = `inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-semibold ${stateClass[s].badge}`;
+    if (overallDot) overallDot.className = `h-1.5 w-1.5 rounded-full ${stateClass[s].dot}`;
+    if (overallLabel) overallLabel.textContent = labels.overall[s];
+  };
+
+  const setMeta = (checkedAt, uptimeSeconds) => {
+    if (lastCheckEl) {
+      if (typeof checkedAt === 'string' && !Number.isNaN(Date.parse(checkedAt))) {
+        const formatted = new Intl.DateTimeFormat(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }).format(new Date(checkedAt));
+        lastCheckEl.textContent = `${labels.checkedPrefix} ${formatted}`;
+      } else {
+        lastCheckEl.textContent = `${labels.checkedPrefix} -`;
+      }
+    }
+
+    if (uptimeEl) {
+      if (typeof uptimeSeconds === 'number' && Number.isFinite(uptimeSeconds) && uptimeSeconds >= 0) {
+        const hours = Math.floor(uptimeSeconds / 3600);
+        const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+        uptimeEl.textContent = `${labels.uptimePrefix} ${hours}h ${minutes}m`;
+      } else {
+        uptimeEl.textContent = `${labels.uptimePrefix} ${labels.uptimeUnknown}`;
+      }
+    }
+  };
+
+  const setServiceState = (service) => {
+    const row = root.querySelector(`[data-service-row="${service.id}"]`);
+    if (!row) return;
+
+    const s = asStatus(service.status);
+    row.setAttribute('data-state', s);
+
+    const dot = row.querySelector('[data-service-dot]');
+    if (dot) dot.className = `h-2 w-2 rounded-full ${stateClass[s].dot}`;
+
+    const state = row.querySelector('[data-service-state]');
+    if (state) {
+      state.className = `rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${stateClass[s].badge}`;
+      state.textContent = labels.overall[s];
+    }
+
+    const detail = row.querySelector('[data-service-detail]');
+    if (detail) {
+      detail.textContent = typeof service.detail === 'string' && service.detail ? service.detail : labels.probeFailed;
+    }
+
+    const checks = row.querySelector('[data-service-checks]');
+    if (checks) {
+      const items = Array.isArray(service.checks) ? service.checks : [];
+      checks.textContent =
+        items.length > 0
+          ? items.map((check) => `${shortLabel(check.label)} ${formatAgo(check.updatedAt ?? null)}`).join(' • ')
+          : '';
+    }
+
+    const metric = row.querySelector('[data-service-metric]');
+    if (metric) {
+      const checkCount = Array.isArray(service.checks) ? service.checks.length : 0;
+      if (checkCount > 0) {
+        metric.textContent = `${labels.runs}: ${checkCount}`;
+      } else if (typeof service.latencyMs === 'number') {
+        metric.textContent = `${labels.latency}: ${service.latencyMs}ms`;
+      } else {
+        metric.textContent = `${labels.latency}: ${labels.notAvailable}`;
+      }
+    }
+  };
+
+  const applyStatus = (payload) => {
+    setOverall(payload?.overallStatus ?? 'unknown');
+    setMeta(payload?.checkedAt ?? null, payload?.apiUptimeSeconds ?? null);
+
+    const services = Array.isArray(payload?.services) ? payload.services : [];
+    for (const service of services) setServiceState(service);
+  };
+
+  const applyFetchFailure = () => {
+    setOverall('degraded');
+    setMeta(new Date().toISOString(), null);
+
+    for (const id of ['web', 'api', 'collector', 'upworker', 'db']) {
+      setServiceState({
+        id,
+        status: 'degraded',
+        detail: labels.probeFailed,
+        latencyMs: null,
+        checks: [],
+      });
+    }
+  };
+
+  try {
+    const parsed = payloadNode?.textContent ? JSON.parse(payloadNode.textContent) : null;
+    if (parsed) applyStatus(parsed);
+    else setOverall(root.dataset.initialOverall ?? 'unknown');
+  } catch {
+    setOverall(root.dataset.initialOverall ?? 'unknown');
+  }
+
+  const refresh = async () => {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      const payload = await response.json();
+      applyStatus(payload?.data ?? null);
+    } catch {
+      applyFetchFailure();
+    }
+  };
+
+  window.setInterval(refresh, 30000);
+</script>

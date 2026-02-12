@@ -71,14 +71,77 @@ app.get('/health', (c) => {
   return c.json({ data: { status: 'ok' }, meta: { ts: new Date().toISOString() } });
 });
 
-app.get('/api/status', (c) => {
+app.get('/api/status', async (c) => {
+  const nowIso = new Date().toISOString();
+  const jobsStreamKey = process.env.REDIS_STREAM_KEY ?? 'jobs';
+
+  const parseIsoOrNull = (value: unknown): string | null => {
+    if (typeof value !== 'string') return null;
+    return Number.isNaN(Date.parse(value)) ? null : value;
+  };
+
+  const readActivityUpdatedAt = async (source: ActivitySource): Promise<string | null> => {
+    const key = redisKeys.stat(source, 'default');
+    const raw = await redis.get(key);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as { updatedAt?: unknown };
+      return parseIsoOrNull(parsed.updatedAt);
+    } catch {
+      return null;
+    }
+  };
+
+  const readUpworkerLastFetchedAt = async (): Promise<string | null> => {
+    try {
+      const rows = await redis.xrevrange(jobsStreamKey, '+', '-', 'COUNT', 1);
+      const first = rows[0];
+      if (!first) return null;
+      const [, kv] = first;
+      let fetchedAtRaw: string | null = null;
+      for (let i = 0; i < kv.length - 1; i += 2) {
+        if (kv[i] === 'fetched_at') {
+          fetchedAtRaw = kv[i + 1] ?? null;
+          break;
+        }
+      }
+      if (!fetchedAtRaw) return null;
+      const epochSec = Number(fetchedAtRaw);
+      if (!Number.isFinite(epochSec) || epochSec <= 0) return null;
+      return new Date(epochSec * 1000).toISOString();
+    } catch {
+      return null;
+    }
+  };
+
+  const [githubUpdatedAt, ankiUpdatedAt, upworkerLastFetchedAt] = await Promise.all([
+    readActivityUpdatedAt('github'),
+    readActivityUpdatedAt('anki'),
+    readUpworkerLastFetchedAt(),
+  ]);
+
+  const collectorLastUpdatedAt =
+    [githubUpdatedAt, ankiUpdatedAt]
+      .filter((v): v is string => typeof v === 'string')
+      .sort()
+      .at(-1) ?? null;
+
   return c.json({
     data: {
       api: 'ok',
       uptimeSeconds: Math.floor(process.uptime()),
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso,
+      collector: {
+        githubUpdatedAt,
+        ankiUpdatedAt,
+        lastUpdatedAt: collectorLastUpdatedAt,
+      },
+      upworker: {
+        streamKey: jobsStreamKey,
+        lastFetchedAt: upworkerLastFetchedAt,
+      },
     },
-    meta: { source: 'placeholder' },
+    meta: { source: 'redis', ts: nowIso },
   });
 });
 
