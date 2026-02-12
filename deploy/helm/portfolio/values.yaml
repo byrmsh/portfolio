@@ -130,3 +130,24 @@ upworkerBot:
     limits:
       memory: 256Mi
       cpu: 500m
+
+upworker:
+  enabled: false
+  replicas: 1
+  image:
+    repository: portfolio-upworker
+    tag: dev
+    pullPolicy: IfNotPresent
+  env:
+    redisUrl: redis://db-service:6379/0
+    streamKey: jobs
+    healthPort: "3000"
+    impersonate: chrome
+  secretRef: upworker-secrets
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 500m
