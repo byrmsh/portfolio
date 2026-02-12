@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-upworkerbot = "__main__:main"
+upworkerbot = "upworkerbot_app:main"
 
 [tool.uv]
 package = true
@@ -22,5 +22,4 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["__main__"]
-
+py-modules = ["__main__", "upworkerbot_app"]
