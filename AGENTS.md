@@ -46,9 +46,8 @@ livenessProbe:
 
 ### 4.1 Helm-First Deployment
 
-- Preferred deployment source is `deploy/helm/portfolio`.
-- Keep `deploy/k8s` raw manifests usable as fallback/reference.
-- When changing workloads, update Helm and any mirrored raw manifests/docs in the same task.
+- Deployment source is `deploy/helm/portfolio`.
+- When changing workloads, update Helm templates/values and related docs in the same task.
 
 ### 4.2 Default Local Dev Workflow
 

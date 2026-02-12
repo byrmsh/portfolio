@@ -188,9 +188,6 @@ If we later add a dedicated route (e.g. `/lyrics/:trackId`), it should render on
 Primary deployment path:
 - Helm chart: `deploy/helm/portfolio` (`collectorCronJobs.jobs` includes `lyricist-cronjob`)
 
-Fallback/raw manifest:
-- `deploy/k8s/06-lyricist-cronjob.yaml`
-
 Constraints (from `AGENTS.md`):
 - namespace: `portfolio`
 - labels: `app: portfolio`, `component: collector` (closest fit for a scheduled worker)
@@ -222,4 +219,4 @@ Note: `YTMUSIC_AUTH_JSON` is usually multiline; prefer `--from-file` when we wir
    - store cursor at `stat:ytmusic:cursor`
 3. API: choose Option A or B and implement it in `apps/api`
 4. Web: make `SavedLyricsCard` dynamic
-5. K8s/Helm: keep `lyricist-cronjob` wired in Helm values/templates and maintain raw manifest fallback
+5. K8s/Helm: keep `lyricist-cronjob` wired in Helm values/templates

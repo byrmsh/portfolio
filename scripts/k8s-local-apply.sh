@@ -20,20 +20,15 @@ minikube image load portfolio-collector:dev
 minikube image load portfolio-ankiworker:dev
 minikube image load portfolio-lyricist:dev
 
-if command -v helm >/dev/null 2>&1; then
-  echo "[3/6] Deploying Helm release..."
-  helm upgrade --install portfolio ./deploy/helm/portfolio \
-    --namespace portfolio \
-    --create-namespace
-else
-  echo "[3/6] Helm not found; applying raw manifests from deploy/k8s..."
-  kubectl apply -f deploy/k8s/01-namespace.yaml
-  kubectl apply -f deploy/k8s/02-db.yaml
-  kubectl apply -f deploy/k8s/03-api.yaml
-  kubectl apply -f deploy/k8s/04-web.yaml
-  kubectl apply -f deploy/k8s/05-collector-cronjobs.yaml
-  kubectl apply -f deploy/k8s/06-lyricist-cronjob.yaml
+if ! command -v helm >/dev/null 2>&1; then
+  echo "helm is required. Install Helm to deploy ./deploy/helm/portfolio." >&2
+  exit 1
 fi
+
+echo "[3/6] Deploying Helm release..."
+helm upgrade --install portfolio ./deploy/helm/portfolio \
+  --namespace portfolio \
+  --create-namespace
 
 echo "[4/6] Waiting for db rollout..."
 kubectl -n portfolio rollout status deploy/db-deployment

@@ -24,8 +24,7 @@ This is a polyglot monorepo containing application code and deployment manifests
 │   ├── lyricist/           # YT Music lyric-note worker (Python)
 │   └── upworker/           # Upwork ingestion worker (Python)
 ├── deploy/
-│   ├── helm/portfolio/     # Helm chart (recommended deployment path)
-│   └── k8s/                # Raw Kubernetes manifests (fallback/reference)
+│   └── helm/portfolio/     # Helm chart (deployment path)
 ├── packages/               # Reserved for shared UI/Types
 └── AGENTS.md               # Coding agent rules
 ```
@@ -248,12 +247,4 @@ helm upgrade --install portfolio ./deploy/helm/portfolio \
   --namespace portfolio \
   --create-namespace \
   -f deploy/helm/portfolio/values-prod.yaml
-```
-
-### Raw YAML Fallback
-
-Raw manifests are kept in `deploy/k8s/` as a fallback:
-
-```bash
-kubectl apply -f deploy/k8s/
 ```
