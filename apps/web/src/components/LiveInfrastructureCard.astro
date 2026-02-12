@@ -69,7 +69,7 @@ const initial = await loadInitialStatus();
         const metric = metricFor(key, node);
         const detail = detailFor(key, node);
         return (
-          <article data-service-row={key} class="min-w-0">
+          <article data-service-row={key} class="service-cell min-w-0">
             <h3 class="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
               <span data-service-dot class:list={['h-2 w-2 rounded-full', dotClass(node.status)]} />
               <span class="truncate">{serviceNames[key]}</span>
@@ -186,3 +186,44 @@ const initial = await loadInitialStatus();
   if (!lastCheckedAt) refresh();
   window.setInterval(refresh, 30000);
 </script>
+
+<style>
+  .service-cell {
+    position: relative;
+  }
+
+  .service-cell::before {
+    content: '';
+    position: absolute;
+    left: -0.75rem;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgb(245 245 245);
+    border-radius: 9999px;
+  }
+
+  .service-cell:nth-child(2n + 1)::before {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .service-cell:nth-child(2n + 1)::before {
+      display: block;
+    }
+
+    .service-cell:nth-child(3n + 1)::before {
+      display: none;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .service-cell:nth-child(3n + 1)::before {
+      display: block;
+    }
+
+    .service-cell:nth-child(6n + 1)::before {
+      display: none;
+    }
+  }
+</style>
