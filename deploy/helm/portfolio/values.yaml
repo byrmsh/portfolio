@@ -112,3 +112,21 @@ collectorCronJobs:
     limits:
       memory: 256Mi
       cpu: 500m
+
+upworkerBot:
+  enabled: false
+  image:
+    repository: portfolio-upworkerbot
+    tag: dev
+    pullPolicy: IfNotPresent
+  env:
+    redisUrl: redis://db-service:6379/0
+    port: "3000"
+  secretRef: upworker-bot-secrets
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 500m
