@@ -136,6 +136,7 @@ def cmd_help() -> str:
     return (
         "Commands:\n"
         "/upwork_status\n"
+        "/upwork_set_all token=<...> cookie=<...> tenant=<...>\n"
         "/upwork_set_token <bearer_token>\n"
         "/upwork_set_cookie <cookie_header_value>\n"
         "/upwork_set_tenant <tenant_id>\n"
@@ -143,6 +144,34 @@ def cmd_help() -> str:
         "/upwork_clear_cookie\n"
         "/upwork_clear_tenant\n"
     )
+
+
+def parse_set_all_arg(arg: str) -> dict[str, str]:
+    arg = arg.strip()
+    if not arg:
+        return {}
+
+    if arg.startswith("{"):
+        obj = json.loads(arg)
+        if not isinstance(obj, dict):
+            return {}
+        out: dict[str, str] = {}
+        for k in ("token", "cookie", "tenant"):
+            v = obj.get(k)
+            if isinstance(v, str) and v.strip():
+                out[k] = v.strip()
+        return out
+
+    out: dict[str, str] = {}
+    for part in arg.split():
+        if "=" not in part:
+            continue
+        k, v = part.split("=", 1)
+        k = k.strip().lower()
+        v = v.strip()
+        if k in ("token", "cookie", "tenant") and v:
+            out[k] = v
+    return out
 
 
 def handle_command(chat_id: int, text: str) -> str:
@@ -166,6 +195,30 @@ def handle_command(chat_id: int, text: str) -> str:
             f"cookie: {mask_secret(str(cookie))} updated_at={cookie_ts}\n"
             f"tenant: {mask_secret(str(tenant))} updated_at={tenant_ts}\n"
         )
+
+    if cmd == "/upwork_set_all":
+        parsed = parse_set_all_arg(arg)
+        if not parsed:
+            return (
+                "Usage:\n"
+                "/upwork_set_all token=<...> cookie=<...> tenant=<...>\n"
+                "or\n"
+                '/upwork_set_all {"token":"...","cookie":"...","tenant":"..."}\n'
+            )
+        out_lines = []
+        if "token" in parsed:
+            r.set(UPWORK_TOKEN_REDIS_KEY, parsed["token"])
+            r.set(UPWORK_TOKEN_UPDATED_AT_REDIS_KEY, now_iso())
+            out_lines.append(f"token: {mask_secret(parsed['token'])}")
+        if "cookie" in parsed:
+            r.set(UPWORK_COOKIE_REDIS_KEY, parsed["cookie"])
+            r.set(UPWORK_COOKIE_UPDATED_AT_REDIS_KEY, now_iso())
+            out_lines.append(f"cookie: {mask_secret(parsed['cookie'])}")
+        if "tenant" in parsed:
+            r.set(UPWORK_API_TENANT_REDIS_KEY, parsed["tenant"])
+            r.set(UPWORK_TENANT_UPDATED_AT_REDIS_KEY, now_iso())
+            out_lines.append(f"tenant: {mask_secret(parsed['tenant'])}")
+        return "Updated:\n" + "\n".join(out_lines)
 
     if cmd == "/upwork_set_token":
         if not arg:
@@ -267,4 +320,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

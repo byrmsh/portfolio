@@ -5,6 +5,7 @@ Telegram bot that stores Upwork auth material in Redis for `apps/upworker` to us
 ## Commands
 
 - `/upwork_status`
+- `/upwork_set_all token=<...> cookie=<...> tenant=<...>` (or JSON payload)
 - `/upwork_set_token <bearer_token>`
 - `/upwork_set_cookie <cookie_header_value>`
 - `/upwork_set_tenant <tenant_id>`
@@ -31,4 +32,3 @@ Optional:
 - `TELEGRAM_POLL_SECONDS` (default `2`)
 - `CURL_CFFI_IMPERSONATE` (default `chrome`)
 - `PORT` (health server, default `3000`)
-
