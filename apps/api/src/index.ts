@@ -72,22 +72,11 @@ app.get('/health', (c) => {
 });
 
 app.get('/api/status', async (c) => {
+  const routeStartMs = Date.now();
   const jobsStreamKey = process.env.REDIS_STREAM_KEY ?? 'jobs';
   const freshnessMs = 24 * 60 * 60 * 1000;
   const checkedAt = new Date().toISOString();
-  const MOCK_STATUS = {
-    checkedAt,
-    web: { status: 'healthy', latency: 24, message: 'Astro SSR runtime responding' },
-    api: { status: 'healthy', latency: 12, message: 'Hono endpoint reachable' },
-    dragonfly: { status: 'healthy', latency: 4, message: 'Redis-backed activity read OK' },
-    collector: {
-      status: 'healthy',
-      runs: 2,
-      message: 'Collector tasks reported',
-      meta: 'GitHub 12m ago • Anki 45m ago',
-    },
-    upworker: { status: 'partial', runs: 1, message: 'Jobs stream n/a' },
-  } as const;
+  type ServiceStatus = 'healthy' | 'partial' | 'degraded' | 'unknown';
 
   const parseIsoOrNull = (value: unknown): string | null => {
     if (typeof value !== 'string') return null;
@@ -110,6 +99,19 @@ app.get('/api/status', async (c) => {
     const hours = Math.floor(mins / 60);
     if (hours < 48) return `${hours}h ago`;
     return `${Math.floor(hours / 24)}d ago`;
+  };
+
+  const statusFromAge = (iso: string | null): ServiceStatus => {
+    const ageMs = msAgo(iso);
+    if (ageMs === null) return 'unknown';
+    return ageMs <= freshnessMs ? 'healthy' : 'degraded';
+  };
+
+  const combineStatus = (statuses: ServiceStatus[]): ServiceStatus => {
+    if (statuses.some((status) => status === 'degraded')) return 'degraded';
+    if (statuses.some((status) => status === 'partial')) return 'partial';
+    if (statuses.some((status) => status === 'unknown')) return 'unknown';
+    return 'healthy';
   };
 
   const readActivityUpdatedAt = async (source: ActivitySource): Promise<string | null> => {
@@ -146,85 +148,83 @@ app.get('/api/status', async (c) => {
     }
   };
 
-  const probeSelfHealth = async (): Promise<number> => {
-    const start = Date.now();
-    try {
-      const response = await fetch('http://127.0.0.1:3000/health', {
-        method: 'GET',
-        cache: 'no-store',
-        headers: { accept: 'application/json' },
-      });
-      if (!response.ok) return 0;
-      return Math.max(1, Date.now() - start);
-    } catch {
-      return 0;
-    }
-  };
-
-  const probeRedis = async (): Promise<number> => {
+  const probeRedis = async (): Promise<number | null> => {
     const start = Date.now();
     try {
       await redis.ping();
       return Math.max(1, Date.now() - start);
     } catch {
-      return 0;
+      return null;
     }
   };
 
-  const [githubUpdatedAt, ankiUpdatedAt, upworkerLastFetchedAt] = await Promise.all([
+  const [githubUpdatedAt, ankiUpdatedAt, upworkerLastFetchedAt, dragonflyLatency] = await Promise.all([
     readActivityUpdatedAt('github'),
     readActivityUpdatedAt('anki'),
     readUpworkerLastFetchedAt(),
+    probeRedis(),
   ]);
 
-  const [apiLatency, dragonflyLatency] = await Promise.all([probeSelfHealth(), probeRedis()]);
-
-  const upworkerFresh = msAgo(upworkerLastFetchedAt);
-  const hasMissingSignals =
-    apiLatency <= 0 ||
-    dragonflyLatency <= 0 ||
-    [githubUpdatedAt, ankiUpdatedAt].every((value) => !value) ||
-    !upworkerLastFetchedAt;
-
-  if (hasMissingSignals) {
-    return c.json(MOCK_STATUS, 200);
-  }
-
-  const collectorRunsRaw = [githubUpdatedAt, ankiUpdatedAt].filter(Boolean).length;
+  const collectorRunsRaw = [githubUpdatedAt, ankiUpdatedAt].filter((value): value is string => Boolean(value)).length;
   const upworkerRunsRaw = upworkerLastFetchedAt ? 1 : 0;
-  const collectorMeta = `GitHub ${githubUpdatedAt ? agoLabel(githubUpdatedAt) : '1h ago'} • Anki ${ankiUpdatedAt ? agoLabel(ankiUpdatedAt) : '1h ago'}`;
+  const collectorMeta = `GitHub ${agoLabel(githubUpdatedAt)} • Anki ${agoLabel(ankiUpdatedAt)}`;
+
+  const collectorStatus = combineStatus([statusFromAge(githubUpdatedAt), statusFromAge(ankiUpdatedAt)]);
+  const upworkerFreshMs = msAgo(upworkerLastFetchedAt);
+  const upworkerStatus: ServiceStatus =
+    upworkerFreshMs === null ? 'unknown' : upworkerFreshMs <= freshnessMs ? 'healthy' : 'partial';
+  const dragonflyStatus: ServiceStatus = dragonflyLatency === null ? 'degraded' : 'healthy';
+  const collectorLastUpdatedAt =
+    [githubUpdatedAt, ankiUpdatedAt]
+      .filter((value): value is string => Boolean(value))
+      .map((value) => ({ value, ts: Date.parse(value) }))
+      .filter((entry) => !Number.isNaN(entry.ts))
+      .sort((a, b) => b.ts - a.ts)[0]?.value ?? null;
+  const apiLatency = Math.max(1, Date.now() - routeStartMs);
 
   return c.json(
     {
       checkedAt,
       web: {
-        status: 'healthy',
-        latency: 24,
-        message: 'Astro SSR runtime responding',
+        status: 'unknown',
+        latency: 0,
+        message: 'Web health is measured by web runtime',
       },
       api: {
         status: 'healthy',
         latency: apiLatency,
-        message: 'Hono endpoint reachable',
+        message: 'Hono process responding',
       },
       dragonfly: {
-        status: 'healthy',
-        latency: dragonflyLatency,
-        message: 'Redis-backed activity read OK',
+        status: dragonflyStatus,
+        latency: dragonflyLatency ?? 0,
+        message: dragonflyLatency === null ? 'Redis ping failed' : 'Redis ping successful',
       },
       collector: {
-        status: 'healthy',
+        status: collectorStatus,
         runs: collectorRunsRaw,
-        message: 'Collector tasks reported',
+        message: collectorRunsRaw > 0 ? 'Collector tasks reported' : 'Collector has no reports yet',
         meta: collectorMeta,
       },
       upworker: {
-        status:
-          upworkerRunsRaw > 0 && upworkerFresh !== null && upworkerFresh <= freshnessMs
-            ? 'healthy'
-            : 'partial',
+        status: upworkerStatus,
         runs: upworkerRunsRaw,
-        message: upworkerRunsRaw > 0 ? 'Jobs stream active' : 'Jobs stream n/a',
+        message: upworkerRunsRaw > 0 ? 'Jobs stream active' : 'Jobs stream missing',
+        lastFetchedAt: upworkerLastFetchedAt,
+      },
+      data: {
+        checkedAt,
+        uptimeSeconds: Math.floor(process.uptime()),
+        collector: {
+          lastUpdatedAt: collectorLastUpdatedAt,
+        },
+        upworker: {
+          lastFetchedAt: upworkerLastFetchedAt,
+        },
+      },
+      meta: {
+        ts: checkedAt,
+        source: 'api',
       },
     },
     200,
