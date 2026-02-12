@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import SiteNav from '../components/SiteNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import LatestUpdatesCard from '../components/LatestUpdatesCard.astro';
 import { SITE } from '../config/site';
 import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
 import { getEntry } from 'astro:content';
@@ -20,6 +21,16 @@ if (!post || post.data.draft) return new Response(null, { status: 404 });
 
 const { Content } = await post.render();
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
+const postCommitPathFilters = Array.from(
+  new Set([
+    `src/content/blog/${post.id}`,
+    `src/content/blog/${post.slug}.md`,
+    `src/content/blog/${post.slug}.mdx`,
+    `:(top)apps/web/src/content/blog/${post.id}`,
+    `:(top)apps/web/src/content/blog/${post.slug}.md`,
+    `:(top)apps/web/src/content/blog/${post.slug}.mdx`,
+  ]),
+);
 ---
 
 <Layout title={`${SITE.name} | ${post.data.title}`} locale={locale}>
@@ -45,6 +56,13 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
       <article class="rounded-xl border border-neutral-200 bg-white p-6 blog-prose">
         <Content />
       </article>
+
+      <LatestUpdatesCard
+        t={t}
+        locale={locale}
+        title="Post Updates"
+        pathFilters={postCommitPathFilters}
+      />
 
       <SiteFooter t={t} locale={locale} />
     </div>
