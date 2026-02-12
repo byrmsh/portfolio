@@ -10,7 +10,6 @@ import {
   normalizePayload,
   serviceNames,
   serviceOrder,
-  serviceTech,
   type NormalizedPayload,
 } from '../lib/system-health';
 import WidgetHeader from './WidgetHeader.astro';
@@ -21,6 +20,13 @@ interface Props {
 
 const { t } = Astro.props;
 const endpoint = new URL('/system-status.json', Astro.url).toString();
+const servicePills = {
+  web: ['Astro', 'Svelte'],
+  api: ['Hono'],
+  collector: ['Python'],
+  upworker: ['GraphQL', 'Playwright'],
+  dragonfly: ['Redis API'],
+} as const;
 
 async function loadInitialStatus(): Promise<NormalizedPayload> {
   try {
@@ -47,7 +53,7 @@ const initial = await loadInitialStatus();
   data-label-checked-prefix={t('health.checkedPrefix')}
   class="col-span-1 rounded-xl border border-neutral-200 bg-white p-6 md:col-span-6 lg:col-span-12"
 >
-  <WidgetHeader title="Live Infrastructure" class="mb-5">
+  <WidgetHeader title={t('health.title')} class="mb-5">
     <span
       data-last-check
       class="w-[18ch] text-right text-[11px] font-mono tabular-nums uppercase tracking-wide text-neutral-400"
@@ -64,17 +70,32 @@ const initial = await loadInitialStatus();
         return (
           <article data-service-row={key} class="min-w-0">
             <h3 class="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
-              <span data-service-dot class:list={['h-2 w-2 rounded-full', dotClass(node.status)]}></span>
+              <span data-service-dot class:list={['h-2 w-2 rounded-full', dotClass(node.status)]} />
               <span class="truncate">{serviceNames[key]}</span>
             </h3>
-            <p class="mb-2 min-h-[1rem] text-[11px] font-sans text-neutral-500">{serviceTech[key]}</p>
+            <div class="mb-2 mt-1 flex flex-wrap gap-1">
+              {servicePills[key].map((pill) => (
+                <span class="rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-sans text-neutral-500">
+                  {pill}
+                </span>
+              ))}
+            </div>
             <p class:list={['mb-1', metricClass(metric)]} data-service-metric>
               {metric}
             </p>
-            <p class="text-[11px] font-mono uppercase tracking-wide text-neutral-400" data-service-label>
+            <p
+              class="text-[11px] font-mono uppercase tracking-wide text-neutral-400"
+              data-service-label
+            >
               {labelFor(key)}
             </p>
-            <p class:list={['text-[11px] font-sans text-neutral-500', { hidden: detail.length === 0 }]} data-service-detail>
+            <p
+              class:list={[
+                'text-[11px] font-sans text-neutral-500',
+                { hidden: detail.length === 0 },
+              ]}
+              data-service-detail
+            >
               {detail}
             </p>
           </article>

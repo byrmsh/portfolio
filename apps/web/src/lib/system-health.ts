@@ -245,7 +245,7 @@ export function metricClass(value: string): string {
   const base = 'min-h-[2.25rem] flex items-end';
   return /\d/.test(value)
     ? `${base} text-3xl font-mono font-medium text-neutral-900`
-    : `${base} text-xl font-mono font-medium uppercase tracking-wide text-neutral-300`;
+    : `${base} text-3xl font-mono font-medium uppercase tracking-wide text-neutral-300`;
 }
 
 export function labelFor(key: ServiceKey): string {
