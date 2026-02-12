@@ -79,9 +79,7 @@ function getGitMetadataFromFile(): GitMetadata | null {
     const parsed = JSON.parse(raw) as Partial<GitMetadata>;
     const commits = Array.isArray(parsed.commits) ? parsed.commits : [];
     const totalChanges =
-      typeof parsed.totalChanges === 'number' && parsed.totalChanges >= 0
-        ? parsed.totalChanges
-        : 0;
+      typeof parsed.totalChanges === 'number' && parsed.totalChanges >= 0 ? parsed.totalChanges : 0;
     const repoUrl = typeof parsed.repoUrl === 'string' ? parsed.repoUrl : null;
     return { commits, totalChanges, repoUrl };
   } catch {
@@ -144,15 +142,15 @@ function capitalizeMessage(value: string): string {
 
 function commitTypeClass(type: string): string {
   const map: Record<string, string> = {
-    feat: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-    fix: 'bg-amber-100 text-amber-800 border-amber-300',
-    docs: 'bg-sky-100 text-sky-800 border-sky-300',
-    chore: 'bg-zinc-100 text-zinc-800 border-zinc-300',
-    refactor: 'bg-cyan-100 text-cyan-800 border-cyan-300',
-    perf: 'bg-lime-100 text-lime-800 border-lime-300',
-    test: 'bg-orange-100 text-orange-800 border-orange-300',
-    ci: 'bg-indigo-100 text-indigo-800 border-indigo-300',
-    build: 'bg-teal-100 text-teal-800 border-teal-300',
+    feat: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+    fix: 'bg-amber-100 text-amber-700 border-amber-300',
+    docs: 'bg-sky-100 text-sky-700 border-sky-300',
+    chore: 'bg-zinc-100 text-zinc-700 border-zinc-300',
+    refactor: 'bg-cyan-100 text-cyan-700 border-cyan-300',
+    perf: 'bg-lime-100 text-lime-700 border-lime-300',
+    test: 'bg-orange-100 text-orange-700 border-orange-300',
+    ci: 'bg-indigo-100 text-indigo-700 border-indigo-300',
+    build: 'bg-teal-100 text-teal-700 border-teal-300',
     style: 'bg-neutral-100 text-neutral-700 border-neutral-300',
   };
 
@@ -200,10 +198,10 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
         {commits.map((commit) => {
           const parsed = parseConventionalSubject(commit.subject);
           return (
-            <article class="border-b border-neutral-100 px-2 pb-4 pt-1.5 transition-colors hover:bg-neutral-50 last:border-b-0 md:border-b-0 md:py-1.5">
+            <article class="border-b border-neutral-100 px-2 pb-6 pt-1.5 mb-6 transition-colors hover:bg-neutral-50 last:border-0 md:mb-0 md:border-b-0 md:pb-1.5">
               <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div class="min-w-0 flex-1">
-                  <p class="mb-2 text-sm font-semibold font-sans text-neutral-900 leading-snug break-words md:mb-0">
+                  <p class="mb-2 text-sm font-medium font-sans text-neutral-700 leading-snug break-words md:mb-0">
                     {parsed.description}
                   </p>
                   <div class="md:hidden">
@@ -227,11 +225,11 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                         </span>
                       ) : null}
                     </div>
-                    <div class="grid grid-cols-[min-content_1fr] gap-x-3 gap-y-1 text-xs">
-                      <span class="text-right font-mono text-[11px] uppercase tracking-wide text-neutral-400">
-                        HASH:
+                    <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+                      <span class="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                        HASH
                       </span>
-                      <span class="inline-flex min-w-0 items-center gap-1.5 font-mono text-[11px] text-neutral-800">
+                      <span class="inline-flex min-w-0 items-center gap-1.5 text-xs font-mono text-neutral-700 text-left">
                         <code title={commit.hash}>{commit.shortHash}</code>
                         {repoUrl ? (
                           <a
@@ -247,22 +245,29 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                         ) : null}
                       </span>
 
-                      <span class="text-right font-mono text-[11px] uppercase tracking-wide text-neutral-400">
-                        DATE:
+                      <span class="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                        DATE
                       </span>
-                      <time class="font-mono text-[11px] text-neutral-800" datetime={commit.authoredAt}>
+                      <time
+                        class="text-xs font-mono text-neutral-700 text-left"
+                        datetime={commit.authoredAt}
+                      >
                         {dateFormatter.format(new Date(commit.authoredAt))}
                       </time>
 
-                      <span class="text-right font-mono text-[11px] uppercase tracking-wide text-neutral-400">
-                        AUTH:
+                      <span class="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                        AUTHOR
                       </span>
-                      <span class="font-mono text-[11px] text-neutral-800 break-words">{commit.author}</span>
+                      <span class="text-xs font-mono text-neutral-700 text-left break-words">
+                        {commit.author}
+                      </span>
                     </div>
                   </div>
                   <div class="mt-1 hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs md:flex">
                     <span class="inline-flex items-center gap-1.5">
-                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">HASH:</span>
+                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">
+                        HASH:
+                      </span>
                       <code class="font-mono text-[11px] text-neutral-600" title={commit.hash}>
                         {commit.shortHash}
                       </code>
@@ -280,11 +285,15 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                       ) : null}
                     </span>
                     <span class="inline-flex items-center gap-1.5">
-                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">AUTHOR:</span>
+                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">
+                        AUTHOR:
+                      </span>
                       <span class="text-neutral-700">{commit.author}</span>
                     </span>
                     <span class="inline-flex items-center gap-1.5">
-                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">DATE:</span>
+                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">
+                        DATE:
+                      </span>
                       <time class="text-neutral-700" datetime={commit.authoredAt}>
                         {dateFormatter.format(new Date(commit.authoredAt))}
                       </time>
