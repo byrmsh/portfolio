@@ -3,8 +3,10 @@ import logging
 import re
 import sys
 import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from operator import itemgetter
 from pathlib import Path
+from threading import Thread
 from typing import Any, Awaitable, Callable, List, Optional
 
 import structlog
@@ -48,6 +50,8 @@ TELEGRAM_ALERT_COOLDOWN_SECONDS = env.int(
 TELEGRAM_ALERT_REDIS_KEY = env.str(
     "TELEGRAM_ALERT_REDIS_KEY", default="stat:upwork:auth_alert"
 )
+UPWORK_HEALTH_ENABLED = env.bool("UPWORK_HEALTH_ENABLED", default=True)
+UPWORK_HEALTH_PORT = env.int("UPWORK_HEALTH_PORT", default=3000)
 MAX_OFFSET = 5000
 MAX_PAGE_SIZE = 50
 OPTIMAL_PAGE_SIZE = env.int("OPTIMAL_PAGE_SIZE", default=40)
@@ -667,6 +671,37 @@ def get_latest_redis_job_id() -> int | None:
     return None
 
 
+def health_server() -> None:
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            if self.path != "/health":
+                self.send_response(404)
+                self.end_headers()
+                return
+            try:
+                latest_job_id = get_latest_redis_job_id()
+            except Exception:
+                latest_job_id = None
+            body = json.dumps(
+                {
+                    "ok": True,
+                    "latestJobId": latest_job_id,
+                    "ts": int(time.time()),
+                }
+            ).encode("utf-8")
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):  # noqa: A002
+            return
+
+    httpd = HTTPServer(("0.0.0.0", int(UPWORK_HEALTH_PORT)), Handler)
+    httpd.serve_forever()
+
+
 def add_jobs_to_redis(jobs: List[UpworkJobResult]) -> None:
     jobs_sorted = sorted(jobs, key=itemgetter("id"))
     logger.info("Adding jobs to redis", count=len(jobs_sorted))
@@ -744,6 +779,8 @@ def sleep_by_pid_and_new_count(pid: PID, new_count: int) -> None:
 
 def main():
     logger.info("Starting main fetch loop")
+    if UPWORK_HEALTH_ENABLED:
+        Thread(target=health_server, daemon=True).start()
     pid = PID(0.1, 0.05, 0.01, setpoint=0, output_limits=(1, 3600))
 
     while True:

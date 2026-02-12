@@ -93,6 +93,8 @@ Environment variables:
 - `UPWORK_API_TENANT_REDIS_KEY`: Redis key for tenant overrides (default `upwork_api_tenant_id`).
 - `TELEGRAM_BOT_TOKEN`: Telegram bot token for alerts (optional).
 - `TELEGRAM_CHAT_ID`: Telegram chat id for alerts (optional).
+- `UPWORK_HEALTH_ENABLED`: enable `/health` endpoint (default `true`).
+- `UPWORK_HEALTH_PORT`: port for `/health` (default `3000`).
 
 ## Connects Data (Optional)
 
