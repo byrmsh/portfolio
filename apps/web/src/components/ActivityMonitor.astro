@@ -3,6 +3,7 @@ import GitHub from '@lucide/astro/icons/github';
 import BrainCircuit from '@lucide/astro/icons/brain-circuit';
 import ky from 'ky';
 import type { SupportedLocale } from '../i18n';
+import WidgetHeader from './WidgetHeader.astro';
 
 type ActivityCell = { date: string; count: number; level: number };
 type ActivitySeries = {
@@ -109,12 +110,9 @@ const rangeLabel =
   data-tooltip-without-date={t('activity.tooltipWithoutDate')}
   class="col-span-1 md:col-span-6 lg:col-span-8 min-w-0 rounded-xl border border-neutral-200 bg-white p-6"
 >
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">
-      {t('activity.title')}
-    </h2>
+  <WidgetHeader title={t('activity.title')} class="mb-4">
     <div class="text-xxs font-mono text-neutral-400" data-range>{rangeLabel}</div>
-  </div>
+  </WidgetHeader>
 
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-6 lg:gap-x-8 lg:gap-y-0 min-w-0">
     <div class="min-w-0">

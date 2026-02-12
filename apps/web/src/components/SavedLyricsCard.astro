@@ -3,6 +3,7 @@ import Disc from '@lucide/astro/icons/disc';
 import ArrowRight from '@lucide/astro/icons/arrow-right';
 import ky from 'ky';
 import { localizedPath, type SupportedLocale } from '../i18n';
+import WidgetHeader from './WidgetHeader.astro';
 
 type SavedLyricNote = {
   id: string;
@@ -48,12 +49,9 @@ const noteHref = saved?.id
   class="col-span-1 md:col-span-6 lg:col-span-4 rounded-xl border border-neutral-200 bg-white p-6 flex flex-col relative overflow-hidden group"
 >
   <div class="relative z-10">
-    <div class="flex justify-between items-start mb-6">
-      <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">
-        {t('savedLyrics.title')}
-      </h2>
+    <WidgetHeader title={t('savedLyrics.title')} class="mb-6 items-start">
       <Disc class="w-4 h-4 text-neutral-400" />
-    </div>
+    </WidgetHeader>
     <div class="flex gap-4">
       <div
         class="w-16 h-16 bg-neutral-900 rounded-md shadow-sm flex items-center justify-center shrink-0"

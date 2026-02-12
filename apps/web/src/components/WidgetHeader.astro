@@ -1,0 +1,16 @@
+---
+interface Props {
+  title: string;
+  class?: string;
+  titleClass?: string;
+}
+
+const { title, class: className, titleClass } = Astro.props;
+---
+
+<div class:list={['flex items-center justify-between gap-3', className]}>
+  <h2 class:list={['text-xs font-bold uppercase tracking-widest text-neutral-400', titleClass]}>
+    {title}
+  </h2>
+  <slot />
+</div>

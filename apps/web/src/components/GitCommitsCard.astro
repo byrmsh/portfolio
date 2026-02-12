@@ -3,6 +3,7 @@ import ArrowUpRight from '@lucide/astro/icons/arrow-up-right';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import type { SupportedLocale } from '../i18n';
+import WidgetHeader from './WidgetHeader.astro';
 
 interface Props {
   t: (path: string, vars?: Record<string, string | number>) => string;
@@ -183,14 +184,11 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
 <section
   class="col-span-1 md:col-span-6 lg:col-span-12 rounded-xl border border-neutral-200 bg-white p-6"
 >
-  <div class="flex items-center justify-between gap-3 mb-5">
-    <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400 whitespace-nowrap">
-      {t('gitCommits.title')}
-    </h2>
+  <WidgetHeader title={t('gitCommits.title')} class="mb-5">
     <span class="text-xxs font-mono text-neutral-400 whitespace-nowrap">
       {t('gitCommits.totalChanges', { value: totalChanges })}
     </span>
-  </div>
+  </WidgetHeader>
 
   {
     commits.length > 0 ? (
