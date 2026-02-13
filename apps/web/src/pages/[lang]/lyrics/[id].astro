@@ -11,7 +11,11 @@ if (lang === DEFAULT_LOCALE) {
 }
 
 const locale = getLocaleFromUrl(Astro.url);
-if (!id) return Astro.redirect(localizedPath(locale, '/lyrics'));
+if (!id) {
+  const response = Astro.redirect(localizedPath(locale, '/lyrics'));
+  void response;
+  return response;
+}
 ---
 
 <LyricNotePage id={id} url={Astro.url} />

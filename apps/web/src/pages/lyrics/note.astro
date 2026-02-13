@@ -7,10 +7,12 @@ const id = Astro.url.searchParams.get('id');
 const lang = Astro.url.searchParams.get('lang');
 const locale = lang ? normalizeLocale(lang) : normalizeLocale(null);
 if (!id) {
-  return Astro.redirect(localizedPath(locale, '/lyrics'));
+  const response = Astro.redirect(localizedPath(locale, '/lyrics'));
+  void response;
+  return response;
 }
 
-return Astro.redirect(
-  localizedPath(locale, `/lyrics/${encodeURIComponent(id)}`),
-);
+const response = Astro.redirect(localizedPath(locale, `/lyrics/${encodeURIComponent(id)}`));
+void response;
+return response;
 ---

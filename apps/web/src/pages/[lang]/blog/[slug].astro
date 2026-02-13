@@ -9,8 +9,11 @@ if (!lang || !isSupportedLocale(lang)) return new Response(null, { status: 404 }
 if (lang === DEFAULT_LOCALE) return Astro.redirect(slug ? `/blog/${slug}` : '/blog');
 
 const locale = getLocaleFromUrl(Astro.url);
-if (!slug) return Astro.redirect(localizedPath(locale, '/blog'));
+if (!slug) {
+  const response = Astro.redirect(localizedPath(locale, '/blog'));
+  void response;
+  return response;
+}
 ---
 
 <BlogPostPage slug={slug} url={Astro.url} />
-
