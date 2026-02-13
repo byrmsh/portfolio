@@ -191,7 +191,8 @@ Deploy manually with Helm (equivalent to script):
 ```bash
 helm upgrade --install portfolio ./deploy/helm/portfolio \
   --namespace portfolio \
-  --create-namespace
+  --create-namespace \
+  --reset-values
 ```
 
 Check rollout:
@@ -216,6 +217,17 @@ Optional local access:
 ```bash
 kubectl -n portfolio port-forward svc/api-service 3000:3000
 kubectl -n portfolio port-forward svc/web-service 8080:80
+```
+
+Note: `upworker` and `upworkerBot` are disabled by default. Enable them explicitly when you have the required Secrets:
+
+```bash
+helm upgrade --install portfolio ./deploy/helm/portfolio \
+  --namespace portfolio \
+  --create-namespace \
+  --reset-values \
+  --set upworker.enabled=true \
+  --set upworkerBot.enabled=true
 ```
 
 ### Production (Manual)

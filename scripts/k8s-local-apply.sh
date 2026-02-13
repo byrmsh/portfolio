@@ -16,13 +16,13 @@ docker build -f apps/upworker/Dockerfile -t portfolio-upworker:dev .
 docker build -f apps/upworkerbot/Dockerfile -t portfolio-upworkerbot:dev .
 
 echo "[2/8] Loading images into minikube..."
-minikube image load portfolio-api:dev
-minikube image load portfolio-web:dev
-minikube image load portfolio-collector:dev
-minikube image load portfolio-ankiworker:dev
-minikube image load portfolio-lyricist:dev
-minikube image load portfolio-upworker:dev
-minikube image load portfolio-upworkerbot:dev
+minikube image load --overwrite=true portfolio-api:dev
+minikube image load --overwrite=true portfolio-web:dev
+minikube image load --overwrite=true portfolio-collector:dev
+minikube image load --overwrite=true portfolio-ankiworker:dev
+minikube image load --overwrite=true portfolio-lyricist:dev
+minikube image load --overwrite=true portfolio-upworker:dev
+minikube image load --overwrite=true portfolio-upworkerbot:dev
 
 if ! command -v helm >/dev/null 2>&1; then
   echo "helm is required. Install Helm to deploy ./deploy/helm/portfolio." >&2
@@ -33,22 +33,41 @@ echo "[3/8] Deploying Helm release..."
 helm upgrade --install portfolio ./deploy/helm/portfolio \
   --namespace portfolio \
   --create-namespace \
-  --set upworker.enabled=true \
-  --set upworkerBot.enabled=true
+  --reset-values
+
+restart_deploy_if_exists() {
+  local name="$1"
+  if kubectl -n portfolio get deploy "$name" >/dev/null 2>&1; then
+    kubectl -n portfolio rollout restart "deploy/$name"
+  fi
+}
+
+rollout_status_if_exists() {
+  local name="$1"
+  if kubectl -n portfolio get deploy "$name" >/dev/null 2>&1; then
+    kubectl -n portfolio rollout status "deploy/$name" --timeout=300s
+  fi
+}
+
+echo "[3.5/8] Restarting workloads to pick up refreshed :dev images..."
+restart_deploy_if_exists api-deployment
+restart_deploy_if_exists web-deployment
+restart_deploy_if_exists upworker-deployment
+restart_deploy_if_exists upworker-bot-deployment
 
 echo "[4/8] Waiting for db rollout..."
-kubectl -n portfolio rollout status deploy/db-deployment
+rollout_status_if_exists db-deployment
 
 echo "[5/8] Waiting for api rollout..."
-kubectl -n portfolio rollout status deploy/api-deployment
+rollout_status_if_exists api-deployment
 
 echo "[6/8] Waiting for web rollout..."
-kubectl -n portfolio rollout status deploy/web-deployment
+rollout_status_if_exists web-deployment
 
-echo "[7/8] Waiting for upworker rollout..."
-kubectl -n portfolio rollout status deploy/upworker-deployment
+echo "[7/8] Waiting for upworker rollout (if enabled)..."
+rollout_status_if_exists upworker-deployment
 
-echo "[8/8] Waiting for upworker-bot rollout..."
-kubectl -n portfolio rollout status deploy/upworker-bot-deployment
+echo "[8/8] Waiting for upworker-bot rollout (if enabled)..."
+rollout_status_if_exists upworker-bot-deployment
 
 echo "Local apply completed."
