@@ -1,0 +1,9 @@
+---
+import JobDetailsPage from '../../views/JobDetailsPage.astro';
+
+const { id } = Astro.params;
+if (!id) return new Response(null, { status: 404 });
+---
+
+<JobDetailsPage url={Astro.url} id={id} />
+

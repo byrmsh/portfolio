@@ -9,13 +9,14 @@ interface Props {
 }
 
 const { locale, t } = Astro.props;
-const baseSearch = Astro.url.search;
+// Don't carry query params like `?before=...` across unrelated pages via nav links.
+const baseSearch = '';
 
 const links = [
   { label: t('nav.home'), href: localizedPath(locale, '/', baseSearch) },
   { label: t('nav.blog'), href: localizedPath(locale, '/blog', baseSearch) },
   { label: t('nav.lyrics'), href: localizedPath(locale, '/lyrics', baseSearch) },
-  { label: t('nav.jobs'), href: '#' },
+  { label: t('nav.jobs'), href: localizedPath(locale, '/jobs', baseSearch) },
   { label: t('nav.contact'), href: '#' },
 ];
 ---

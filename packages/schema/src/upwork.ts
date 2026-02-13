@@ -3,6 +3,19 @@ import { z } from "zod";
 // Mirrors the current Upwork payload shape defined by apps/upworker/typex.py
 // and selected in apps/upworker/job-search.gql.
 const nullableString = z.string().nullable();
+const nullableBool = z.boolean().nullable();
+
+const nullableNumberLike = z.preprocess((value) => {
+  if (value === null || value === undefined) return value;
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return null;
+    const n = Number(trimmed);
+    return Number.isFinite(n) ? n : value;
+  }
+  return value;
+}, z.number().nullable());
 
 export const upworkFixedPriceAmountSchema = z.object({
   isoCurrencyCode: nullableString,
@@ -41,9 +54,10 @@ export const upworkJobDetailsSchema = z.object({
   id: z.string(),
   ciphertext: z.string(),
   jobType: z.enum(["FIXED", "HOURLY"]),
-  weeklyRetainerBudget: z.number().nullable(),
-  hourlyBudgetMax: z.number().nullable(),
-  hourlyBudgetMin: z.number().nullable(),
+  // Upwork sometimes returns numeric fields as strings.
+  weeklyRetainerBudget: nullableNumberLike,
+  hourlyBudgetMax: nullableNumberLike,
+  hourlyBudgetMin: nullableNumberLike,
   hourlyEngagementType: nullableString,
   contractorTier: z.string(),
   sourcingTimestamp: nullableString,
@@ -101,8 +115,9 @@ export const upworkJobResultSchema = z.object({
   description: z.string(),
   relevanceEncoded: z.string(),
   ontologySkills: z.array(upworkOntologySkillSchema),
-  isSTSVectorSearchResult: z.boolean(),
-  connectPrice: z.number().int().nullable(),
+  isSTSVectorSearchResult: z.boolean().or(nullableBool),
+  // Not selected in job-search.gql (historical field).
+  connectPrice: z.number().int().nullable().optional(),
   applied: z.boolean().nullable(),
   upworkHistoryData: upworkHistoryDataSchema,
   jobTile: upworkJobTileSchema,

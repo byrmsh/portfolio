@@ -132,7 +132,7 @@ upworkerBot:
       cpu: 500m
 
 upworker:
-  enabled: false
+  enabled: true
   replicas: 1
   image:
     repository: portfolio-upworker

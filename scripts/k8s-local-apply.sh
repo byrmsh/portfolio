@@ -17,12 +17,19 @@ docker build -f apps/upworkerbot/Dockerfile -t portfolio-upworkerbot:dev .
 
 echo "[2/8] Loading images into minikube..."
 minikube image load --overwrite=true portfolio-api:dev
+echo "Loaded portfolio-api:dev into minikube"
 minikube image load --overwrite=true portfolio-web:dev
+echo "Loaded portfolio-web:dev into minikube"
 minikube image load --overwrite=true portfolio-collector:dev
+echo "Loaded portfolio-collector:dev into minikube"
 minikube image load --overwrite=true portfolio-ankiworker:dev
+echo "Loaded portfolio-ankiworker:dev into minikube"
 minikube image load --overwrite=true portfolio-lyricist:dev
+echo "Loaded portfolio-lyricist:dev into minikube"
 minikube image load --overwrite=true portfolio-upworker:dev
+echo "Loaded portfolio-upworker:dev into minikube"
 minikube image load --overwrite=true portfolio-upworkerbot:dev
+echo "Loaded portfolio-upworkerbot:dev into minikube"
 
 if ! command -v helm >/dev/null 2>&1; then
   echo "helm is required. Install Helm to deploy ./deploy/helm/portfolio." >&2

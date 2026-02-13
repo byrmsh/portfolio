@@ -5,19 +5,157 @@ import { Redis } from 'ioredis';
 import {
   activityMonitorDataSchema,
   activitySeriesSchema,
+  jobDetailSchema,
+  jobLeadSchema,
+  jobRedisRecordSchema,
   redisKeys,
   savedLyricNoteSchema,
   ytmusicAnalysisSchema,
   type ActivitySource,
   type ActivitySeries,
   type ApiEnvelope,
+  type JobDetail,
+  type JobLead,
+  type JobRedisRecord,
   type SavedLyricNote,
   type YtMusicAnalysis,
 } from '@portfolio/schema/dashboard';
+import { upworkJobResultSchema, type UpworkJobResult } from '@portfolio/schema/upwork';
 
 const app = new Hono();
 
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379/0');
+
+function clampInt(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, Math.trunc(n)));
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function parseUnixSecondsToIso(value: unknown): string | null {
+  const raw = typeof value === 'string' ? value.trim() : value;
+  const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return new Date(n * 1000).toISOString();
+}
+
+function parseMaybeEpochToIso(value: unknown): string | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const ms = value > 1e12 ? value : value * 1000;
+    return new Date(ms).toISOString();
+  }
+  if (typeof value === 'string') {
+    const s = value.trim();
+    if (/^\d+$/.test(s)) {
+      const n = Number(s);
+      if (!Number.isFinite(n) || n <= 0) return null;
+      const ms = s.length > 10 ? n : n * 1000;
+      return new Date(ms).toISOString();
+    }
+    const ts = Date.parse(s);
+    if (!Number.isNaN(ts)) return new Date(ts).toISOString();
+  }
+  return null;
+}
+
+function summarize(text: string, maxLen: number): string {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (clean.length <= maxLen) return clean;
+  return `${clean.slice(0, Math.max(0, maxLen - 1)).trim()}…`;
+}
+
+function uniq<T>(values: T[]): T[] {
+  const out: T[] = [];
+  const seen = new Set<T>();
+  for (const v of values) {
+    if (seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
+
+function upworkJobHref(job: UpworkJobResult): string | undefined {
+  const ciphertext = asNonEmptyString(job?.jobTile?.job?.ciphertext);
+  if (!ciphertext) return undefined;
+  const clean = ciphertext.replace(/^~+/, '');
+  return `https://www.upwork.com/jobs/~${encodeURIComponent(clean)}`;
+}
+
+function projectUpworkJobToLead(job: UpworkJobResult, capturedAtIso: string | null): JobLead | null {
+  const publishedAt =
+    parseMaybeEpochToIso(job?.jobTile?.job?.publishTime) ??
+    parseMaybeEpochToIso(job?.jobTile?.job?.createTime) ??
+    null;
+  const capturedAt = capturedAtIso ?? publishedAt ?? new Date().toISOString();
+
+  const tags = uniq(
+    (Array.isArray(job.ontologySkills) ? job.ontologySkills : [])
+      .map((s) => asNonEmptyString((s as { prettyName?: unknown }).prettyName))
+      .filter((v): v is string => Boolean(v)),
+  ).slice(0, 6);
+
+  const lead = {
+    id: String(job.id),
+    source: 'upwork' as const,
+    title: String(job.title ?? '').trim(),
+    summary: summarize(String(job.description ?? ''), 180),
+    tags: tags.length ? tags : ['Upwork'],
+    publishedAt: publishedAt ?? new Date().toISOString(),
+    capturedAt,
+    href: upworkJobHref(job),
+  };
+
+  const parsed = jobLeadSchema.safeParse(lead);
+  return parsed.success ? parsed.data : null;
+}
+
+function projectUpworkJobToRecord(job: UpworkJobResult, capturedAtIso: string | null): JobRedisRecord | null {
+  const base = projectUpworkJobToLead(job, capturedAtIso);
+  if (!base) return null;
+  const record = {
+    ...base,
+    description: String(job.description ?? '').trim(),
+  };
+  const parsed = jobRedisRecordSchema.safeParse(record);
+  return parsed.success ? parsed.data : null;
+}
+
+function projectUpworkJobToDetail(job: UpworkJobResult, capturedAtIso: string | null): JobDetail | null {
+  const base = projectUpworkJobToRecord(job, capturedAtIso);
+  if (!base) return null;
+
+  const jobNode = job?.jobTile?.job;
+  const detail = {
+    ...base,
+    jobType: jobNode?.jobType,
+    hourlyBudgetMin: jobNode?.hourlyBudgetMin ?? null,
+    hourlyBudgetMax: jobNode?.hourlyBudgetMax ?? null,
+    weeklyRetainerBudget: jobNode?.weeklyRetainerBudget ?? null,
+    fixedPriceAmount: jobNode?.fixedPriceAmount ?? null,
+    contractorTier: asNonEmptyString(jobNode?.contractorTier) ?? undefined,
+    enterpriseJob: typeof jobNode?.enterpriseJob === 'boolean' ? jobNode.enterpriseJob : undefined,
+    premium: typeof jobNode?.premium === 'boolean' ? jobNode.premium : undefined,
+    personsToHire: typeof jobNode?.personsToHire === 'number' ? jobNode.personsToHire : undefined,
+    totalApplicants: typeof jobNode?.totalApplicants === 'number' ? jobNode.totalApplicants : null,
+    client: job?.upworkHistoryData?.client
+      ? {
+          country: job.upworkHistoryData.client.country ?? null,
+          paymentVerificationStatus: job.upworkHistoryData.client.paymentVerificationStatus ?? null,
+          totalReviews: job.upworkHistoryData.client.totalReviews,
+          totalFeedback: job.upworkHistoryData.client.totalFeedback,
+          totalSpent: job.upworkHistoryData.client.totalSpent ?? null,
+        }
+      : undefined,
+  };
+
+  const parsed = jobDetailSchema.safeParse(detail);
+  return parsed.success ? parsed.data : null;
+}
 
 function isoDate(d: Date): string {
   // YYYY-MM-DD in UTC.
@@ -232,10 +370,120 @@ app.get('/api/status', async (c) => {
 });
 
 app.get('/api/jobs', (c) => {
-  return c.json({
-    data: [],
-    meta: { count: 0 },
-  });
+  return (async () => {
+    const streamKey = process.env.REDIS_STREAM_KEY ?? 'jobs';
+    const limitRaw = c.req.query('limit');
+    const beforeRaw = c.req.query('before');
+    const limit = clampInt(Number.parseInt(limitRaw ?? '20', 10) || 20, 1, 50);
+    const before = typeof beforeRaw === 'string' && beforeRaw.trim().length > 0 ? beforeRaw.trim() : null;
+
+    let rows: Array<[string, string[]]> = [];
+    try {
+      const count = before ? limit + 1 : limit;
+      rows = await redis.xrevrange(streamKey, before ?? '+', '-', 'COUNT', count);
+    } catch {
+      rows = [];
+    }
+
+    if (before && rows.length && rows[0]?.[0] === before) rows.shift();
+    if (rows.length > limit) rows = rows.slice(0, limit);
+
+    const entries = rows
+      .map(([id, kv]) => {
+        let jobId = '';
+        for (let i = 0; i < kv.length - 1; i += 2) {
+          if (kv[i] === 'job_id') {
+            jobId = String(kv[i + 1] ?? '').trim();
+            break;
+          }
+        }
+        if (!jobId) jobId = String(id).split('-')[0] ?? '';
+        return { streamId: id, kv, jobId };
+      })
+      .filter((e) => e.jobId.length > 0);
+
+    if (!entries.length) {
+      const envelope: ApiEnvelope<{ items: JobLead[]; nextCursor: string | null }> = {
+        data: { items: [], nextCursor: null },
+        meta: { ts: new Date().toISOString(), source: 'redis' },
+      };
+      return c.json(envelope);
+    }
+
+    const pipeline = redis.pipeline();
+    for (const e of entries) pipeline.get(redisKeys.job(e.jobId));
+    const rawJobs = await pipeline.exec();
+
+    const items: JobLead[] = [];
+    for (let i = 0; i < entries.length; i += 1) {
+      const streamKv = entries[i]?.kv ?? [];
+      let fetchedAtIso: string | null = null;
+      for (let j = 0; j < streamKv.length - 1; j += 2) {
+        if (streamKv[j] === 'fetched_at') {
+          fetchedAtIso = parseUnixSecondsToIso(streamKv[j + 1]);
+          break;
+        }
+      }
+
+      const entry = rawJobs?.[i];
+      const raw = entry?.[1];
+      if (typeof raw !== 'string') continue;
+
+      try {
+        const upwork = upworkJobResultSchema.parse(JSON.parse(raw) as unknown);
+        const lead = projectUpworkJobToLead(upwork, fetchedAtIso);
+        if (lead) items.push(lead);
+      } catch {
+        // Skip malformed historical records.
+      }
+    }
+
+    const nextCursor = entries.length ? entries[entries.length - 1]!.streamId : null;
+    const envelope: ApiEnvelope<{ items: JobLead[]; nextCursor: string | null }> = {
+      data: { items, nextCursor },
+      meta: { ts: new Date().toISOString(), source: 'redis' },
+    };
+    return c.json(envelope);
+  })();
+});
+
+app.get('/api/jobs/:id', (c) => {
+  return (async () => {
+    const streamKey = process.env.REDIS_STREAM_KEY ?? 'jobs';
+    const jobId = c.req.param('id');
+    const raw = await redis.get(redisKeys.job(jobId));
+    if (!raw) return c.json({ error: 'not found' }, 404);
+
+    let fetchedAtIso: string | null = null;
+    try {
+      const rows = await redis.xrange(streamKey, `${jobId}-0`, `${jobId}-0`, 'COUNT', 1);
+      const first = rows?.[0];
+      if (first) {
+        const [, kv] = first;
+        for (let i = 0; i < kv.length - 1; i += 2) {
+          if (kv[i] === 'fetched_at') {
+            fetchedAtIso = parseUnixSecondsToIso(kv[i + 1]);
+            break;
+          }
+        }
+      }
+    } catch {
+      fetchedAtIso = null;
+    }
+
+    try {
+      const upwork = upworkJobResultSchema.parse(JSON.parse(raw) as unknown);
+      const detail = projectUpworkJobToDetail(upwork, fetchedAtIso);
+      if (!detail) return c.json({ error: 'invalid record' }, 500);
+      const envelope: ApiEnvelope<JobDetail> = {
+        data: detail,
+        meta: { ts: new Date().toISOString(), source: 'redis' },
+      };
+      return c.json(envelope);
+    } catch {
+      return c.json({ error: 'invalid record' }, 500);
+    }
+  })();
 });
 
 app.get('/api/activity-series/:source', async (c) => {

@@ -45,7 +45,7 @@ const writingPosts = (await getCollection('blog'))
         <SavedLyricsCard locale={locale} t={t} />
         <WritingCard posts={writingPosts} allHref={localizedPath(locale, '/blog')} t={t} />
         <KnowledgeGraphCard t={t} />
-        <JobScoutCard t={t} />
+        <JobScoutCard t={t} locale={locale} />
         <LiveInfrastructureCard t={t} />
         <LatestUpdatesCard t={t} locale={locale} />
       </div>

@@ -1,11 +1,61 @@
 ---
+import ky from 'ky';
+import { localizedPath, type SupportedLocale } from '../i18n';
 import WidgetHeader from './WidgetHeader.astro';
 
 interface Props {
   t: (path: string, vars?: Record<string, string | number>) => string;
+  locale: SupportedLocale;
 }
 
-const { t } = Astro.props;
+type JobLead = {
+  id: string;
+  source: 'upwork';
+  title: string;
+  summary: string;
+  tags: string[];
+  publishedAt: string;
+  capturedAt: string;
+  href?: string;
+};
+
+const { t, locale } = Astro.props;
+
+const apiOrigin =
+  process.env.API_ORIGIN ??
+  import.meta.env.API_ORIGIN ??
+  import.meta.env.PUBLIC_API_ORIGIN ??
+  'http://localhost:3000';
+
+function ageMetricFromIso(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const ts = Date.parse(value);
+  if (Number.isNaN(ts)) return null;
+  const ageMs = Math.max(0, Date.now() - ts);
+  const minutes = Math.floor(ageMs / 60000);
+  if (minutes < 60) return `${Math.max(1, minutes)}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+let latest: JobLead | null = null;
+try {
+  const json = await ky
+    .get(`${apiOrigin}/api/jobs`, {
+      searchParams: { limit: '1' },
+      headers: { accept: 'application/json' },
+      throwHttpErrors: false,
+    })
+    .json<{ data?: { items?: JobLead[] } | null }>();
+  latest = json?.data?.items?.[0] ?? null;
+} catch {
+  latest = null;
+}
+
+const jobsHref = localizedPath(locale, '/jobs');
+const age = ageMetricFromIso(latest?.capturedAt) ?? null;
+const tags = Array.isArray(latest?.tags) ? latest!.tags.slice(0, 2) : [];
 ---
 
 <section
@@ -19,24 +69,31 @@ const { t } = Astro.props;
     <div class="p-3 bg-neutral-50 rounded-lg border border-neutral-100">
       <div class="flex justify-between items-start mb-2">
         <span class="text-xs font-bold text-neutral-700">{t('jobScout.source')}</span>
-        <span class="text-xxs font-mono text-neutral-400">{t('jobScout.ago')}</span>
+        <span class="text-xxs font-mono text-neutral-400">{age ?? '--'}</span>
       </div>
       <p class="text-sm font-medium text-neutral-900 line-clamp-2">
-        {t('jobScout.lead')}
+        {latest?.title ?? t('jobScout.emptyLead')}
       </p>
       <div class="mt-2 flex gap-2">
-        <span class="text-xxs border border-neutral-200 px-1 py-0.5 rounded text-neutral-500"
-          >{t('jobScout.tag1')}</span
-        >
-        <span class="text-xxs border border-neutral-200 px-1 py-0.5 rounded text-neutral-500"
-          >{t('jobScout.tag2')}</span
-        >
+        {
+          tags.length ? (
+            tags.map((tag) => (
+              <span class="text-xxs border border-neutral-200 px-1 py-0.5 rounded text-neutral-500">
+                {tag}
+              </span>
+            ))
+          ) : (
+            <span class="text-xxs border border-neutral-200 px-1 py-0.5 rounded text-neutral-500">
+              {t('jobScout.emptyTag')}
+            </span>
+          )
+        }
       </div>
     </div>
   </div>
 
   <div class="mt-4 text-center">
-    <a href="#" class="text-xs text-neutral-400 hover:text-neutral-900 transition-colors"
+    <a href={jobsHref} class="text-xs text-neutral-400 hover:text-neutral-900 transition-colors"
       >{t('jobScout.viewAll')}</a
     >
   </div>

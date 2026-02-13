@@ -110,6 +110,40 @@ export const jobRedisRecordSchema = jobLeadSchema.extend({
   description: z.string().min(1),
 });
 
+export const jobDetailSchema = jobRedisRecordSchema.extend({
+  jobType: z.enum(["FIXED", "HOURLY"]).optional(),
+  hourlyBudgetMin: z.number().nullable().optional(),
+  hourlyBudgetMax: z.number().nullable().optional(),
+  weeklyRetainerBudget: z.number().nullable().optional(),
+  fixedPriceAmount: z
+    .object({
+      isoCurrencyCode: z.string().nullable().optional(),
+      amount: z.string().min(1),
+    })
+    .nullable()
+    .optional(),
+  contractorTier: z.string().min(1).optional(),
+  enterpriseJob: z.boolean().optional(),
+  premium: z.boolean().optional(),
+  personsToHire: z.number().int().min(0).optional(),
+  totalApplicants: z.number().int().min(0).nullable().optional(),
+  client: z
+    .object({
+      country: z.string().nullable().optional(),
+      paymentVerificationStatus: z.string().nullable().optional(),
+      totalReviews: z.number().int().min(0).optional(),
+      totalFeedback: z.number().min(0).optional(),
+      totalSpent: z
+        .object({
+          isoCurrencyCode: z.string().nullable().optional(),
+          amount: z.string().min(1),
+        })
+        .nullable()
+        .optional(),
+    })
+    .optional(),
+});
+
 export const serviceHealthSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -161,6 +195,7 @@ export type WritingPost = z.infer<typeof writingPostSchema>;
 export type KnowledgeGraphSnapshot = z.infer<typeof knowledgeGraphSnapshotSchema>;
 export type JobLead = z.infer<typeof jobLeadSchema>;
 export type JobRedisRecord = z.infer<typeof jobRedisRecordSchema>;
+export type JobDetail = z.infer<typeof jobDetailSchema>;
 export type ServiceHealth = z.infer<typeof serviceHealthSchema>;
 export type SystemHealthSnapshot = z.infer<typeof systemHealthSnapshotSchema>;
 export type DashboardSnapshot = z.infer<typeof dashboardSnapshotSchema>;
@@ -190,6 +225,10 @@ export function parseDashboardSnapshot(value: unknown): DashboardSnapshot {
 
 export function parseJobRedisRecord(value: unknown): JobRedisRecord {
   return jobRedisRecordSchema.parse(value);
+}
+
+export function parseJobDetail(value: unknown): JobDetail {
+  return jobDetailSchema.parse(value);
 }
 
 export function parseStatRedisRecord(value: unknown): StatRedisRecord {

@@ -1,0 +1,12 @@
+---
+import JobDetailsPage from '../../../views/JobDetailsPage.astro';
+import { DEFAULT_LOCALE, isSupportedLocale } from '../../../i18n';
+
+const { lang, id } = Astro.params;
+if (!lang || !isSupportedLocale(lang)) return new Response(null, { status: 404 });
+if (!id) return new Response(null, { status: 404 });
+if (lang === DEFAULT_LOCALE) return Astro.redirect(`/jobs/${encodeURIComponent(id)}`);
+---
+
+<JobDetailsPage url={Astro.url} id={id} />
+
