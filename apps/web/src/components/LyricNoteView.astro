@@ -75,7 +75,7 @@ const format = (template: string, vars: Record<string, string | number>): string
 
       {analysis.background.notes?.length ? (
         <div class="mt-5 grid gap-4">
-          {analysis.background.notes.map((n) => (
+          {analysis.background.notes.map((n: { title: string; body: string }) => (
             <div class="rounded-lg border border-neutral-200 p-4">
               <div class="text-sm font-semibold text-neutral-900">{n.title}</div>
               <p class="mt-2 text-sm text-neutral-700 leading-relaxed">{n.body}</p>
@@ -91,7 +91,14 @@ const format = (template: string, vars: Record<string, string | number>): string
           {labels.vocabulary}
         </h2>
         <div class="mt-4 grid gap-3">
-          {analysis.vocabulary.map((v) => (
+          {analysis.vocabulary.map(
+            (v: {
+              term: string;
+              cefr?: string | null;
+              literal: string;
+              meaning: string;
+              usage?: string[] | null;
+            }) => (
             <div class="rounded-lg border border-neutral-200 p-4">
               <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <div class="text-sm font-semibold text-neutral-900">{v.term}</div>
@@ -105,13 +112,14 @@ const format = (template: string, vars: Record<string, string | number>): string
               </div>
               {v.usage?.length ? (
                 <ul class="mt-2 list-disc pl-5 text-sm text-neutral-700">
-                  {v.usage.map((u) => (
+                  {v.usage.map((u: string) => (
                     <li>{u}</li>
                   ))}
                 </ul>
               ) : null}
             </div>
-          ))}
+            ),
+          )}
         </div>
       </section>
     ) : null}
