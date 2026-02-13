@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: portfolio-local
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: portfolio
+  source:
+    repoURL: https://github.com/byrmsh/portfolio.git
+    targetRevision: main
+    path: deploy/helm/portfolio
+    helm:
+      releaseName: portfolio
+      valueFiles:
+        - values.yaml
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+
