@@ -15,7 +15,6 @@ export type SystemHealthStrings = {
   runPlural: string;
   latencyLabel: string;
   recencyLabel: string;
-  upworkerActiveDetail: string;
 };
 
 export type ApiStatusResponse = {
@@ -303,8 +302,7 @@ export function labelFor(key: ServiceKey, strings: SystemHealthStrings): string 
   return strings.latencyLabel;
 }
 
-export function detailFor(key: ServiceKey, node: StatusNode, strings: SystemHealthStrings): string {
-  if (key === 'upworker') return /active/i.test(node.message) ? strings.upworkerActiveDetail : '';
+export function detailFor(_key: ServiceKey, _node: StatusNode, _strings: SystemHealthStrings): string {
   return '';
 }
 

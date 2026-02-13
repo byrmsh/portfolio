@@ -27,7 +27,6 @@ const strings = {
   runPlural: t('health.runPlural'),
   latencyLabel: t('health.latencyLabel'),
   recencyLabel: t('health.recencyLabel'),
-  upworkerActiveDetail: t('health.upworkerActiveDetail'),
 } satisfies SystemHealthStrings;
 const servicePills = {
   web: ['Astro', 'Svelte'],
@@ -66,7 +65,6 @@ const initial = await loadInitialStatus();
   data-run-plural={strings.runPlural}
   data-label-latency={strings.latencyLabel}
   data-label-recency={strings.recencyLabel}
-  data-upworker-active-detail={strings.upworkerActiveDetail}
   class="col-span-1 rounded-xl border border-neutral-200 bg-white p-6 md:col-span-6 lg:col-span-12"
 >
   <WidgetHeader title={t('health.title')} class="mb-5 flex-wrap gap-y-1" titleClass="whitespace-nowrap">
@@ -147,7 +145,6 @@ const initial = await loadInitialStatus();
     runPlural: root.dataset.runPlural ?? '',
     latencyLabel: root.dataset.labelLatency ?? '',
     recencyLabel: root.dataset.labelRecency ?? '',
-    upworkerActiveDetail: root.dataset.upworkerActiveDetail ?? '',
   };
 
   let lastCheckedAt = asIso(root.dataset.initialCheckedAt ?? null);
