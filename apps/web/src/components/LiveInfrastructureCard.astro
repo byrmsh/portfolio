@@ -23,8 +23,8 @@ const { t } = Astro.props;
 const endpoint = new URL('/system-status.json', Astro.url).toString();
 const strings = {
   notAvailable: t('health.notAvailable'),
-  runSingular: t('health.runSingular'),
-  runPlural: t('health.runPlural'),
+  runSingular: t('health.runs.one'),
+  runPlural: t('health.runs.other'),
   latencyLabel: t('health.latencyLabel'),
   recencyLabel: t('health.recencyLabel'),
 } satisfies SystemHealthStrings;

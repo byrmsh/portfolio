@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ['en', 'de', 'tr'] as const;
+export const SUPPORTED_LOCALES = ['en'] as const;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
@@ -8,10 +8,67 @@ type TranslationDict = {
   [key: string]: string | TranslationDict;
 };
 
+// Type-safe translation keys
+type DeepKeys<T> = T extends object
+  ? {
+      [K in keyof T]: K extends string
+        ? T[K] extends object
+          ? `${K}.${DeepKeys<T[K]>}`
+          : K
+        : never;
+    }[keyof T]
+  : never;
+
+export type TranslationKey = DeepKeys<typeof translations.en>;
+
+// Translation helper with interpolation support
+export function t(
+  key: TranslationKey,
+  params?: Record<string, string | number>,
+  locale: SupportedLocale = DEFAULT_LOCALE,
+): string {
+  const keys = key.split('.');
+  let value: TranslationDict | string = translations[locale];
+
+  for (const k of keys) {
+    if (typeof value === 'string') return key;
+    value = value?.[k];
+    if (!value) return key;
+  }
+
+  if (typeof value !== 'string') return key;
+
+  if (!params) return value;
+
+  return value.replace(/\{(\w+)\}/g, (_, k) => String(params[k] ?? ''));
+}
+
+// Pluralization helper
+export function plural(count: number, singular: string, plural: string): string {
+  return count === 1 ? singular : plural;
+}
+
 export const translations: Record<SupportedLocale, TranslationDict> = {
   en: {
     common: {
       httpError: 'HTTP {status}',
+      loading: 'Loading',
+      error: 'Error',
+      closeDialog: 'Close dialog',
+      backToTop: 'Back to top',
+      dateFormats: {
+        savedAt: 'Saved {date}',
+        publishedAt: 'Published {date}',
+        capturedAt: 'Captured {date}',
+        updatedAt: 'Updated {date}',
+      },
+    },
+    errors: {
+      notFound: 'Not found',
+      invalidResponse: 'Invalid response',
+      failedToLoad: 'Failed to load',
+      networkError: 'Network error',
+      unauthorized: 'Unauthorized',
     },
     meta: {
       systemsConsole: 'Systems Console',
@@ -20,7 +77,7 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       jobs: 'Jobs',
     },
     blog: {
-      indexDescription: 'Notes, systems write-ups, and project logs.',
+      indexDescription: 'Project logs, notes, and system documentation.',
       updatedInline: ' · updated {date}',
     },
     nav: {
@@ -33,13 +90,14 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       language: 'Language',
     },
     contact: {
-      description: 'Email for anything serious. GPG key for encrypted mail.',
+      description:
+        'Open to new opportunities and technical discussions! GPG key available for encryption.',
       emailLabel: 'Email',
       gpgLabel: 'GPG Public Key',
     },
     hero: {
       subtitle: 'Full-Stack Developer & DevOps Practitioner.',
-      description: 'Building functional systems and documenting the process.',
+      description: 'Building software and writing about what I learn along the way.',
     },
     activity: {
       title: 'Activity Monitor',
@@ -58,15 +116,11 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
     savedLyrics: {
       title: 'Saved Lyrics',
       noTracks: 'No saved tracks yet',
-      readLyricNote: 'READ LYRIC NOTE',
+      readLyricNote: 'READ NOTE',
     },
     writing: {
       title: 'Writing',
       allPosts: 'All Posts',
-      post1Title: 'Zero Trust K3s with Pulumi',
-      post1Description: 'Hardening the homelab with Cilium & mTLS.',
-      post2Title: 'Welcome to the Monorepo',
-      post2Description: 'Why I treat my portfolio as a product.',
     },
     knowledgeGraph: {
       title: 'Knowledge Graph',
@@ -78,39 +132,19 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       title: 'Job Scout',
       source: 'Upwork',
       emptyLead: 'No captured job leads yet.',
-      emptyTag: 'Waiting on upworker',
+      emptyTag: 'Awaiting data stream',
       viewAll: 'View all captured leads',
     },
     health: {
       title: 'Live Infrastructure',
-      namespace: 'k8s/portfolio-ns',
-      serviceWeb: 'Astro SSR',
-      serviceApi: 'Hono / Node',
-      serviceCollector: 'Python Worker (telemetry pending)',
-      serviceUpworker: 'Upworker Worker (telemetry pending)',
-      serviceDb: 'Redis-compatible',
-      serviceWebDescription: 'Frontend',
-      serviceApiDescription: 'Backend API',
-      serviceCollectorDescription: 'Personal data fetchers',
-      serviceUpworkerDescription: 'Upwork ingestion worker',
-      serviceDbDescription: 'KV store',
-      overallHealthy: 'Healthy',
-      overallDegraded: 'Degraded',
-      overallUnknown: 'Partial',
       latencyLabel: 'LATENCY',
       recencyLabel: 'RECENCY',
-      runsLabel: 'RUNS',
       notAvailable: 'n/a',
-      runSingular: 'run',
-      runPlural: 'runs',
+      runs: {
+        one: '{count} run',
+        other: '{count} runs',
+      },
       checkedPrefix: 'CHECKED',
-      uptimePrefix: 'UPTIME',
-      uptimeUnknown: 'n/a',
-      probeFailed: 'Probe failed',
-      webHealthy: 'Astro SSR runtime responding',
-      apiHealthy: 'Hono API endpoint reachable',
-      dbHealthy: 'Redis-backed activity read OK',
-      workerPending: 'Worker telemetry not yet wired',
     },
     gitCommits: {
       title: 'Latest Updates',
@@ -148,9 +182,8 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       couldNotLoadPage: 'Could not load page: {error}',
       prev: 'PREV',
       next: 'NEXT',
-      backToAll: '← ALL LYRIC NOTES',
+      backToAll: '← ALL NOTES',
       loading: 'Loading…',
-      loadingDescription: 'Fetching analysis from the API.',
       couldNotLoadNote: 'Could not load note',
       noteLabel: 'Lyric Note',
       openTrack: 'OPEN TRACK',
@@ -160,7 +193,6 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       vocabulary: 'Vocabulary',
       literal: 'Literal:',
       meaning: 'Meaning:',
-      missingId: 'Missing id',
       notFound: 'Not found',
       invalidResponse: 'Invalid response',
       failedToLoad: 'Failed to load',
@@ -184,359 +216,6 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       factPayment: 'PAYMENT',
       factSpent: 'SPENT',
       factBudget: 'BUDGET',
-    },
-  },
-  de: {
-    common: {
-      httpError: 'HTTP {status}',
-    },
-    meta: {
-      systemsConsole: 'Systemkonsole',
-      lyrics: 'Liedtexte',
-      lyricNote: 'Liedtext-Notiz',
-      jobs: 'Jobs',
-    },
-    blog: {
-      indexDescription: 'Notizen, System-Write-ups und Projekt-Logs.',
-      updatedInline: ' · aktualisiert {date}',
-    },
-    nav: {
-      home: 'Start',
-      blog: 'Blog',
-      lyrics: 'Liedtexte',
-      jobs: 'Jobs',
-      contact: 'Kontakt',
-      openMenu: 'Menü öffnen',
-      language: 'Sprache',
-    },
-    contact: {
-      description: 'E-Mail für alles Ernsthafte. GPG-Schlüssel für verschlüsselte Nachrichten.',
-      emailLabel: 'E-Mail',
-      gpgLabel: 'GPG Public Key',
-    },
-    hero: {
-      subtitle: 'Full-Stack Entwickler & DevOps-Praktiker.',
-      description: 'Ich baue funktionale Systeme und dokumentiere den Prozess.',
-    },
-    activity: {
-      title: 'Aktivitätsmonitor',
-      last7Days: 'Letzte 7 Tage',
-      to: 'bis',
-      githubLabel: 'GitHub',
-      ankiLabel: 'Anki',
-      githubAria: 'GitHub-Aktivität, letzte 7 Tage',
-      ankiAria: 'Anki-Aktivität, letzte 7 Tage',
-      githubDayAria: 'GitHub Tag {day}',
-      ankiDayAria: 'Anki Tag {day}',
-      streak: 'Serie',
-      tooltipWithDate: '{label}: {date} ({count})',
-      tooltipWithoutDate: '{label}: ({count})',
-    },
-    savedLyrics: {
-      title: 'Gespeicherte Liedtexte',
-      noTracks: 'Noch keine gespeicherten Tracks',
-      readLyricNote: 'LIEDTEXT-NOTIZ LESEN',
-    },
-    writing: {
-      title: 'Schreiben',
-      allPosts: 'Alle Beiträge',
-      post1Title: 'Zero Trust K3s mit Pulumi',
-      post1Description: 'Härtung des Homelabs mit Cilium & mTLS.',
-      post2Title: 'Willkommen im Monorepo',
-      post2Description: 'Warum ich mein Portfolio als Produkt behandle.',
-    },
-    knowledgeGraph: {
-      title: 'Wissensgraph',
-      source: 'OBSIDIAN',
-      nodes: '{count} Knoten',
-      description: 'Verknüpfte Notizen zu DevOps, Philosophie und Musik.',
-    },
-    jobScout: {
-      title: 'Job-Scout',
-      source: 'Upwork',
-      emptyLead: 'Noch keine Job-Leads erfasst.',
-      emptyTag: 'Warte auf Upworker',
-      viewAll: 'Alle erfassten Leads anzeigen',
-    },
-    health: {
-      title: 'Live-Infrastruktur',
-      namespace: 'k8s/portfolio-ns',
-      serviceWeb: 'Astro SSR',
-      serviceApi: 'Hono / Node',
-      serviceCollector: 'Python-Worker (Telemetry ausstehend)',
-      serviceUpworker: 'Upworker-Worker (Telemetry ausstehend)',
-      serviceDb: 'Redis-kompatibel',
-      serviceWebDescription: 'Frontend',
-      serviceApiDescription: 'Backend-API',
-      serviceCollectorDescription: 'Persönliche Daten-Fetcher',
-      serviceUpworkerDescription: 'Upwork-Ingestion-Worker',
-      serviceDbDescription: 'KV-Store',
-      overallHealthy: 'Stabil',
-      overallDegraded: 'Gestört',
-      overallUnknown: 'Teilweise',
-      latencyLabel: 'LATENZ',
-      recencyLabel: 'AKTUALITÄT',
-      runsLabel: 'LÄUFE',
-      notAvailable: 'n/v',
-      runSingular: 'Lauf',
-      runPlural: 'Läufe',
-      checkedPrefix: 'GEPRÜFT',
-      uptimePrefix: 'LAUFZEIT',
-      uptimeUnknown: 'n/v',
-      probeFailed: 'Prüfung fehlgeschlagen',
-      webHealthy: 'Astro-SSR antwortet',
-      apiHealthy: 'Hono-API erreichbar',
-      dbHealthy: 'Redis-Leseprüfung erfolgreich',
-      workerPending: 'Worker-Telemetry noch nicht verdrahtet',
-    },
-    gitCommits: {
-      title: 'Neueste Updates',
-      postUpdatesTitle: 'Post-Updates',
-      totalChanges: 'GESAMTANDERUNGEN: {value}',
-      author: 'AUTOR',
-      date: 'DATUM',
-      hash: 'HASH',
-      openCommit: 'Commit {hash} offnen',
-      breaking: 'BREAKING',
-      typeFeat: 'FEATURE',
-      typeFix: 'FIX',
-      typeDocs: 'DOKUMENTATION',
-      typeChore: 'WARTUNG',
-      typeRefactor: 'REFACTOR',
-      typeTest: 'TEST',
-      empty: 'Keine Commit-Historie verfügbar.',
-    },
-    footer: {
-      copyright: '© {year} {name}',
-      source: 'Quellcode',
-      rss: 'RSS',
-    },
-    lyrics: {
-      eyebrow: 'Liedtexte',
-      title: 'Liedtext-Notizen',
-      description:
-        'Hintergrundanalyse und Vokabelnotizen. Vollständige Texte liegen auf externen Seiten.',
-      latest: 'Neueste',
-      savedAt: 'Gespeichert {date}',
-      noTracks: 'Noch keine Tracks verarbeitet.',
-      all: 'Alle ({count})',
-      page: 'Seite {page} / {totalPages}',
-      perPage: '{count}/Seite',
-      couldNotLoadPage: 'Seite konnte nicht geladen werden: {error}',
-      prev: 'ZURÜCK',
-      next: 'WEITER',
-      backToAll: '← ALLE LIEDTEXT-NOTIZEN',
-      loading: 'Lädt…',
-      loadingDescription: 'Analyse wird von der API geladen.',
-      couldNotLoadNote: 'Notiz konnte nicht geladen werden',
-      noteLabel: 'Liedtext-Notiz',
-      openTrack: 'TRACK ÖFFNEN',
-      readLyrics: 'LIEDTEXT LESEN',
-      updatedAt: 'Aktualisiert {date}',
-      background: 'Hintergrund',
-      vocabulary: 'Wortschatz',
-      literal: 'Wörtlich:',
-      meaning: 'Bedeutung:',
-      missingId: 'ID fehlt',
-      notFound: 'Nicht gefunden',
-      invalidResponse: 'Ungültige Antwort',
-      failedToLoad: 'Laden fehlgeschlagen',
-    },
-    jobs: {
-      eyebrow: 'Jobs',
-      title: 'Gesammelte Leads',
-      description: 'Aktuelle Upwork-Job-Leads, die vom Worker erfasst wurden.',
-      empty: 'Noch keine Jobs erfasst.',
-      newest: 'NEUSTE',
-      next: 'WEITER',
-      backToAll: '← ALLE JOBS',
-      openUpwork: 'UPWORK ÖFFNEN',
-      published: 'Veröffentlicht {date}',
-      captured: 'Erfasst {date}',
-      notFound: 'Job nicht gefunden',
-      facts: 'Fakten',
-      factType: 'TYP',
-      factTier: 'TIER',
-      factCountry: 'LAND',
-      factPayment: 'ZAHLUNG',
-      factSpent: 'AUSGABEN',
-      factBudget: 'BUDGET',
-    },
-  },
-  tr: {
-    common: {
-      httpError: 'HTTP {status}',
-    },
-    meta: {
-      systemsConsole: 'Sistem Konsolu',
-      lyrics: 'Şarkı Sözleri',
-      lyricNote: 'Şarkı Notu',
-      jobs: 'İşler',
-    },
-    blog: {
-      indexDescription: 'Notlar, sistem yazilari ve proje loglari.',
-      updatedInline: ' · guncellendi {date}',
-    },
-    nav: {
-      home: 'Ana Sayfa',
-      blog: 'Blog',
-      lyrics: 'Şarkı Sözleri',
-      jobs: 'İşler',
-      contact: 'İletişim',
-      openMenu: 'Menüyü aç',
-      language: 'Dil',
-    },
-    contact: {
-      description: 'Ciddi konular için e-posta. Şifreli e-posta için GPG anahtarı.',
-      emailLabel: 'E-posta',
-      gpgLabel: 'GPG Public Key',
-    },
-    hero: {
-      subtitle: 'Full-Stack Geliştirici ve DevOps Uygulayıcısı.',
-      description: 'İşlevsel sistemler kuruyor ve süreci belgeliyorum.',
-    },
-    activity: {
-      title: 'Aktivite Monitörü',
-      last7Days: 'Son 7 gün',
-      to: 'ile',
-      githubLabel: 'GitHub',
-      ankiLabel: 'Anki',
-      githubAria: 'GitHub aktivitesi, son 7 gün',
-      ankiAria: 'Anki aktivitesi, son 7 gün',
-      githubDayAria: 'GitHub gün {day}',
-      ankiDayAria: 'Anki gün {day}',
-      streak: 'Seri',
-      tooltipWithDate: '{label}: {date} ({count})',
-      tooltipWithoutDate: '{label}: ({count})',
-    },
-    savedLyrics: {
-      title: 'Kaydedilmiş Şarkı Sözleri',
-      noTracks: 'Henüz kaydedilmiş parça yok',
-      readLyricNote: 'ŞARKI NOTUNU OKU',
-    },
-    writing: {
-      title: 'Yazılar',
-      allPosts: 'Tüm Yazılar',
-      post1Title: 'Pulumi ile Zero Trust K3s',
-      post1Description: 'Homelab altyapısını Cilium ve mTLS ile güçlendirmek.',
-      post2Title: 'Monorepo’ya Hoş Geldiniz',
-      post2Description: 'Portföyümü neden bir ürün gibi ele alıyorum.',
-    },
-    knowledgeGraph: {
-      title: 'Bilgi Grafiği',
-      source: 'OBSIDIAN',
-      nodes: '{count} Düğüm',
-      description: 'DevOps, felsefe ve müzik hakkında bağlantılı notlar.',
-    },
-    jobScout: {
-      title: 'İş Takipçisi',
-      source: 'Upwork',
-      emptyLead: 'Henüz iş ilanı yakalanmadı.',
-      emptyTag: 'Upworker bekleniyor',
-      viewAll: 'Toplanan tüm ilanları gör',
-    },
-    health: {
-      title: 'Canli Altyapi',
-      namespace: 'k8s/portfolio-ns',
-      serviceWeb: 'Astro SSR',
-      serviceApi: 'Hono / Node',
-      serviceCollector: 'Python Worker (telemetri bekleniyor)',
-      serviceUpworker: 'Upworker Worker (telemetri bekleniyor)',
-      serviceDb: 'Redis uyumlu',
-      serviceWebDescription: 'Arayuz',
-      serviceApiDescription: 'Backend API',
-      serviceCollectorDescription: 'Kisisel veri toplayicilari',
-      serviceUpworkerDescription: 'Upwork veri alma calisani',
-      serviceDbDescription: 'KV deposu',
-      overallHealthy: 'Sağlıklı',
-      overallDegraded: 'Sorunlu',
-      overallUnknown: 'Kısmi',
-      latencyLabel: 'GECIKME',
-      recencyLabel: 'GUNCELLIK',
-      runsLabel: 'ÇALIŞTIRMA',
-      notAvailable: 'yok',
-      runSingular: 'calisma',
-      runPlural: 'calisma',
-      checkedPrefix: 'KONTROL',
-      uptimePrefix: 'ÇALIŞMA',
-      uptimeUnknown: 'yok',
-      probeFailed: 'Kontrol başarısız',
-      webHealthy: 'Astro SSR yanıt veriyor',
-      apiHealthy: 'Hono API erişilebilir',
-      dbHealthy: 'Redis veri okuması başarılı',
-      workerPending: 'Worker telemetrisi henüz bağlanmadı',
-    },
-    gitCommits: {
-      title: 'Son Guncellemeler',
-      postUpdatesTitle: 'Yazi Guncellemeleri',
-      totalChanges: 'TOPLAM DEGISIKLIK: {value}',
-      author: 'YAZAR',
-      date: 'TARIH',
-      hash: 'HASH',
-      openCommit: '{hash} commitini ac',
-      breaking: 'KRITIK',
-      typeFeat: 'OZELLIK',
-      typeFix: 'DUZELTME',
-      typeDocs: 'DOKUMANTASYON',
-      typeChore: 'BAKIM',
-      typeRefactor: 'REFACTOR',
-      typeTest: 'TEST',
-      empty: 'Commit gecmisi kullanilamiyor.',
-    },
-    footer: {
-      copyright: '© {year} {name}',
-      source: 'Kaynak',
-      rss: 'RSS',
-    },
-    lyrics: {
-      eyebrow: 'Şarkı Sözleri',
-      title: 'Şarkı Notları',
-      description: 'Arka plan analizi ve kelime notları. Tam sözler harici sitelerde barındırılır.',
-      latest: 'En Son',
-      savedAt: 'Kaydedildi {date}',
-      noTracks: 'Henüz işlenmiş parça yok.',
-      all: 'Tümü ({count})',
-      page: 'Sayfa {page} / {totalPages}',
-      perPage: 'sayfa başına {count}',
-      couldNotLoadPage: 'Sayfa yüklenemedi: {error}',
-      prev: 'ÖNCEKİ',
-      next: 'SONRAKİ',
-      backToAll: '← TÜM ŞARKI NOTLARI',
-      loading: 'Yükleniyor…',
-      loadingDescription: 'Analiz API’den alınıyor.',
-      couldNotLoadNote: 'Not yüklenemedi',
-      noteLabel: 'Şarkı Notu',
-      openTrack: 'PARÇAYI AÇ',
-      readLyrics: 'SÖZLERİ OKU',
-      updatedAt: 'Güncellendi {date}',
-      background: 'Arka Plan',
-      vocabulary: 'Kelime Dağarcığı',
-      literal: 'Birebir:',
-      meaning: 'Anlamı:',
-      missingId: 'Kimlik eksik',
-      notFound: 'Bulunamadı',
-      invalidResponse: 'Geçersiz yanıt',
-      failedToLoad: 'Yükleme başarısız',
-    },
-    jobs: {
-      eyebrow: 'İşler',
-      title: 'Toplanan İlanlar',
-      description: 'Worker tarafından yakalanan son Upwork iş ilanları.',
-      empty: 'Henüz iş ilanı yok.',
-      newest: 'EN YENİ',
-      next: 'SONRAKİ',
-      backToAll: '← TÜM İŞLER',
-      openUpwork: 'UPWORK AÇ',
-      published: 'Yayınlandı {date}',
-      captured: 'Yakalandı {date}',
-      notFound: 'İlan bulunamadı',
-      facts: 'Bilgiler',
-      factType: 'TÜR',
-      factTier: 'SEVİYE',
-      factCountry: 'ÜLKE',
-      factPayment: 'ÖDEME',
-      factSpent: 'HARCAMA',
-      factBudget: 'BÜTÇE',
     },
   },
 };
