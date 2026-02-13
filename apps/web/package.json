@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@astrojs/node": "^9.5.2",
+    "@astrojs/rss": "^4.0.15",
     "@astrojs/svelte": "^7.2.5",
     "@lucide/astro": "^0.563.0",
     "@portfolio/schema": "workspace:*",

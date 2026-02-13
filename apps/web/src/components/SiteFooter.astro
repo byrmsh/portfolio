@@ -1,6 +1,7 @@
 ---
 import { SITE } from '../config/site';
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../i18n';
+import { localizedPath } from '../i18n';
 
 interface Props {
   locale: SupportedLocale;
@@ -41,7 +42,12 @@ const { t, locale } = Astro.props;
     </div>
     <div class="flex items-center gap-6">
       <a href="#" class="hover:text-neutral-900 transition-colors">{t('footer.source')}</a>
-      <a href="#" class="hover:text-neutral-900 transition-colors">{t('footer.rss')}</a>
+      <a
+        href={localizedPath(locale, '/rss.xml')}
+        class="hover:text-neutral-900 transition-colors"
+      >
+        {t('footer.rss')}
+      </a>
     </div>
   </div>
 </footer>

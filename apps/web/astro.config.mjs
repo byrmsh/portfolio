@@ -2,9 +2,11 @@ import { defineConfig } from 'astro/config';
 import svelte from '@astrojs/svelte';
 import node from '@astrojs/node';
 import tailwindcss from '@tailwindcss/vite';
+import { SITE } from './site.config.mjs';
 
 // https://astro.build/config
 export default defineConfig({
+  site: `https://${SITE.domain}`,
   output: 'server',
   adapter: node({ mode: 'standalone' }),
   integrations: [svelte()],
