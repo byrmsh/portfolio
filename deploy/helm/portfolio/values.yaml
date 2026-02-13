@@ -141,6 +141,7 @@ upworker:
   env:
     redisUrl: redis://db-service:6379/0
     streamKey: jobs
+    streamMaxlen: "5000"
     healthPort: "3000"
     impersonate: chrome
   secretRef: upworker-secrets

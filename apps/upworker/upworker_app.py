@@ -34,6 +34,8 @@ JOB_SEARCH_QUERY = (_HERE / "job-search.gql").read_text("utf-8")
 CONNECTS_FREELANCER_QUERY = (_HERE / "connects-freelancer.gql").read_text("utf-8")
 REDIS_URL = env.str("REDIS_URL")
 STREAM_KEY = env.str("REDIS_STREAM_KEY", default="jobs")
+# Prevent unbounded stream growth (still approximate trimming).
+STREAM_MAXLEN = env.int("REDIS_STREAM_MAXLEN", default=5000)
 UPWORK_TOKEN_REDIS_KEY = env.str("UPWORK_TOKEN_REDIS_KEY", default="upwork_token")
 UPWORK_GRAPHQL_HEADERS_REDIS_KEY = env.str(
     "UPWORK_GRAPHQL_HEADERS_REDIS_KEY", default="upwork_graphql_headers"
@@ -642,23 +644,42 @@ def fetch_jobs_page(offset: int, count: int) -> List[UpworkJobResult]:
 
 
 def fetch_new_jobs(latest_job_id: int | None) -> List[UpworkJobResult]:
+    # Historically we used numeric job IDs to find "new" jobs. That assumes ID monotonicity
+    # and can silently miss jobs if Upwork changes ordering/ID behavior. Instead, treat a job
+    # as new if we don't already have its `job:{id}` key in Redis.
     logger.info("Starting fetch_new_jobs", latest_job_id=latest_job_id)
-    if latest_job_id is None:
-        return fetch_jobs_page(0, MAX_PAGE_SIZE)
+
     offset = 0
-    new_job_entries = []
+    new_job_entries: List[UpworkJobResult] = []
     while True:
         jobs = fetch_jobs_page(offset, MAX_PAGE_SIZE)
-        filtered = [job for job in jobs if int(job["id"]) > latest_job_id]
+        if not jobs:
+            break
+
+        pipe = r.pipeline()
+        for job in jobs:
+            pipe.exists(f"job:{job['id']}")
+        exists_flags = pipe.execute()
+
+        filtered: List[UpworkJobResult] = [
+            job for job, exists in zip(jobs, exists_flags) if not exists
+        ]
         logger.info(
-            "Processing page", offset=offset, fetched=len(jobs), filtered=len(filtered)
+            "Processing page", offset=offset, fetched=len(jobs), new=len(filtered)
         )
+
+        # With recency sorting, once a page has zero new jobs the rest should be older.
         if not filtered:
             break
         new_job_entries.extend(filtered)
-        if len(filtered) < MAX_PAGE_SIZE:
+
+        if len(jobs) < MAX_PAGE_SIZE:
             break
         offset += MAX_PAGE_SIZE
+        if offset > MAX_OFFSET:
+            logger.warning("Reached max offset while searching for new jobs", offset=offset)
+            break
+
     logger.info("Total new jobs fetched", total=len(new_job_entries))
     return new_job_entries
 
@@ -724,6 +745,8 @@ def add_jobs_to_redis(jobs: List[UpworkJobResult]) -> None:
                     "fetched_at": str(int(time.time())),
                 },
                 stream_id,
+                maxlen=max(1, int(STREAM_MAXLEN)),
+                approximate=True,
             )
         except RedisResponseError as e:
             logger.warning(

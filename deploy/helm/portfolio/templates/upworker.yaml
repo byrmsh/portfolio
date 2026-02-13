@@ -31,6 +31,8 @@ spec:
               value: {{ .Values.upworker.env.redisUrl | quote }}
             - name: REDIS_STREAM_KEY
               value: {{ .Values.upworker.env.streamKey | quote }}
+            - name: REDIS_STREAM_MAXLEN
+              value: {{ .Values.upworker.env.streamMaxlen | quote }}
             - name: UPWORK_HEALTH_ENABLED
               value: "true"
             - name: UPWORK_HEALTH_PORT
