@@ -32,6 +32,11 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       openMenu: 'Open menu',
       language: 'Language',
     },
+    contact: {
+      description: 'Email for anything serious. GPG key for encrypted mail.',
+      emailLabel: 'Email',
+      gpgLabel: 'GPG Public Key',
+    },
     hero: {
       subtitle: 'Full-Stack Developer & DevOps Practitioner.',
       description: 'Building functional systems and documenting the process.',
@@ -204,6 +209,11 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       openMenu: 'Menü öffnen',
       language: 'Sprache',
     },
+    contact: {
+      description: 'E-Mail für alles Ernsthafte. GPG-Schlüssel für verschlüsselte Nachrichten.',
+      emailLabel: 'E-Mail',
+      gpgLabel: 'GPG Public Key',
+    },
     hero: {
       subtitle: 'Full-Stack Entwickler & DevOps-Praktiker.',
       description: 'Ich baue funktionale Systeme und dokumentiere den Prozess.',
@@ -375,6 +385,11 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       contact: 'İletişim',
       openMenu: 'Menüyü aç',
       language: 'Dil',
+    },
+    contact: {
+      description: 'Ciddi konular için e-posta. Şifreli e-posta için GPG anahtarı.',
+      emailLabel: 'E-posta',
+      gpgLabel: 'GPG Public Key',
     },
     hero: {
       subtitle: 'Full-Stack Geliştirici ve DevOps Uygulayıcısı.',
