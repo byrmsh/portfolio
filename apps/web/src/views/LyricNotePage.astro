@@ -37,7 +37,7 @@ try {
   if (res.status === 404) {
     error = t('lyrics.notFound');
   } else if (!res.ok) {
-    error = `HTTP ${res.status}`;
+    error = t('common.httpError', { status: res.status });
   } else {
     const json = (await res.json()) as { data?: YtMusicAnalysis };
     if (!json?.data?.id) error = t('lyrics.invalidResponse');

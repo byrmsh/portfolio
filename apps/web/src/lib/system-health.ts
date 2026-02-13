@@ -9,6 +9,15 @@ export type StatusNode = {
   meta?: string;
 };
 
+export type SystemHealthStrings = {
+  notAvailable: string;
+  runSingular: string;
+  runPlural: string;
+  latencyLabel: string;
+  recencyLabel: string;
+  upworkerActiveDetail: string;
+};
+
 export type ApiStatusResponse = {
   web: StatusNode;
   api: StatusNode;
@@ -90,7 +99,7 @@ function metricMinutes(value: string): number | null {
   return null;
 }
 
-export function collectorMetric(meta: string): string {
+export function collectorMetric(meta: string): string | null {
   const github = extractSourceFromMeta(meta, 'github');
   const anki = extractSourceFromMeta(meta, 'anki');
   const githubMinutes = metricMinutes(github);
@@ -101,7 +110,7 @@ export function collectorMetric(meta: string): string {
   }
   if (githubMinutes !== null) return github;
   if (ankiMinutes !== null) return anki;
-  return 'N/A';
+  return null;
 }
 
 export function parseCheckedAt(payload: unknown): string | null {
@@ -137,10 +146,10 @@ function updatedAtForCheck(service: Record<string, unknown> | undefined, checkId
   return null;
 }
 
-export function ageMetricFromIso(value: string | null): string {
-  if (!value) return 'N/A';
+export function ageMetricFromIso(value: string | null): string | null {
+  if (!value) return null;
   const ts = Date.parse(value);
-  if (Number.isNaN(ts)) return 'N/A';
+  if (Number.isNaN(ts)) return null;
   const ageMs = Math.max(0, Date.now() - ts);
   const minutes = Math.floor(ageMs / 60000);
   if (minutes < 60) return `${Math.max(1, minutes)}m`;
@@ -152,7 +161,7 @@ export function ageMetricFromIso(value: string | null): string {
 function collectorMetaFromChecks(service: Record<string, unknown> | undefined): string {
   const githubAge = ageMetricFromIso(updatedAtForCheck(service, 'github'));
   const ankiAge = ageMetricFromIso(updatedAtForCheck(service, 'anki'));
-  return `GitHub ${githubAge === 'N/A' ? '--' : githubAge} • Anki ${ankiAge === 'N/A' ? '--' : ankiAge}`;
+  return `GitHub ${githubAge ?? '--'} • Anki ${ankiAge ?? '--'}`;
 }
 
 function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial<StatusNode>>> {
@@ -164,16 +173,18 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
   if (direct.web || direct.api || direct.dragonfly || direct.collector || direct.upworker || direct.lyricist) {
     const upworkerLastFetchedAt = asIso(direct.upworker?.lastFetchedAt);
     if (upworkerLastFetchedAt) {
+      const meta = ageMetricFromIso(upworkerLastFetchedAt) ?? '';
       direct.upworker = {
         ...direct.upworker,
-        meta: ageMetricFromIso(upworkerLastFetchedAt),
+        meta,
       };
     }
     const lyricistLastFetchedAt = asIso(direct.lyricist?.lastFetchedAt);
     if (lyricistLastFetchedAt) {
+      const meta = ageMetricFromIso(lyricistLastFetchedAt) ?? '';
       direct.lyricist = {
         ...direct.lyricist,
-        meta: ageMetricFromIso(lyricistLastFetchedAt),
+        meta,
       };
     }
     return direct;
@@ -222,13 +233,13 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
       status: asStatus(byId.upworker?.status),
       runs: runsFromChecks(byId.upworker),
       message: asText(byId.upworker?.detail, ''),
-      meta: ageMetricFromIso(latestUpdatedAtFromChecks(byId.upworker)),
+      meta: ageMetricFromIso(latestUpdatedAtFromChecks(byId.upworker)) ?? '',
     },
     lyricist: {
       status: asStatus(byId.lyricist?.status),
       runs: runsFromChecks(byId.lyricist),
       message: asText(byId.lyricist?.detail, ''),
-      meta: ageMetricFromIso(latestUpdatedAtFromChecks(byId.lyricist)),
+      meta: ageMetricFromIso(latestUpdatedAtFromChecks(byId.lyricist)) ?? '',
     },
   };
 }
@@ -267,16 +278,17 @@ export function dotClass(status: ServiceStatus): string {
   return status === 'healthy' ? 'bg-emerald-500' : 'bg-rose-500';
 }
 
-export function metricFor(key: ServiceKey, node: StatusNode): string {
-  if (key === 'collector') return collectorMetric(asText(node.meta, ''));
+export function metricFor(key: ServiceKey, node: StatusNode, strings: SystemHealthStrings): string {
+  if (key === 'collector') return collectorMetric(asText(node.meta, '')) ?? strings.notAvailable;
   if (key === 'upworker' || key === 'lyricist') {
-    const freshness = asText(node.meta, 'N/A');
-    if (freshness !== 'N/A') return freshness;
+    const freshness = asText(node.meta, '');
+    if (freshness) return freshness;
     const runs = asCount(node.runs);
-    return runs > 0 ? `${runs} run${runs === 1 ? '' : 's'}` : 'N/A';
+    if (runs <= 0) return strings.notAvailable;
+    return `${runs} ${runs === 1 ? strings.runSingular : strings.runPlural}`;
   }
   const latency = asCount(node.latency);
-  return latency > 0 ? `${latency}ms` : 'N/A';
+  return latency > 0 ? `${latency}ms` : strings.notAvailable;
 }
 
 export function metricClass(value: string): string {
@@ -286,13 +298,13 @@ export function metricClass(value: string): string {
     : `${base} text-3xl font-mono font-medium uppercase tracking-wide text-neutral-300`;
 }
 
-export function labelFor(key: ServiceKey): string {
-  if (key === 'collector' || key === 'upworker' || key === 'lyricist') return 'RECENCY';
-  return 'LATENCY';
+export function labelFor(key: ServiceKey, strings: SystemHealthStrings): string {
+  if (key === 'collector' || key === 'upworker' || key === 'lyricist') return strings.recencyLabel;
+  return strings.latencyLabel;
 }
 
-export function detailFor(key: ServiceKey, node: StatusNode): string {
-  if (key === 'upworker') return /active/i.test(node.message) ? 'Jobs stream active' : '';
+export function detailFor(key: ServiceKey, node: StatusNode, strings: SystemHealthStrings): string {
+  if (key === 'upworker') return /active/i.test(node.message) ? strings.upworkerActiveDetail : '';
   return '';
 }
 

@@ -167,12 +167,12 @@ function commitTypeClass(type: string): string {
 
 function labelForType(type: string): string {
   const labels: Record<string, string> = {
-    feat: 'FEATURE',
-    fix: 'FIX',
-    docs: 'DOCUMENTATION',
-    chore: 'MAINTENANCE',
-    refactor: 'REFACTOR',
-    test: 'TEST',
+    feat: t('gitCommits.typeFeat'),
+    fix: t('gitCommits.typeFix'),
+    docs: t('gitCommits.typeDocs'),
+    chore: t('gitCommits.typeChore'),
+    refactor: t('gitCommits.typeRefactor'),
+    test: t('gitCommits.typeTest'),
   };
   return labels[type] ?? type.toUpperCase();
 }
@@ -226,13 +226,13 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                       ) : null}
                       {parsed.breaking ? (
                         <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
-                          BREAKING
+                          {t('gitCommits.breaking')}
                         </span>
                       ) : null}
                     </div>
                     <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
                       <span class="text-right text-xs font-bold uppercase tracking-wider text-neutral-400">
-                        HASH
+                        {t('gitCommits.hash')}
                       </span>
                       <span class="inline-flex min-w-0 items-center gap-1.5 text-left text-xs font-mono text-neutral-800">
                         <code title={commit.hash}>{commit.shortHash}</code>
@@ -251,7 +251,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                       </span>
 
                       <span class="text-right text-xs font-bold uppercase tracking-wider text-neutral-400">
-                        DATE
+                        {t('gitCommits.date')}
                       </span>
                       <time
                         class="text-left text-xs font-mono text-neutral-800"
@@ -261,7 +261,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                       </time>
 
                       <span class="text-right text-xs font-bold uppercase tracking-wider text-neutral-400">
-                        AUTHOR
+                        {t('gitCommits.author')}
                       </span>
                       <span class="text-left text-xs font-mono text-neutral-800 break-words">
                         {commit.author}
@@ -271,7 +271,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                   <div class="mt-1 hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs md:flex">
                     <span class="inline-flex items-center gap-1.5">
                       <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">
-                        HASH:
+                        {t('gitCommits.hash')}:
                       </span>
                       <code class="font-mono text-[11px] text-neutral-600" title={commit.hash}>
                         {commit.shortHash}
@@ -291,13 +291,13 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                     </span>
                     <span class="inline-flex items-center gap-1.5">
                       <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">
-                        AUTHOR:
+                        {t('gitCommits.author')}:
                       </span>
                       <span class="text-neutral-700">{commit.author}</span>
                     </span>
                     <span class="inline-flex items-center gap-1.5">
                       <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">
-                        DATE:
+                        {t('gitCommits.date')}:
                       </span>
                       <time class="text-neutral-700" datetime={commit.authoredAt}>
                         {dateFormatter.format(new Date(commit.authoredAt))}
@@ -322,7 +322,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                   ) : null}
                   {parsed.breaking ? (
                     <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
-                      BREAKING
+                      {t('gitCommits.breaking')}
                     </span>
                   ) : null}
                 </div>

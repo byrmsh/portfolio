@@ -21,6 +21,7 @@
     page: string;
     perPage: string;
     couldNotLoadPage: string;
+    httpError: string;
     noTracks: string;
     savedAt: string;
     prev: string;
@@ -86,7 +87,7 @@
         headers: { accept: 'application/json' },
       });
       if (!res.ok) {
-        error = `HTTP ${res.status}`;
+        error = format(labels.httpError, { status: res.status });
         return;
       }
       const json = (await res.json()) as { data?: SavedLyricNotesPage };
@@ -151,7 +152,7 @@
         aria-disabled={loading}
         on:click|preventDefault={() => loadPage(data.page - 1)}
       >
-        {loading ? '…' : labels.prev}
+        {loading ? labels.loading : labels.prev}
       </a>
     {:else}
       <span></span>
@@ -164,7 +165,7 @@
         aria-disabled={loading}
         on:click|preventDefault={() => loadPage(data.page + 1)}
       >
-        {loading ? '…' : labels.next}
+        {loading ? labels.loading : labels.next}
       </a>
     {:else}
       <span></span>

@@ -14,7 +14,12 @@ const { t, locale } = Astro.props;
   <div
     class="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-neutral-500"
   >
-    <div class="font-mono">© {new Date().getFullYear()} {SITE.name}</div>
+    <div class="font-mono">
+      {t('footer.copyright', {
+        year: new Date().getFullYear(),
+        name: SITE.name,
+      })}
+    </div>
     <div class="flex items-center gap-2">
       <label class="text-xxs font-mono text-neutral-500" for="footer-lang-select"
         >{t('nav.language')}</label
