@@ -16,8 +16,7 @@ Examples (fill in your own values):
 ```bash
 kubectl create secret generic upworker-secrets \
   --namespace portfolio \
-  --from-literal=TELEGRAM_BOT_TOKEN='YOUR_TOKEN' \
-  --from-literal=TELEGRAM_CHAT_ID='YOUR_CHAT_ID'
+  --from-literal=UPWORK_BEARER_TOKEN='YOUR_UPWORK_TOKEN'
 ```
 
 ```bash

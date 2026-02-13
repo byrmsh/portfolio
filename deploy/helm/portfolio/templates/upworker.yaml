@@ -7,17 +7,20 @@ metadata:
   labels:
     app: {{ include "portfolio.appLabel" . }}
     component: upworker
+    workload: upworker
 spec:
   replicas: {{ .Values.upworker.replicas }}
   selector:
     matchLabels:
       app: {{ include "portfolio.appLabel" . }}
       component: upworker
+      workload: upworker
   template:
     metadata:
       labels:
         app: {{ include "portfolio.appLabel" . }}
         component: upworker
+        workload: upworker
     spec:
       containers:
         - name: upworker
@@ -55,4 +58,3 @@ spec:
             initialDelaySeconds: 3
             periodSeconds: 5
 {{- end }}
-
