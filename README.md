@@ -32,18 +32,21 @@ This is a polyglot monorepo containing application code and deployment manifests
 ### Tech Standards
 
 Frontend (`apps/web`):
+
 - Astro 5
 - Svelte 5 (Runes mode preferred)
 - Islands architecture; default static HTML, use `client:visible` only for live widgets
 - TailwindCSS utility-first (avoid `@apply`, keep class sorting)
 
 Backend (`apps/api`):
+
 - Hono
 - Node.js 22 LTS or Bun
 - REST JSON endpoints: `/api/status` and `/api/jobs`
 - Response format: `{ data: T, meta: { ... } }` or standard HTTP errors
 
 Containerization:
+
 - Base images: `node:22-alpine` or `gcr.io/distroless/nodejs`
 - Multi-stage builds required
 - Run as non-root (`USER node`)
@@ -81,6 +84,7 @@ pnpm dev
 ```
 
 This command:
+
 - starts `kubectl port-forward svc/api-service 3000:3000` in `portfolio`
 - runs `apps/web` dev server with `API_ORIGIN=http://127.0.0.1:3000`
 
@@ -129,6 +133,7 @@ docker compose up --build
 ```
 
 Services:
+
 - `web`: http://localhost:4321
 - `api`: http://localhost:3000
 - `redis` (DragonflyDB): localhost:6379

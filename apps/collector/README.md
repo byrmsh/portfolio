@@ -36,6 +36,7 @@ The collectors write JSON payloads that the API/web can validate.
   - `payload`: JSON like `{ "key": "stat:github:default" }`
 
 Per collector:
+
 - `collector-github` (`github_activity.py`): GitHub GraphQL contributions calendar -> `stat:github:default` and `github_activity_updated`.
 - `collector-cluster` (`cluster.py`): placeholder -> `metric:cluster:status` and `cluster_status_updated`.
 

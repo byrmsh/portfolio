@@ -23,9 +23,7 @@ HTTP_TOKEN = env.str("UPWORKERBOT_HTTP_TOKEN", default="").strip()
 
 UPWORK_TOKEN_REDIS_KEY = env.str("UPWORK_TOKEN_REDIS_KEY", default="upwork_token")
 UPWORK_COOKIE_REDIS_KEY = env.str("UPWORK_COOKIE_REDIS_KEY", default="upwork_cookie")
-UPWORK_API_TENANT_REDIS_KEY = env.str(
-    "UPWORK_API_TENANT_REDIS_KEY", default="upwork_api_tenant_id"
-)
+UPWORK_API_TENANT_REDIS_KEY = env.str("UPWORK_API_TENANT_REDIS_KEY", default="upwork_api_tenant_id")
 
 UPWORK_TOKEN_UPDATED_AT_REDIS_KEY = env.str(
     "UPWORK_TOKEN_UPDATED_AT_REDIS_KEY", default="stat:upwork:token_updated_at"
@@ -70,9 +68,7 @@ def as_int(s: str) -> Optional[int]:
 
 TELEGRAM_ALLOWED_CHAT_ID = as_int(TELEGRAM_ALLOWED_CHAT_ID_RAW)
 if TELEGRAM_ALLOWED_CHAT_ID is None:
-    logger.warning(
-        "TELEGRAM_ALLOWED_CHAT_ID is not set; bot will accept commands from any chat_id"
-    )
+    logger.warning("TELEGRAM_ALLOWED_CHAT_ID is not set; bot will accept commands from any chat_id")
 
 
 def tg_api(method: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -114,7 +110,7 @@ def health_server() -> None:
             self.send_response(401)
             self.send_header("content-type", "application/json")
             self.end_headers()
-            self.wfile.write(b"{\"ok\":false,\"error\":\"unauthorized\"}")
+            self.wfile.write(b'{"ok":false,"error":"unauthorized"}')
 
         def _bad_request(self, msg: str) -> None:
             self.send_response(400)
@@ -147,7 +143,7 @@ def health_server() -> None:
             self.send_response(200)
             self.send_header("content-type", "application/json")
             self.end_headers()
-            self.wfile.write(b"{\"ok\":true}")
+            self.wfile.write(b'{"ok":true}')
 
         def do_POST(self):  # noqa: N802
             if self.path != "/upwork_set_all":
@@ -175,9 +171,7 @@ def health_server() -> None:
 
             parsed = parse_set_all_payload(obj)
             if not parsed:
-                return self._bad_request(
-                    "provide token/cookie/tenant fields"
-                )
+                return self._bad_request("provide token/cookie/tenant fields")
 
             updated = apply_set_all(parsed)
             masked = {k: mask_secret(v) for k, v in updated.items()}

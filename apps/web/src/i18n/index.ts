@@ -54,11 +54,10 @@ export function getLocaleFromUrl(url: URL): SupportedLocale {
 export function localizedPath(locale: SupportedLocale, path = '/', baseSearch?: string): string {
   const clean = path.startsWith('/') ? path : `/${path}`;
   const parts = clean.split('/').filter(Boolean);
-  const stripped = parts.length && isSupportedLocale(parts[0]) ? `/${parts.slice(1).join('/')}` : clean;
+  const stripped =
+    parts.length && isSupportedLocale(parts[0]) ? `/${parts.slice(1).join('/')}` : clean;
   const withLocale =
-    locale === DEFAULT_LOCALE
-      ? stripped
-      : `/${locale}${stripped === '/' ? '' : stripped}`;
+    locale === DEFAULT_LOCALE ? stripped : `/${locale}${stripped === '/' ? '' : stripped}`;
   const params = new URLSearchParams(baseSearch ?? '');
   // Query-param locale is deprecated; ensure we don't carry it forward.
   params.delete('lang');

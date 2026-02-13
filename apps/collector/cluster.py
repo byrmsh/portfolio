@@ -5,6 +5,7 @@ from portfolio_common import emit_event, logger, redis_client, write_metric
 
 # Placeholder for cluster metrics ingestion.
 
+
 def main() -> None:
     logger.info("collector.cluster.todo")
     r = redis_client()

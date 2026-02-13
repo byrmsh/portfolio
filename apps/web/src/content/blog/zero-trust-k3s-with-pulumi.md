@@ -1,9 +1,9 @@
 ---
-title: "Zero Trust K3s with Pulumi"
-description: "Hardening the homelab with Cilium, mTLS, and boringly-repeatable infra."
+title: 'Zero Trust K3s with Pulumi'
+description: 'Hardening the homelab with Cilium, mTLS, and boringly-repeatable infra.'
 pubDate: 2026-02-10
 draft: true
-tags: ["k3s", "pulumi", "cilium", "homelab", "security"]
+tags: ['k3s', 'pulumi', 'cilium', 'homelab', 'security']
 ---
 
 This post is a work in progress.

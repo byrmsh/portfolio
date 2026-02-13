@@ -37,4 +37,4 @@ export async function GET(context: { site?: URL; params: { lang?: string } }) {
       categories: post.data.tags,
     })),
   });
-};
+}

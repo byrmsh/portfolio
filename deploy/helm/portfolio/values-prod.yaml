@@ -14,7 +14,7 @@ collectorCronJobs:
   jobs:
     - name: collector-github-cronjob
       component: collector
-      schedule: "15 3 * * *"
+      schedule: '15 3 * * *'
       suspend: true
       image:
         repository: ghcr.io/byrmsh/portfolio-collector
@@ -26,7 +26,7 @@ collectorCronJobs:
       secretRef: collector-secrets
     - name: collector-anki-cronjob
       component: collector
-      schedule: "5 * * * *"
+      schedule: '5 * * * *'
       suspend: true
       image:
         repository: ghcr.io/byrmsh/portfolio-ankiworker
@@ -38,7 +38,7 @@ collectorCronJobs:
       secretRef: collector-secrets
     - name: collector-cluster-cronjob
       component: collector
-      schedule: "*/10 * * * *"
+      schedule: '*/10 * * * *'
       suspend: true
       image:
         repository: ghcr.io/byrmsh/portfolio-collector
@@ -50,7 +50,7 @@ collectorCronJobs:
       secretRef: collector-secrets
     - name: lyricist-cronjob
       component: collector
-      schedule: "10 5 * * *"
+      schedule: '10 5 * * *'
       suspend: true
       image:
         repository: ghcr.io/byrmsh/portfolio-lyricist

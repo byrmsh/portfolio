@@ -60,9 +60,7 @@ def _open_collection_db(path: Path) -> sqlite3.Connection:
     return sqlite3.connect(f"file:{path}?mode=ro", uri=True)
 
 
-def _fetch_review_ids_ms(
-    *, collection_path: Path, start_ms: int, end_ms: int
-) -> list[int]:
+def _fetch_review_ids_ms(*, collection_path: Path, start_ms: int, end_ms: int) -> list[int]:
     with _open_collection_db(collection_path) as conn:
         conn.row_factory = None
         cur = conn.cursor()
@@ -83,9 +81,7 @@ def _build_series_from_collection(
     start_ms = _to_ms(start_dt)
     end_ms = _to_ms(end_dt)
 
-    ids_ms = _fetch_review_ids_ms(
-        collection_path=collection_path, start_ms=start_ms, end_ms=end_ms
-    )
+    ids_ms = _fetch_review_ids_ms(collection_path=collection_path, start_ms=start_ms, end_ms=end_ms)
 
     counts: dict[date, int] = defaultdict(int)
     for review_id_ms in ids_ms:
@@ -162,9 +158,7 @@ def _sync_down_collection_from_ankiweb(*, sync_dir: Path) -> Path:
             sync_pb2.SyncCollectionResponse.FULL_SYNC,
             sync_pb2.SyncCollectionResponse.FULL_DOWNLOAD,
         ):
-            logger.info(
-                "ankiworker.anki.full_download_required", required=int(out.required)
-            )
+            logger.info("ankiworker.anki.full_download_required", required=int(out.required))
             col.close_for_full_sync()
             col._backend.full_upload_or_download(
                 sync_pb2.FullUploadOrDownloadRequest(auth=auth, upload=False)
@@ -185,9 +179,7 @@ def main() -> None:
     today = datetime.now(tz=tz).date()
     start, end = _date_range_16_weeks(today)
 
-    collection_path = (
-        Path(ANKI_COLLECTION_PATH).expanduser() if ANKI_COLLECTION_PATH else None
-    )
+    collection_path = Path(ANKI_COLLECTION_PATH).expanduser() if ANKI_COLLECTION_PATH else None
     if collection_path and collection_path.exists():
         logger.info(
             "ankiworker.anki.start",

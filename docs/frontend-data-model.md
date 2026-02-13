@@ -8,31 +8,37 @@ runtime contracts.
 `apps/web/src/pages/index.astro` renders these cards:
 
 1. `ActivityMonitor`:
+
 - GitHub contribution heatmap cells (`level` buckets)
 - Anki heatmap cells + streak count
 
 2. `SavedLyricsCard`:
+
 - latest saved track title
 - artist
 - lyric-note link
 - (implicit) saved timestamp
 
 3. `WritingCard`:
+
 - post title
 - one-line description
 - post URL
 
 4. `KnowledgeGraphCard`:
+
 - node count
 - summary text
 
 5. `JobScoutCard`:
+
 - source (Upwork)
 - capture age
 - job title
 - tags
 
 6. `SystemHealthCard`:
+
 - namespace label
 - uptime ratio/value
 - service list with status/pulse

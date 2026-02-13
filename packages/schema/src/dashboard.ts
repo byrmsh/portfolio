@@ -1,20 +1,20 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD");
+const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
 const isoDatetimeSchema = z
   .string()
-  .refine((value) => !Number.isNaN(Date.parse(value)), "Expected ISO datetime");
+  .refine((value) => !Number.isNaN(Date.parse(value)), 'Expected ISO datetime');
 
 export const statSourceSchema = z.enum([
-  "github",
-  "anki",
-  "ytmusic",
-  "obsidian",
-  "writing",
-  "cluster",
+  'github',
+  'anki',
+  'ytmusic',
+  'obsidian',
+  'writing',
+  'cluster',
 ]);
-export const activitySourceSchema = z.enum(["github", "anki"]);
-export const serviceStatusSchema = z.enum(["up", "degraded", "down"]);
+export const activitySourceSchema = z.enum(['github', 'anki']);
+export const serviceStatusSchema = z.enum(['up', 'degraded', 'down']);
 
 export const activityCellSchema = z.object({
   date: isoDateSchema,
@@ -37,7 +37,7 @@ export const activityMonitorDataSchema = z.object({
 
 export const savedLyricNoteSchema = z.object({
   id: z.string().min(1),
-  source: z.literal("ytmusic"),
+  source: z.literal('ytmusic'),
   title: z.string().min(1),
   artist: z.string().min(1),
   noteUrl: z.string().url(),
@@ -65,7 +65,7 @@ export const ytmusicVocabularyItemSchema = z.object({
 
 export const ytmusicAnalysisSchema = z.object({
   id: z.string().min(1),
-  source: z.literal("ytmusic"),
+  source: z.literal('ytmusic'),
   title: z.string().min(1),
   artist: z.string().min(1),
   album: z.string().min(1).nullable().optional(),
@@ -79,7 +79,7 @@ export const ytmusicAnalysisSchema = z.object({
 
 export const writingPostSchema = z.object({
   id: z.string().min(1),
-  source: z.literal("writing"),
+  source: z.literal('writing'),
   title: z.string().min(1),
   description: z.string().min(1),
   href: z.string().min(1),
@@ -88,7 +88,7 @@ export const writingPostSchema = z.object({
 });
 
 export const knowledgeGraphSnapshotSchema = z.object({
-  source: z.literal("obsidian"),
+  source: z.literal('obsidian'),
   nodes: z.number().int().min(0),
   edges: z.number().int().min(0),
   summary: z.string().min(1),
@@ -97,7 +97,7 @@ export const knowledgeGraphSnapshotSchema = z.object({
 
 export const jobLeadSchema = z.object({
   id: z.string().min(1),
-  source: z.literal("upwork"),
+  source: z.literal('upwork'),
   title: z.string().min(1),
   summary: z.string().min(1),
   tags: z.array(z.string().min(1)),
@@ -111,7 +111,7 @@ export const jobRedisRecordSchema = jobLeadSchema.extend({
 });
 
 export const jobDetailSchema = jobRedisRecordSchema.extend({
-  jobType: z.enum(["FIXED", "HOURLY"]).optional(),
+  jobType: z.enum(['FIXED', 'HOURLY']).optional(),
   hourlyBudgetMin: z.number().nullable().optional(),
   hourlyBudgetMax: z.number().nullable().optional(),
   weeklyRetainerBudget: z.number().nullable().optional(),
@@ -154,7 +154,7 @@ export const serviceHealthSchema = z.object({
 });
 
 export const systemHealthSnapshotSchema = z.object({
-  source: z.literal("cluster"),
+  source: z.literal('cluster'),
   namespace: z.string().min(1),
   uptimeRatio30d: z.number().min(0).max(1),
   services: z.array(serviceHealthSchema),
@@ -213,9 +213,9 @@ export const redisKeys = {
   statField: (source: StatSource, id: string | number, field: string) =>
     `stat:${source}:${id}:${field}`,
   index: {
-    jobRecent: "index:job:recent",
-    writingRecent: "index:writing:recent",
-    lyricsRecent: "index:ytmusic:saved",
+    jobRecent: 'index:job:recent',
+    writingRecent: 'index:writing:recent',
+    lyricsRecent: 'index:ytmusic:saved',
   },
 } as const;
 

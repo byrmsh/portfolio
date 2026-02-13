@@ -10,3 +10,5 @@ node_modules
 **/.output
 **/coverage
 **/pnpm-lock.yaml
+deploy/helm/**/templates/*.yaml
+deploy/helm/**/templates/*.yml

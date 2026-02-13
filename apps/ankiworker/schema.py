@@ -53,4 +53,3 @@ __all__ = [
     "validate_upwork_job_result",
     "validate_upwork_job_search_response",
 ]
-

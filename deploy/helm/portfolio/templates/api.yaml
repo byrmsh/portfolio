@@ -2,36 +2,35 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-deployment
-  namespace: {{ .Release.Namespace }}
+  namespace: { { .Release.Namespace } }
   labels:
-    app: {{ include "portfolio.appLabel" . }}
+    app: { { include "portfolio.appLabel" . } }
     component: api
 spec:
-  replicas: {{ .Values.api.replicas }}
+  replicas: { { .Values.api.replicas } }
   selector:
     matchLabels:
-      app: {{ include "portfolio.appLabel" . }}
+      app: { { include "portfolio.appLabel" . } }
       component: api
   template:
     metadata:
       labels:
-        app: {{ include "portfolio.appLabel" . }}
+        app: { { include "portfolio.appLabel" . } }
         component: api
     spec:
       containers:
         - name: api
-          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
-          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          image: '{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}'
+          imagePullPolicy: { { .Values.api.image.pullPolicy } }
           env:
             - name: REDIS_URL
-              value: {{ .Values.api.env.redisUrl | quote }}
+              value: { { .Values.api.env.redisUrl | quote } }
             - name: PORT
-              value: {{ .Values.api.env.port | quote }}
+              value: { { .Values.api.env.port | quote } }
           ports:
             - name: http
               containerPort: 3000
-          resources:
-            {{- toYaml .Values.api.resources | nindent 12 }}
+          resources: { { - toYaml .Values.api.resources | nindent 12 } }
           startupProbe:
             httpGet:
               path: /health
@@ -55,14 +54,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: api-service
-  namespace: {{ .Release.Namespace }}
+  namespace: { { .Release.Namespace } }
   labels:
-    app: {{ include "portfolio.appLabel" . }}
+    app: { { include "portfolio.appLabel" . } }
     component: api
 spec:
   type: ClusterIP
   selector:
-    app: {{ include "portfolio.appLabel" . }}
+    app: { { include "portfolio.appLabel" . } }
     component: api
   ports:
     - name: http

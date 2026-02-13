@@ -46,9 +46,7 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
                   <div class="text-xxs font-mono text-neutral-400">
                     {dateFmt.format(post.data.pubDate)}
                   </div>
-                  <div class="mt-1 text-base font-semibold text-neutral-900">
-                    {post.data.title}
-                  </div>
+                  <div class="mt-1 text-base font-semibold text-neutral-900">{post.data.title}</div>
                   <div class="mt-1 text-sm text-neutral-700">{post.data.description}</div>
                 </a>
               </li>

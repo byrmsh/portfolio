@@ -28,4 +28,4 @@ export async function GET(context: { site?: URL }) {
       categories: post.data.tags,
     })),
   });
-};
+}

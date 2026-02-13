@@ -6,7 +6,9 @@ const OUTPUT_PATH = 'apps/web/dist/git-meta.json';
 const LOG_FORMAT = '%H%x1f%h%x1f%aN%x1f%aI%x1f%s';
 
 function normalizeGitHubRepoUrl(remote) {
-  const trimmed = String(remote ?? '').trim().replace(/\.git$/, '');
+  const trimmed = String(remote ?? '')
+    .trim()
+    .replace(/\.git$/, '');
   if (!trimmed) return null;
 
   if (trimmed.startsWith('https://github.com/')) return trimmed;
@@ -33,7 +35,9 @@ function safeWrite(payload) {
 }
 
 try {
-  const rawLog = runGit(`git log -n ${RECENT_LIMIT} --date=iso-strict --pretty=format:${LOG_FORMAT}`);
+  const rawLog = runGit(
+    `git log -n ${RECENT_LIMIT} --date=iso-strict --pretty=format:${LOG_FORMAT}`,
+  );
   const commits = rawLog
     ? rawLog
         .split('\n')

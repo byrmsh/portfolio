@@ -2,38 +2,37 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web-deployment
-  namespace: {{ .Release.Namespace }}
+  namespace: { { .Release.Namespace } }
   labels:
-    app: {{ include "portfolio.appLabel" . }}
+    app: { { include "portfolio.appLabel" . } }
     component: web
 spec:
-  replicas: {{ .Values.web.replicas }}
+  replicas: { { .Values.web.replicas } }
   selector:
     matchLabels:
-      app: {{ include "portfolio.appLabel" . }}
+      app: { { include "portfolio.appLabel" . } }
       component: web
   template:
     metadata:
       labels:
-        app: {{ include "portfolio.appLabel" . }}
+        app: { { include "portfolio.appLabel" . } }
         component: web
     spec:
       containers:
         - name: web
-          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
-          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          image: '{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}'
+          imagePullPolicy: { { .Values.web.image.pullPolicy } }
           env:
             - name: HOST
-              value: {{ .Values.web.env.host | quote }}
+              value: { { .Values.web.env.host | quote } }
             - name: PORT
-              value: {{ .Values.web.env.port | quote }}
+              value: { { .Values.web.env.port | quote } }
             - name: API_ORIGIN
-              value: {{ .Values.web.env.apiOrigin | quote }}
+              value: { { .Values.web.env.apiOrigin | quote } }
           ports:
             - name: http
               containerPort: 8080
-          resources:
-            {{- toYaml .Values.web.resources | nindent 12 }}
+          resources: { { - toYaml .Values.web.resources | nindent 12 } }
           startupProbe:
             httpGet:
               path: /health
@@ -57,14 +56,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: web-service
-  namespace: {{ .Release.Namespace }}
+  namespace: { { .Release.Namespace } }
   labels:
-    app: {{ include "portfolio.appLabel" . }}
+    app: { { include "portfolio.appLabel" . } }
     component: web
 spec:
   type: ClusterIP
   selector:
-    app: {{ include "portfolio.appLabel" . }}
+    app: { { include "portfolio.appLabel" . } }
     component: web
   ports:
     - name: http

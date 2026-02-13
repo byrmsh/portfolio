@@ -1,8 +1,8 @@
 ---
-title: "Pulumi K3s Guide"
-description: "Guide for running a Zero-Trust Kubernetes node on Hetzner with Cloudflare Tunnel and Pulumi with no open inbound ports"
-pubDate: "11 Jan 2026"
-heroImage: "../../assets/blog-placeholder-3.jpg"
+title: 'Pulumi K3s Guide'
+description: 'Guide for running a Zero-Trust Kubernetes node on Hetzner with Cloudflare Tunnel and Pulumi with no open inbound ports'
+pubDate: '11 Jan 2026'
+heroImage: '../../assets/blog-placeholder-3.jpg'
 ---
 
 ### Introduction
@@ -80,13 +80,13 @@ pulumi config set hcloud:token <HETZNER_TOKEN> --secret
 We start by defining the tunnel itself and generating a secret for it. This represents the tunnel identity inside Cloudflare.
 
 ```ts
-const tunnelSecret = new random.RandomId("tunnel-secret", {
+const tunnelSecret = new random.RandomId('tunnel-secret', {
   byteLength: 32,
 }).b64Std;
 
-export const tunnel = new cloudflare.ZeroTrustTunnelCloudflared("k8s-tunnel", {
+export const tunnel = new cloudflare.ZeroTrustTunnelCloudflared('k8s-tunnel', {
   accountId: cfAccountId,
-  name: "hetzner-platform",
+  name: 'hetzner-platform',
   tunnelSecret: tunnelSecret,
 });
 ```
@@ -94,12 +94,10 @@ export const tunnel = new cloudflare.ZeroTrustTunnelCloudflared("k8s-tunnel", {
 Cloudflare expects the tunnel daemon to authenticate using a base64-encoded token. Pulumi does not expose this directly, so we construct it ourselves:
 
 ```ts
-const tunnelToken = pulumi
-  .all([tunnel.id, tunnelSecret])
-  .apply(([id, secret]) => {
-    const json = JSON.stringify({ a: cfAccountId, t: id, s: secret });
-    return Buffer.from(json).toString("base64");
-  });
+const tunnelToken = pulumi.all([tunnel.id, tunnelSecret]).apply(([id, secret]) => {
+  const json = JSON.stringify({ a: cfAccountId, t: id, s: secret });
+  return Buffer.from(json).toString('base64');
+});
 ```
 
 This token will later be injected into the server during first boot.
@@ -109,34 +107,31 @@ This token will later be injected into the server during first boot.
 With the tunnel created, we tell Cloudflare how incoming hostnames should be routed to local services on the VM.
 
 ```ts
-export const tunnelConfig = new cloudflare.ZeroTrustTunnelCloudflaredConfig(
-  "k8s-tunnel-config",
-  {
-    accountId: cfAccountId,
-    tunnelId: tunnel.id,
-    config: {
-      ingresses: [
-        {
-          hostname: `ssh.${domainName}`,
-          service: "ssh://localhost:22",
-        },
-        {
-          hostname: `k8s.${domainName}`,
-          service: "tcp://localhost:6443",
-        },
-        {
-          hostname: `*.${domainName}`,
-          service: "http://localhost:80",
-        },
-        {
-          hostname: domainName,
-          service: "http://localhost:80",
-        },
-        { service: "http_status:404" },
-      ],
-    },
+export const tunnelConfig = new cloudflare.ZeroTrustTunnelCloudflaredConfig('k8s-tunnel-config', {
+  accountId: cfAccountId,
+  tunnelId: tunnel.id,
+  config: {
+    ingresses: [
+      {
+        hostname: `ssh.${domainName}`,
+        service: 'ssh://localhost:22',
+      },
+      {
+        hostname: `k8s.${domainName}`,
+        service: 'tcp://localhost:6443',
+      },
+      {
+        hostname: `*.${domainName}`,
+        service: 'http://localhost:80',
+      },
+      {
+        hostname: domainName,
+        service: 'http://localhost:80',
+      },
+      { service: 'http_status:404' },
+    ],
   },
-);
+});
 ```
 
 This gives us:
@@ -155,15 +150,15 @@ const createRecord = (name: string, recordName: string) =>
     zoneId: cfZoneId,
     name: recordName,
     content: pulumi.interpolate`${tunnel.id}.cfargotunnel.com`,
-    type: "CNAME",
+    type: 'CNAME',
     proxied: true,
     ttl: 1,
   });
 
-export const dnsSsh = createRecord("dns-ssh", "ssh");
-export const dnsK8s = createRecord("dns-k8s", "k8s");
-export const dnsWildcard = createRecord("dns-wildcard", "*");
-export const dnsApex = createRecord("dns-apex", "@");
+export const dnsSsh = createRecord('dns-ssh', 'ssh');
+export const dnsK8s = createRecord('dns-k8s', 'k8s');
+export const dnsWildcard = createRecord('dns-wildcard', '*');
+export const dnsApex = createRecord('dns-apex', '@');
 ```
 
 At no point do these records reference the Hetzner servers IP. All traffic terminates at Cloudflare first.
@@ -177,11 +172,11 @@ On the Hetzner side, we create:
 - A server with a cloud-init script that bootstraps everything
 
 ```ts
-const mainKey = new hcloud.SshKey("main-key", {
+const mainKey = new hcloud.SshKey('main-key', {
   publicKey: sshPublicKey,
 });
 
-const firewall = new hcloud.Firewall("lockdown", { rules: [] });
+const firewall = new hcloud.Firewall('lockdown', { rules: [] });
 ```
 
 The cloud-init configuration installs `cloudflared`, registers the tunnel, locks down the OS firewall, and installs K3s:
@@ -213,15 +208,15 @@ runcmd:
 Finally, the server itself:
 
 ```ts
-const node = new hcloud.Server("platform-node", {
-  serverType: "cax21",
-  image: "ubuntu-24.04",
-  location: "nbg1",
+const node = new hcloud.Server('platform-node', {
+  serverType: 'cax21',
+  image: 'ubuntu-24.04',
+  location: 'nbg1',
   sshKeys: [mainKey.id],
   firewallIds: [firewall.id.apply((id) => parseInt(id, 10))],
   userData: cloudInit,
   publicNets: [{ ipv4Enabled: true, ipv6Enabled: true }],
-  labels: { role: "control-plane" },
+  labels: { role: 'control-plane' },
 });
 
 export const ip = node.ipv4Address;

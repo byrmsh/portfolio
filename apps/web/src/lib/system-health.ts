@@ -49,7 +49,14 @@ export const serviceTech: Record<ServiceKey, string> = {
   dragonfly: 'Redis-compatible KV store',
 };
 
-export const serviceOrder: ServiceKey[] = ['web', 'api', 'collector', 'upworker', 'lyricist', 'dragonfly'];
+export const serviceOrder: ServiceKey[] = [
+  'web',
+  'api',
+  'collector',
+  'upworker',
+  'lyricist',
+  'dragonfly',
+];
 
 export const DEFAULT_DATA: ApiStatusResponse = {
   web: { status: 'unknown', message: '' },
@@ -119,7 +126,13 @@ export function parseCheckedAt(payload: unknown): string | null {
     data?: { checkedAt?: unknown; timestamp?: unknown };
     meta?: { ts?: unknown };
   };
-  return asIso(direct.checkedAt) ?? asIso(direct.data?.checkedAt) ?? asIso(direct.data?.timestamp) ?? asIso(direct.meta?.ts) ?? null;
+  return (
+    asIso(direct.checkedAt) ??
+    asIso(direct.data?.checkedAt) ??
+    asIso(direct.data?.timestamp) ??
+    asIso(direct.meta?.ts) ??
+    null
+  );
 }
 
 function latestUpdatedAtFromChecks(service: Record<string, unknown> | undefined): string | null {
@@ -133,7 +146,10 @@ function latestUpdatedAtFromChecks(service: Record<string, unknown> | undefined)
   return null;
 }
 
-function updatedAtForCheck(service: Record<string, unknown> | undefined, checkId: string): string | null {
+function updatedAtForCheck(
+  service: Record<string, unknown> | undefined,
+  checkId: string,
+): string | null {
   const checks = service?.checks;
   if (!Array.isArray(checks)) return null;
   for (const check of checks) {
@@ -169,7 +185,14 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
     upworker?: Partial<StatusNode> & { lastFetchedAt?: unknown };
     lyricist?: Partial<StatusNode> & { lastFetchedAt?: unknown };
   };
-  if (direct.web || direct.api || direct.dragonfly || direct.collector || direct.upworker || direct.lyricist) {
+  if (
+    direct.web ||
+    direct.api ||
+    direct.dragonfly ||
+    direct.collector ||
+    direct.upworker ||
+    direct.lyricist
+  ) {
     const upworkerLastFetchedAt = asIso(direct.upworker?.lastFetchedAt);
     if (upworkerLastFetchedAt) {
       const meta = ageMetricFromIso(upworkerLastFetchedAt) ?? '';
@@ -189,11 +212,14 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
     return direct;
   }
 
-  const services = (payload as { data?: { services?: Array<Record<string, unknown>> } })?.data?.services;
+  const services = (payload as { data?: { services?: Array<Record<string, unknown>> } })?.data
+    ?.services;
   if (!Array.isArray(services)) return {};
 
   const byId = Object.fromEntries(
-    services.filter((service) => typeof service?.id === 'string').map((service) => [String(service.id), service]),
+    services
+      .filter((service) => typeof service?.id === 'string')
+      .map((service) => [String(service.id), service]),
   ) as Record<string, Record<string, unknown>>;
 
   const runsFromChecks = (service: Record<string, unknown> | undefined): number => {
@@ -243,7 +269,9 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
   };
 }
 
-function normalizeStatus(source: Partial<Record<ServiceKey, Partial<StatusNode>>>): ApiStatusResponse {
+function normalizeStatus(
+  source: Partial<Record<ServiceKey, Partial<StatusNode>>>,
+): ApiStatusResponse {
   const pick = (key: ServiceKey): StatusNode => {
     const fallback = DEFAULT_DATA[key];
     const raw = source[key] ?? {};
@@ -302,7 +330,11 @@ export function labelFor(key: ServiceKey, strings: SystemHealthStrings): string 
   return strings.latencyLabel;
 }
 
-export function detailFor(_key: ServiceKey, _node: StatusNode, _strings: SystemHealthStrings): string {
+export function detailFor(
+  _key: ServiceKey,
+  _node: StatusNode,
+  _strings: SystemHealthStrings,
+): string {
   return '';
 }
 

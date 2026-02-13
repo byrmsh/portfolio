@@ -233,7 +233,9 @@ export const GET: APIRoute = async ({ request }) => {
     {
       id: 'collector',
       status: combineStatuses([githubCheckStatus, ankiCheckStatus]),
-      detail: collectorUpdatedAt ? 'Collector tasks reported recently' : 'Collector has no recent report',
+      detail: collectorUpdatedAt
+        ? 'Collector tasks reported recently'
+        : 'Collector has no recent report',
       latencyMs: null,
       checks: [
         {

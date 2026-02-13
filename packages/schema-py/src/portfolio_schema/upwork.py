@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 # Mirrors the current Upwork payload shape defined by apps/upworker/typex.py
 # and selected in apps/upworker/job-search.gql.
 
+
 class UpworkBaseSchema(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

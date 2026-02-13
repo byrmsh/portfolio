@@ -97,7 +97,9 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
               {page.items.map((job) => {
                 const detailHref = localizedPath(locale, `/jobs/${encodeURIComponent(job.id)}`);
                 const captured = ageMetricFromIso(job.capturedAt);
-                const publishedLabel = job.publishedAt ? dateFmt.format(new Date(job.publishedAt)) : '';
+                const publishedLabel = job.publishedAt
+                  ? dateFmt.format(new Date(job.publishedAt))
+                  : '';
                 return (
                   <article class="rounded-lg border border-neutral-200 p-4 hover:bg-neutral-50 transition-colors">
                     <a href={detailHref} class="block">
@@ -106,9 +108,7 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
                           <h2 class="text-sm font-semibold text-neutral-900 line-clamp-2">
                             {job.title}
                           </h2>
-                          <p class="mt-2 text-xs text-neutral-700 line-clamp-3">
-                            {job.summary}
-                          </p>
+                          <p class="mt-2 text-xs text-neutral-700 line-clamp-3">{job.summary}</p>
                           <div class="mt-3 flex flex-wrap gap-2">
                             {(Array.isArray(job.tags) ? job.tags.slice(0, 6) : []).map((tag) => (
                               <span class="text-xxs border border-neutral-200 px-1 py-0.5 rounded text-neutral-500">
@@ -136,20 +136,26 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
         }
 
         <div class="mt-6 flex items-center gap-3">
-          {before ? (
-            <a
-              href={newestHref}
-              class="text-xs font-mono text-neutral-400 hover:text-neutral-900 transition-colors"
-              >{t('jobs.newest')}</a
-            >
-          ) : null}
-          {nextHref ? (
-            <a
-              href={nextHref}
-              class="ml-auto text-xs font-mono text-neutral-400 hover:text-neutral-900 transition-colors"
-              >{t('jobs.next')}</a
-            >
-          ) : null}
+          {
+            before ? (
+              <a
+                href={newestHref}
+                class="text-xs font-mono text-neutral-400 hover:text-neutral-900 transition-colors"
+              >
+                {t('jobs.newest')}
+              </a>
+            ) : null
+          }
+          {
+            nextHref ? (
+              <a
+                href={nextHref}
+                class="ml-auto text-xs font-mono text-neutral-400 hover:text-neutral-900 transition-colors"
+              >
+                {t('jobs.next')}
+              </a>
+            ) : null
+          }
         </div>
       </section>
 

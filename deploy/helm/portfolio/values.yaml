@@ -24,7 +24,7 @@ api:
     pullPolicy: IfNotPresent
   env:
     redisUrl: redis://db-service:6379/0
-    port: "3000"
+    port: '3000'
   resources:
     requests:
       memory: 128Mi
@@ -41,7 +41,7 @@ web:
     pullPolicy: IfNotPresent
   env:
     host: 0.0.0.0
-    port: "8080"
+    port: '8080'
     apiOrigin: http://api-service:3000
   resources:
     requests:
@@ -56,7 +56,7 @@ collectorCronJobs:
   jobs:
     - name: collector-github-cronjob
       component: collector
-      schedule: "15 3 * * *"
+      schedule: '15 3 * * *'
       suspend: true
       image:
         repository: portfolio-collector
@@ -68,7 +68,7 @@ collectorCronJobs:
       secretRef: collector-secrets
     - name: collector-anki-cronjob
       component: collector
-      schedule: "5 * * * *"
+      schedule: '5 * * * *'
       suspend: true
       image:
         repository: portfolio-ankiworker
@@ -80,7 +80,7 @@ collectorCronJobs:
       secretRef: collector-secrets
     - name: collector-cluster-cronjob
       component: collector
-      schedule: "*/10 * * * *"
+      schedule: '*/10 * * * *'
       suspend: true
       image:
         repository: portfolio-collector
@@ -92,7 +92,7 @@ collectorCronJobs:
       secretRef: collector-secrets
     - name: lyricist-cronjob
       component: collector
-      schedule: "10 5 * * *"
+      schedule: '10 5 * * *'
       suspend: true
       image:
         repository: portfolio-lyricist
@@ -121,7 +121,7 @@ upworkerBot:
     pullPolicy: IfNotPresent
   env:
     redisUrl: redis://db-service:6379/0
-    port: "3000"
+    port: '3000'
   secretRef: upworker-bot-secrets
   resources:
     requests:
@@ -141,8 +141,8 @@ upworker:
   env:
     redisUrl: redis://db-service:6379/0
     streamKey: jobs
-    streamMaxlen: "5000"
-    healthPort: "3000"
+    streamMaxlen: '5000'
+    healthPort: '3000'
     impersonate: chrome
   secretRef: upworker-secrets
   resources:

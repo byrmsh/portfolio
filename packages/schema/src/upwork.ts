@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // Mirrors the current Upwork payload shape defined by apps/upworker/typex.py
 // and selected in apps/upworker/job-search.gql.
@@ -7,8 +7,8 @@ const nullableBool = z.boolean().nullable();
 
 const nullableNumberLike = z.preprocess((value) => {
   if (value === null || value === undefined) return value;
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
     const trimmed = value.trim();
     if (trimmed.length === 0) return null;
     const n = Number(trimmed);
@@ -53,7 +53,7 @@ export const upworkEngagementDurationSchema = z.object({
 export const upworkJobDetailsSchema = z.object({
   id: z.string(),
   ciphertext: z.string(),
-  jobType: z.enum(["FIXED", "HOURLY"]),
+  jobType: z.enum(['FIXED', 'HOURLY']),
   // Upwork sometimes returns numeric fields as strings.
   weeklyRetainerBudget: nullableNumberLike,
   hourlyBudgetMax: nullableNumberLike,

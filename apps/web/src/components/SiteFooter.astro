@@ -16,10 +16,12 @@ const { t, locale } = Astro.props;
     class="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-neutral-500"
   >
     <div class="font-mono">
-      {t('footer.copyright', {
-        year: new Date().getFullYear(),
-        name: SITE.name,
-      })}
+      {
+        t('footer.copyright', {
+          year: new Date().getFullYear(),
+          name: SITE.name,
+        })
+      }
     </div>
     <div class="flex items-center gap-2">
       <label class="text-xxs font-mono text-neutral-500" for="footer-lang-select"
@@ -42,10 +44,7 @@ const { t, locale } = Astro.props;
     </div>
     <div class="flex items-center gap-6">
       <a href="#" class="hover:text-neutral-900 transition-colors">{t('footer.source')}</a>
-      <a
-        href={localizedPath(locale, '/rss.xml')}
-        class="hover:text-neutral-900 transition-colors"
-      >
+      <a href={localizedPath(locale, '/rss.xml')} class="hover:text-neutral-900 transition-colors">
         {t('footer.rss')}
       </a>
     </div>
@@ -65,7 +64,8 @@ const { t, locale } = Astro.props;
       const parts = current.pathname.split('/').filter(Boolean);
       if (parts.length && SUPPORTED.includes(parts[0])) parts.shift();
       const rest = `/${parts.join('/')}`;
-      current.pathname = nextLocale === DEFAULT ? rest : `/${nextLocale}${rest === '/' ? '' : rest}`;
+      current.pathname =
+        nextLocale === DEFAULT ? rest : `/${nextLocale}${rest === '/' ? '' : rest}`;
       window.location.href = `${current.pathname}${current.search}${current.hash}`;
     });
   }

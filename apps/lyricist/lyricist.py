@@ -41,7 +41,9 @@ LYRICIST_LLM_PROVIDER = env.str("LYRICIST_LLM_PROVIDER", default="auto")
 
 GEMINI_API_KEY = env.str("GEMINI_API_KEY", default="")
 GEMINI_MODEL = env.str("GEMINI_MODEL", default="gemini-1.5-flash")
-GEMINI_API_BASE = env.str("GEMINI_API_BASE", default="https://generativelanguage.googleapis.com/v1beta")
+GEMINI_API_BASE = env.str(
+    "GEMINI_API_BASE", default="https://generativelanguage.googleapis.com/v1beta"
+)
 GEMINI_USE_SEARCH = env.bool("GEMINI_USE_SEARCH", default=False)
 GEMINI_SEARCH_DYNAMIC_THRESHOLD = env.float("GEMINI_SEARCH_DYNAMIC_THRESHOLD", default=0.7)
 
@@ -141,7 +143,9 @@ def _extract_track(t: dict[str, Any]) -> Track | None:
         if best:
             album_art_url = best[1]
 
-    return Track(id=str(video_id), title=str(title), artist=artist, album=album, album_art_url=album_art_url)
+    return Track(
+        id=str(video_id), title=str(title), artist=artist, album=album, album_art_url=album_art_url
+    )
 
 
 def _analysis_json_schema() -> dict[str, Any]:
@@ -389,7 +393,9 @@ def _normalize_analysis_payload(track: Track, payload: dict[str, Any]) -> dict[s
     payload["trackUrl"] = track_url if track_url is not None else _ytmusic_track_url(track.id)
 
     lyrics_url = _blank_to_none(payload.get("lyricsUrl"))
-    payload["lyricsUrl"] = lyrics_url if lyrics_url is not None else _genius_search_url(track.title, track.artist)
+    payload["lyricsUrl"] = (
+        lyrics_url if lyrics_url is not None else _genius_search_url(track.title, track.artist)
+    )
 
     # Always stamp analysis generation time.
     payload["updatedAt"] = _iso_now()
@@ -459,7 +465,10 @@ def _gemini_generate_content(
             body["tools"] = [
                 {
                     "google_search_retrieval": {
-                        "dynamic_retrieval_config": {"mode": "MODE_DYNAMIC", "dynamic_threshold": GEMINI_SEARCH_DYNAMIC_THRESHOLD}
+                        "dynamic_retrieval_config": {
+                            "mode": "MODE_DYNAMIC",
+                            "dynamic_threshold": GEMINI_SEARCH_DYNAMIC_THRESHOLD,
+                        }
                     }
                 }
             ]
@@ -500,7 +509,7 @@ def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
     schema_hint = (
         "Return JSON only with exactly these keys:\n"
         "- id (string)\n"
-        "- source (string; use \"ytmusic\")\n"
+        '- source (string; use "ytmusic")\n'
         "- title (string)\n"
         "- artist (string)\n"
         "- album (string or empty)\n"
@@ -574,7 +583,11 @@ def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
             return YtMusicAnalysis.model_validate(payload)
         except ValidationError as e:
             last_err = e
-            logger.warning("lyricist.gemini.validation_error", attempt=attempt, error=_validation_error_summary(e))
+            logger.warning(
+                "lyricist.gemini.validation_error",
+                attempt=attempt,
+                error=_validation_error_summary(e),
+            )
             user_input = (
                 f"{base_user_input}\n"
                 "The previous JSON was invalid. Fix it.\n"
@@ -618,7 +631,11 @@ def _process_track(r, playlist_id: str, track: Track) -> None:
 
     # Analysis can be expensive and depends on external APIs. Avoid regenerating on every touch unless asked.
     existing_analysis = r.get(analysis_key)
-    if existing_analysis and not LYRICIST_REGENERATE_ANALYSIS and not _raw_analysis_is_error_fallback(existing_analysis):
+    if (
+        existing_analysis
+        and not LYRICIST_REGENERATE_ANALYSIS
+        and not _raw_analysis_is_error_fallback(existing_analysis)
+    ):
         logger.info("lyricist.analysis.skip_existing", track_id=track.id)
     else:
         analysis = _generate_analysis(track)
@@ -673,7 +690,11 @@ def _retry_failed_recent_analyses(r) -> None:
         if not note_raw:
             continue
         try:
-            note = json.loads(note_raw.decode("utf-8") if isinstance(note_raw, (bytes, bytearray)) else str(note_raw))
+            note = json.loads(
+                note_raw.decode("utf-8")
+                if isinstance(note_raw, (bytes, bytearray))
+                else str(note_raw)
+            )
         except Exception:
             continue
         if not isinstance(note, dict):
@@ -720,7 +741,9 @@ def main() -> None:
     cursor = _read_cursor(r)
     last_seen = (cursor or {}).get("lastSeenTrackId")
     if LYRICIST_IGNORE_CURSOR and last_seen:
-        logger.info("lyricist.sync.ignore_cursor", playlist_id=YTMUSIC_PLAYLIST_ID, last_seen=last_seen)
+        logger.info(
+            "lyricist.sync.ignore_cursor", playlist_id=YTMUSIC_PLAYLIST_ID, last_seen=last_seen
+        )
         last_seen = None
 
     logger.info("lyricist.sync.start", playlist_id=YTMUSIC_PLAYLIST_ID, last_seen=last_seen)

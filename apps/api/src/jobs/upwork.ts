@@ -1,4 +1,11 @@
-import { jobDetailSchema, jobLeadSchema, jobRedisRecordSchema, type JobDetail, type JobLead, type JobRedisRecord } from '@portfolio/schema/dashboard';
+import {
+  jobDetailSchema,
+  jobLeadSchema,
+  jobRedisRecordSchema,
+  type JobDetail,
+  type JobLead,
+  type JobRedisRecord,
+} from '@portfolio/schema/dashboard';
 import { type UpworkJobResult } from '@portfolio/schema/upwork';
 
 function asNonEmptyString(value: unknown): string | null {
@@ -50,7 +57,10 @@ export function upworkJobHref(job: UpworkJobResult): string | undefined {
   return `https://www.upwork.com/jobs/~${encodeURIComponent(clean)}`;
 }
 
-export function projectUpworkJobToLead(job: UpworkJobResult, capturedAtIso: string | null): JobLead | null {
+export function projectUpworkJobToLead(
+  job: UpworkJobResult,
+  capturedAtIso: string | null,
+): JobLead | null {
   const publishedAt =
     parseMaybeEpochToIso(job?.jobTile?.job?.publishTime) ??
     parseMaybeEpochToIso(job?.jobTile?.job?.createTime) ??
@@ -78,7 +88,10 @@ export function projectUpworkJobToLead(job: UpworkJobResult, capturedAtIso: stri
   return parsed.success ? parsed.data : null;
 }
 
-export function projectUpworkJobToRecord(job: UpworkJobResult, capturedAtIso: string | null): JobRedisRecord | null {
+export function projectUpworkJobToRecord(
+  job: UpworkJobResult,
+  capturedAtIso: string | null,
+): JobRedisRecord | null {
   const base = projectUpworkJobToLead(job, capturedAtIso);
   if (!base) return null;
   const record = {
@@ -89,7 +102,10 @@ export function projectUpworkJobToRecord(job: UpworkJobResult, capturedAtIso: st
   return parsed.success ? parsed.data : null;
 }
 
-export function projectUpworkJobToDetail(job: UpworkJobResult, capturedAtIso: string | null): JobDetail | null {
+export function projectUpworkJobToDetail(
+  job: UpworkJobResult,
+  capturedAtIso: string | null,
+): JobDetail | null {
   const base = projectUpworkJobToRecord(job, capturedAtIso);
   if (!base) return null;
 
@@ -120,4 +136,3 @@ export function projectUpworkJobToDetail(job: UpworkJobResult, capturedAtIso: st
   const parsed = jobDetailSchema.safeParse(detail);
   return parsed.success ? parsed.data : null;
 }
-

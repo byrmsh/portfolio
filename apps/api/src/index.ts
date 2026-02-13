@@ -174,18 +174,24 @@ app.get('/api/status', async (c) => {
     }
   };
 
-  const [githubUpdatedAt, ankiUpdatedAt, upworkerLastFetchedAt, dragonflyLatency] = await Promise.all([
-    readActivityUpdatedAt('github'),
-    readActivityUpdatedAt('anki'),
-    readUpworkerLastFetchedAt(),
-    probeRedis(),
-  ]);
+  const [githubUpdatedAt, ankiUpdatedAt, upworkerLastFetchedAt, dragonflyLatency] =
+    await Promise.all([
+      readActivityUpdatedAt('github'),
+      readActivityUpdatedAt('anki'),
+      readUpworkerLastFetchedAt(),
+      probeRedis(),
+    ]);
 
-  const collectorRunsRaw = [githubUpdatedAt, ankiUpdatedAt].filter((value): value is string => Boolean(value)).length;
+  const collectorRunsRaw = [githubUpdatedAt, ankiUpdatedAt].filter((value): value is string =>
+    Boolean(value),
+  ).length;
   const upworkerRunsRaw = upworkerLastFetchedAt ? 1 : 0;
   const collectorMeta = `GitHub ${agoLabel(githubUpdatedAt)} • Anki ${agoLabel(ankiUpdatedAt)}`;
 
-  const collectorStatus = combineStatus([statusFromAge(githubUpdatedAt), statusFromAge(ankiUpdatedAt)]);
+  const collectorStatus = combineStatus([
+    statusFromAge(githubUpdatedAt),
+    statusFromAge(ankiUpdatedAt),
+  ]);
   const upworkerFreshMs = msAgo(upworkerLastFetchedAt);
   const upworkerStatus: ServiceStatus =
     upworkerFreshMs === null ? 'unknown' : upworkerFreshMs <= freshnessMs ? 'healthy' : 'partial';
@@ -253,7 +259,8 @@ app.get('/api/jobs', (c) => {
     const limitRaw = c.req.query('limit');
     const beforeRaw = c.req.query('before');
     const limit = clampInt(Number.parseInt(limitRaw ?? '20', 10) || 20, 1, 50);
-    const before = typeof beforeRaw === 'string' && beforeRaw.trim().length > 0 ? beforeRaw.trim() : null;
+    const before =
+      typeof beforeRaw === 'string' && beforeRaw.trim().length > 0 ? beforeRaw.trim() : null;
 
     let rows: Array<[string, string[]]> = [];
     try {
@@ -405,9 +412,13 @@ async function readLatestSavedLyric(): Promise<SavedLyricNote | null> {
 
 const YTMUSIC_SAVED_PAGE_SIZE = 50;
 
-async function readSavedLyricsPage(
-  page: number,
-): Promise<{ items: SavedLyricNote[]; page: number; pageSize: number; total: number; totalPages: number }> {
+async function readSavedLyricsPage(page: number): Promise<{
+  items: SavedLyricNote[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}> {
   const total = await redis.zcard(redisKeys.index.lyricsRecent);
   const totalPages = total === 0 ? 0 : Math.ceil(total / YTMUSIC_SAVED_PAGE_SIZE);
   if (total === 0) {

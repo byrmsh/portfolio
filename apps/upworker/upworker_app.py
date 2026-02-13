@@ -41,17 +41,11 @@ UPWORK_GRAPHQL_HEADERS_REDIS_KEY = env.str(
     "UPWORK_GRAPHQL_HEADERS_REDIS_KEY", default="upwork_graphql_headers"
 )
 UPWORK_COOKIE_REDIS_KEY = env.str("UPWORK_COOKIE_REDIS_KEY", default="upwork_cookie")
-UPWORK_API_TENANT_REDIS_KEY = env.str(
-    "UPWORK_API_TENANT_REDIS_KEY", default="upwork_api_tenant_id"
-)
+UPWORK_API_TENANT_REDIS_KEY = env.str("UPWORK_API_TENANT_REDIS_KEY", default="upwork_api_tenant_id")
 TELEGRAM_BOT_TOKEN = env.str("TELEGRAM_BOT_TOKEN", default="").strip()
 TELEGRAM_CHAT_ID = env.str("TELEGRAM_CHAT_ID", default="").strip()
-TELEGRAM_ALERT_COOLDOWN_SECONDS = env.int(
-    "TELEGRAM_ALERT_COOLDOWN_SECONDS", default=6 * 60 * 60
-)
-TELEGRAM_ALERT_REDIS_KEY = env.str(
-    "TELEGRAM_ALERT_REDIS_KEY", default="stat:upwork:auth_alert"
-)
+TELEGRAM_ALERT_COOLDOWN_SECONDS = env.int("TELEGRAM_ALERT_COOLDOWN_SECONDS", default=6 * 60 * 60)
+TELEGRAM_ALERT_REDIS_KEY = env.str("TELEGRAM_ALERT_REDIS_KEY", default="stat:upwork:auth_alert")
 UPWORK_HEALTH_ENABLED = env.bool("UPWORK_HEALTH_ENABLED", default=True)
 UPWORK_HEALTH_PORT = env.int("UPWORK_HEALTH_PORT", default=3000)
 # When running in Kubernetes we prefer to stay alive and keep retrying rather than CrashLooping.
@@ -70,28 +64,16 @@ COMMON_HEADERS_RAW = env.str("COMMON_HEADERS", default="")
 LOGIN_HEADERS_RAW = env.str("LOGIN_HEADERS", default="")
 GRAPHQL_HEADERS_RAW = env.str("GRAPHQL_HEADERS", default="")
 LOGIN_DATA_RAW = env.str("LOGIN_DATA", default="")
-COMMON_HEADERS = (
-    HeadersValidator.validate_json(COMMON_HEADERS_RAW) if COMMON_HEADERS_RAW else {}
-)
-LOGIN_HEADERS = (
-    HeadersValidator.validate_json(LOGIN_HEADERS_RAW) if LOGIN_HEADERS_RAW else {}
-)
-GRAPHQL_HEADERS = (
-    HeadersValidator.validate_json(GRAPHQL_HEADERS_RAW) if GRAPHQL_HEADERS_RAW else {}
-)
+COMMON_HEADERS = HeadersValidator.validate_json(COMMON_HEADERS_RAW) if COMMON_HEADERS_RAW else {}
+LOGIN_HEADERS = HeadersValidator.validate_json(LOGIN_HEADERS_RAW) if LOGIN_HEADERS_RAW else {}
+GRAPHQL_HEADERS = HeadersValidator.validate_json(GRAPHQL_HEADERS_RAW) if GRAPHQL_HEADERS_RAW else {}
 UPWORK_COOKIE_HEADER = env.str("UPWORK_COOKIE_HEADER", default="").strip()
 UPWORK_COOKIE_FILE = env.str("UPWORK_COOKIE_FILE", default="").strip()
 UPWORK_API_TENANT_ID = env.str("UPWORK_API_TENANT_ID", default="").strip()
-LOGIN_DATA = (
-    InitialLoginPayloadValidator.validate_json(LOGIN_DATA_RAW)
-    if LOGIN_DATA_RAW
-    else None
-)
+LOGIN_DATA = InitialLoginPayloadValidator.validate_json(LOGIN_DATA_RAW) if LOGIN_DATA_RAW else None
 UPWORK_AUTH_STRATEGY = env.str("UPWORK_AUTH_STRATEGY", default="api").strip().lower()
 UPWORK_PLAYWRIGHT_HEADLESS = env.bool("UPWORK_PLAYWRIGHT_HEADLESS", default=False)
-UPWORK_PLAYWRIGHT_TIMEOUT_SECONDS = env.int(
-    "UPWORK_PLAYWRIGHT_TIMEOUT_SECONDS", default=300
-)
+UPWORK_PLAYWRIGHT_TIMEOUT_SECONDS = env.int("UPWORK_PLAYWRIGHT_TIMEOUT_SECONDS", default=300)
 UPWORK_PLAYWRIGHT_START_URL = env.str(
     "UPWORK_PLAYWRIGHT_START_URL", default="https://www.upwork.com/nx/search/jobs"
 ).strip()
@@ -131,6 +113,7 @@ def next_proxies() -> Optional[ProxySpec]:
     proxy_url = PROXY_URLS[_proxy_index % len(PROXY_URLS)]
     _proxy_index += 1
     return {"http": proxy_url, "https": proxy_url}
+
 
 logging.basicConfig(format="%(message)s", stream=sys.stdout, level=logging.INFO)
 structlog.configure(
@@ -360,9 +343,7 @@ def cache_authorized_token_via_playwright() -> str:
     return token
 
 
-def login_to_account_sec(
-    session: Session, sec_check_data: Optional[dict] = None
-) -> LoginResponse:
+def login_to_account_sec(session: Session, sec_check_data: Optional[dict] = None) -> LoginResponse:
     if LOGIN_DATA is None:
         raise ValueError(
             "LOGIN_DATA is required for automated login. "
@@ -424,9 +405,7 @@ def request_and_parse_token(session: Session) -> str:
     return client_conf["token"]
 
 
-def retry_until_not_forbidden(
-    func: Callable, args=(), max_retries: Optional[int] = None
-):
+def retry_until_not_forbidden(func: Callable, args=(), max_retries: Optional[int] = None):
     if not PROXY_URLS:
         # No proxy rotation; retries here don't help and can amplify rate-limits.
         return func(*args)
@@ -497,9 +476,7 @@ def get_authorization_token() -> str:
         return normalize_bearer_token(UPWORK_BEARER_TOKEN)
     # Allow supplying a full captured browser header set via GRAPHQL_HEADERS only.
     static_headers = get_static_graphql_headers()
-    hdr_token = static_headers.get("authorization") or static_headers.get(
-        "Authorization"
-    )
+    hdr_token = static_headers.get("authorization") or static_headers.get("Authorization")
     if hdr_token:
         return normalize_bearer_token(hdr_token)
     token = r.get(UPWORK_TOKEN_REDIS_KEY)
@@ -549,10 +526,7 @@ def fetch_jobs_endpoint(offset: int, count: int, token: str) -> UpworkJobSearchR
         "referer": "https://www.upwork.com/nx/search/jobs",
     }
     headers = (
-        COMMON_HEADERS
-        | get_static_graphql_headers()
-        | RUNTIME_GRAPHQL_HEADERS
-        | custom_headers
+        COMMON_HEADERS | get_static_graphql_headers() | RUNTIME_GRAPHQL_HEADERS | custom_headers
     )
     res = requests.post(
         url,
@@ -602,10 +576,7 @@ def fetch_connects_data_for_job(job_id: str, token: str) -> dict:
         "referer": f"https://www.upwork.com/nx/search/jobs/details/{job_id}",
     }
     headers = (
-        COMMON_HEADERS
-        | get_static_graphql_headers()
-        | RUNTIME_GRAPHQL_HEADERS
-        | custom_headers
+        COMMON_HEADERS | get_static_graphql_headers() | RUNTIME_GRAPHQL_HEADERS | custom_headers
     )
     res = requests.post(
         url,
@@ -618,9 +589,7 @@ def fetch_connects_data_for_job(job_id: str, token: str) -> dict:
     raise_custom_http_errors(res)
     res_json = res.json()
     if "errors" in res_json:
-        logger.warning(
-            "Errors in connects response", job_id=job_id, errors=res_json["errors"]
-        )
+        logger.warning("Errors in connects response", job_id=job_id, errors=res_json["errors"])
     return res_json
 
 
@@ -664,9 +633,7 @@ def fetch_new_jobs(latest_job_id: int | None) -> List[UpworkJobResult]:
         filtered: List[UpworkJobResult] = [
             job for job, exists in zip(jobs, exists_flags) if not exists
         ]
-        logger.info(
-            "Processing page", offset=offset, fetched=len(jobs), new=len(filtered)
-        )
+        logger.info("Processing page", offset=offset, fetched=len(jobs), new=len(filtered))
 
         # With recency sorting, once a page has zero new jobs the rest should be older.
         if not filtered:
@@ -787,9 +754,7 @@ def process_jobs_iteration() -> int:
                     raise
                 job["connectsData"] = connects_res.get("data") or connects_res
             except Exception as e:
-                logger.warning(
-                    "Failed to fetch connects data", job_id=job_id, error=str(e)
-                )
+                logger.warning("Failed to fetch connects data", job_id=job_id, error=str(e))
     if new_jobs:
         with r.lock("job_db_lock", timeout=10):
             add_jobs_to_redis(new_jobs)
