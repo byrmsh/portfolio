@@ -13,7 +13,27 @@ Telegram bot that stores Upwork auth material in Redis for `apps/upworker` to us
 - `/upwork_clear_cookie`
 - `/upwork_clear_tenant`
 
+## HTTP
+
+The bot also exposes an HTTP endpoint (useful because DevTools cURLs often exceed Telegram message limits):
+
+- `POST /upwork_set_all` with JSON body:
+  - `{ "token": "...", "cookie": "...", "tenant": "..." }`
+
+If `UPWORKERBOT_HTTP_TOKEN` is set, include either:
+
+- `Authorization: Bearer <token>`
+- or `X-Upworkerbot-Token: <token>`
+
 The bot never echoes back full secrets; it only reports lengths/prefixes.
+
+## Local Helper Script
+
+If you have a DevTools "copy as cURL" request, use the repo script to extract token/cookie/tenant and put a single `kubectl exec ...` update command on your clipboard:
+
+```bash
+python scripts/refine-upwork-curl.py < /path/to/curl.txt
+```
 
 ## Env
 
@@ -32,3 +52,4 @@ Optional:
 - `TELEGRAM_POLL_SECONDS` (default `2`)
 - `CURL_CFFI_IMPERSONATE` (default `chrome`)
 - `PORT` (health server, default `3000`)
+- `UPWORKERBOT_HTTP_TOKEN` (optional; if set, required for `POST /upwork_set_all`)

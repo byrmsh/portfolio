@@ -19,6 +19,7 @@ TELEGRAM_ALLOWED_CHAT_ID_RAW = env.str("TELEGRAM_ALLOWED_CHAT_ID", default="").s
 TELEGRAM_POLL_SECONDS = env.float("TELEGRAM_POLL_SECONDS", default=2.0)
 CURL_CFFI_IMPERSONATE = env.str("CURL_CFFI_IMPERSONATE", default="chrome").strip()
 PORT = env.int("PORT", default=3000)
+HTTP_TOKEN = env.str("UPWORKERBOT_HTTP_TOKEN", default="").strip()
 
 UPWORK_TOKEN_REDIS_KEY = env.str("UPWORK_TOKEN_REDIS_KEY", default="upwork_token")
 UPWORK_COOKIE_REDIS_KEY = env.str("UPWORK_COOKIE_REDIS_KEY", default="upwork_cookie")
@@ -109,6 +110,35 @@ def mask_secret(s: str) -> str:
 
 def health_server() -> None:
     class Handler(BaseHTTPRequestHandler):
+        def _unauthorized(self) -> None:
+            self.send_response(401)
+            self.send_header("content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(b"{\"ok\":false,\"error\":\"unauthorized\"}")
+
+        def _bad_request(self, msg: str) -> None:
+            self.send_response(400)
+            self.send_header("content-type", "application/json")
+            self.end_headers()
+            payload = json.dumps({"ok": False, "error": msg})[:2000].encode("utf-8")
+            self.wfile.write(payload)
+
+        def _json_ok(self, payload: dict[str, Any]) -> None:
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(payload).encode("utf-8"))
+
+        def _ensure_http_allowed(self) -> bool:
+            if not HTTP_TOKEN:
+                return True
+            hdr = (self.headers.get("authorization") or "").strip()
+            if hdr.lower().startswith("bearer "):
+                tok = hdr.split(None, 1)[1].strip()
+                return tok == HTTP_TOKEN
+            tok2 = (self.headers.get("x-upworkerbot-token") or "").strip()
+            return tok2 == HTTP_TOKEN
+
         def do_GET(self):  # noqa: N802
             if self.path != "/health":
                 self.send_response(404)
@@ -118,6 +148,40 @@ def health_server() -> None:
             self.send_header("content-type", "application/json")
             self.end_headers()
             self.wfile.write(b"{\"ok\":true}")
+
+        def do_POST(self):  # noqa: N802
+            if self.path != "/upwork_set_all":
+                self.send_response(404)
+                self.end_headers()
+                return
+
+            if not self._ensure_http_allowed():
+                return self._unauthorized()
+
+            try:
+                content_length = int(self.headers.get("content-length") or "0")
+            except ValueError:
+                content_length = 0
+            if content_length <= 0 or content_length > 5_000_000:
+                return self._bad_request("invalid content-length")
+
+            body = self.rfile.read(content_length)
+            try:
+                obj = json.loads(body.decode("utf-8"))
+            except Exception:
+                return self._bad_request("invalid json")
+            if not isinstance(obj, dict):
+                return self._bad_request("json must be an object")
+
+            parsed = parse_set_all_payload(obj)
+            if not parsed:
+                return self._bad_request(
+                    "provide token/cookie/tenant fields"
+                )
+
+            updated = apply_set_all(parsed)
+            masked = {k: mask_secret(v) for k, v in updated.items()}
+            return self._json_ok({"ok": True, "updated": masked})
 
         def log_message(self, format, *args):  # noqa: A002
             return
@@ -174,6 +238,32 @@ def parse_set_all_arg(arg: str) -> dict[str, str]:
     return out
 
 
+def parse_set_all_payload(obj: dict[str, Any]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for k in ("token", "cookie", "tenant"):
+        v = obj.get(k)
+        if isinstance(v, str) and v.strip():
+            out[k] = v.strip()
+    return out
+
+
+def apply_set_all(parsed: dict[str, str]) -> dict[str, str]:
+    updated: dict[str, str] = {}
+    if "token" in parsed:
+        r.set(UPWORK_TOKEN_REDIS_KEY, parsed["token"])
+        r.set(UPWORK_TOKEN_UPDATED_AT_REDIS_KEY, now_iso())
+        updated["token"] = parsed["token"]
+    if "cookie" in parsed:
+        r.set(UPWORK_COOKIE_REDIS_KEY, parsed["cookie"])
+        r.set(UPWORK_COOKIE_UPDATED_AT_REDIS_KEY, now_iso())
+        updated["cookie"] = parsed["cookie"]
+    if "tenant" in parsed:
+        r.set(UPWORK_API_TENANT_REDIS_KEY, parsed["tenant"])
+        r.set(UPWORK_TENANT_UPDATED_AT_REDIS_KEY, now_iso())
+        updated["tenant"] = parsed["tenant"]
+    return updated
+
+
 def handle_command(chat_id: int, text: str) -> str:
     parts = text.strip().split(None, 1)
     cmd = parts[0].lower()
@@ -205,19 +295,11 @@ def handle_command(chat_id: int, text: str) -> str:
                 "or\n"
                 '/upwork_set_all {"token":"...","cookie":"...","tenant":"..."}\n'
             )
+        updated = apply_set_all(parsed)
         out_lines = []
-        if "token" in parsed:
-            r.set(UPWORK_TOKEN_REDIS_KEY, parsed["token"])
-            r.set(UPWORK_TOKEN_UPDATED_AT_REDIS_KEY, now_iso())
-            out_lines.append(f"token: {mask_secret(parsed['token'])}")
-        if "cookie" in parsed:
-            r.set(UPWORK_COOKIE_REDIS_KEY, parsed["cookie"])
-            r.set(UPWORK_COOKIE_UPDATED_AT_REDIS_KEY, now_iso())
-            out_lines.append(f"cookie: {mask_secret(parsed['cookie'])}")
-        if "tenant" in parsed:
-            r.set(UPWORK_API_TENANT_REDIS_KEY, parsed["tenant"])
-            r.set(UPWORK_TENANT_UPDATED_AT_REDIS_KEY, now_iso())
-            out_lines.append(f"tenant: {mask_secret(parsed['tenant'])}")
+        for k in ("token", "cookie", "tenant"):
+            if k in updated:
+                out_lines.append(f"{k}: {mask_secret(updated[k])}")
         return "Updated:\n" + "\n".join(out_lines)
 
     if cmd == "/upwork_set_token":

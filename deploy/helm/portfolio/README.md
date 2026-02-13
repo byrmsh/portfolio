@@ -23,7 +23,9 @@ kubectl create secret generic upworker-secrets \
 kubectl create secret generic upworker-bot-secrets \
   --namespace portfolio \
   --from-literal=TELEGRAM_BOT_TOKEN='YOUR_TOKEN' \
-  --from-literal=TELEGRAM_ALLOWED_CHAT_ID='YOUR_CHAT_ID'
+  --from-literal=TELEGRAM_ALLOWED_CHAT_ID='YOUR_CHAT_ID' \
+  --from-literal=UPWORKERBOT_HTTP_TOKEN='OPTIONAL_HTTP_TOKEN' \
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 ## Install / Upgrade
