@@ -16,4 +16,5 @@ COPY apps/upworkerbot/.env.sample ./
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["upworkerbot"]
+# Avoid relying on console-script stubs which can break if entrypoints are mis-generated.
+CMD ["python", "-m", "upworkerbot_app"]

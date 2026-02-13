@@ -52,6 +52,8 @@ TELEGRAM_ALERT_REDIS_KEY = env.str(
 )
 UPWORK_HEALTH_ENABLED = env.bool("UPWORK_HEALTH_ENABLED", default=True)
 UPWORK_HEALTH_PORT = env.int("UPWORK_HEALTH_PORT", default=3000)
+# When running in Kubernetes we prefer to stay alive and keep retrying rather than CrashLooping.
+ERROR_BACKOFF_SECONDS = env.int("UPWORK_ERROR_BACKOFF_SECONDS", default=30)
 MAX_OFFSET = 5000
 MAX_PAGE_SIZE = 50
 OPTIMAL_PAGE_SIZE = env.int("OPTIMAL_PAGE_SIZE", default=40)
@@ -784,9 +786,13 @@ def main():
     pid = PID(0.1, 0.05, 0.01, setpoint=0, output_limits=(1, 3600))
 
     while True:
-        new_count = process_jobs_iteration()
-        logger.info("Iteration complete", new_jobs_fetched=new_count)
-        sleep_by_pid_and_new_count(pid, new_count)
+        try:
+            new_count = process_jobs_iteration()
+            logger.info("Iteration complete", new_jobs_fetched=new_count)
+            sleep_by_pid_and_new_count(pid, new_count)
+        except Exception as e:
+            logger.exception("Iteration failed; backing off", exc_info=e)
+            time.sleep(max(1, int(ERROR_BACKOFF_SECONDS)))
 
 
 if __name__ == "__main__":
