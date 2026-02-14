@@ -24,8 +24,8 @@ spec:
     spec:
       containers:
         - name: upworker
-          image: "{{ .Values.upworker.image.repository }}:{{ default .Values.upworker.image.tag (include "portfolio.imageTag" .) }}"
-          imagePullPolicy: {{ default .Values.upworker.image.pullPolicy (include "portfolio.imagePullPolicy" .) }}
+          image: "{{ .Values.upworker.image.repository }}:{{ default (include "portfolio.imageTag" .) .Values.upworker.image.tag }}"
+          imagePullPolicy: {{ default (include "portfolio.imagePullPolicy" .) .Values.upworker.image.pullPolicy }}
           env:
             - name: REDIS_URL
               value: {{ .Values.upworker.env.redisUrl | quote }}

@@ -25,8 +25,8 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: {{ $job.name | trimSuffix "-cronjob" }}
-              image: "{{ $job.image.repository }}:{{ default $job.image.tag (include "portfolio.imageTag" $) }}"
-              imagePullPolicy: {{ default $job.image.pullPolicy (include "portfolio.imagePullPolicy" $) }}
+              image: "{{ $job.image.repository }}:{{ default (include "portfolio.imageTag" $) $job.image.tag }}"
+              imagePullPolicy: {{ default (include "portfolio.imagePullPolicy" $) $job.image.pullPolicy }}
               command:
                 {{- toYaml $job.command | nindent 16 }}
               env:
