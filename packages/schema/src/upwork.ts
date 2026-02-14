@@ -5,7 +5,7 @@ import { z } from 'zod';
 const nullableString = z.string().nullable();
 const nullableBool = z.boolean().nullable();
 
-const nullableNumberLike = z.preprocess((value) => {
+const nullableNumberLike = z.preprocess((value: unknown) => {
   if (value === null || value === undefined) return value;
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {

@@ -3,7 +3,7 @@ import { z } from 'zod';
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
 const isoDatetimeSchema = z
   .string()
-  .refine((value) => !Number.isNaN(Date.parse(value)), 'Expected ISO datetime');
+  .refine((value: string) => !Number.isNaN(Date.parse(value)), 'Expected ISO datetime');
 
 export const statSourceSchema = z.enum([
   'github',
