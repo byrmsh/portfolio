@@ -255,3 +255,8 @@ Production deploys are owned by the `homelab` repo:
 - Argo CD `Application` manifests live in `homelab/k8s/argocd/applications/`
 - prod overrides live in `homelab/k8s/portfolio/values-prod.yaml`
 - `argocd-image-updater` keeps `global.imageTag` up to date as new GHCR images land
+
+Notes:
+
+- This repo does not run Argo CD locally; the default local loop is still `pnpm dev` + `pnpm k8s:local:apply`.
+- Argo CD needs repo credentials to read `portfolio` + `homelab`, and image-updater needs write access to `homelab` to commit updated tags.
