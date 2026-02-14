@@ -38,12 +38,7 @@ helm upgrade --install portfolio ./deploy/helm/portfolio \
 
 ## Production values
 
-```bash
-helm upgrade --install portfolio ./deploy/helm/portfolio \
-  --namespace portfolio \
-  --create-namespace \
-  -f deploy/helm/portfolio/values-prod.yaml
-```
+Production overrides live in the `homelab` repo (GitOps source of truth).
 
 ## Validate
 

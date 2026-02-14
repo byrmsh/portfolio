@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
         - name: web
-          image: '{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}'
-          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          image: '{{ .Values.web.image.repository }}:{{ default .Values.web.image.tag (include "portfolio.imageTag" .) }}'
+          imagePullPolicy: {{ default .Values.web.image.pullPolicy (include "portfolio.imagePullPolicy" .) }}
           env:
             - name: HOST
               value: {{ .Values.web.env.host | quote }}

@@ -248,33 +248,10 @@ pnpm k8s:local:api
 pnpm k8s:local:web
 ```
 
-### Production (Manual)
+### Production (GitOps)
 
-Build images:
+Production deploys are owned by the `homelab` repo:
 
-```bash
-docker build -f apps/api/Dockerfile -t ghcr.io/byrmsh/portfolio-api:latest .
-docker build -f apps/web/Dockerfile -t ghcr.io/byrmsh/portfolio-web:latest .
-docker build -f apps/collector/Dockerfile -t ghcr.io/byrmsh/portfolio-collector:latest .
-docker build -f apps/ankiworker/Dockerfile -t ghcr.io/byrmsh/portfolio-ankiworker:latest .
-docker build -f apps/lyricist/Dockerfile -t ghcr.io/byrmsh/portfolio-lyricist:latest .
-```
-
-Push images:
-
-```bash
-docker push ghcr.io/byrmsh/portfolio-api:latest
-docker push ghcr.io/byrmsh/portfolio-web:latest
-docker push ghcr.io/byrmsh/portfolio-collector:latest
-docker push ghcr.io/byrmsh/portfolio-ankiworker:latest
-docker push ghcr.io/byrmsh/portfolio-lyricist:latest
-```
-
-Deploy with Helm using prod values:
-
-```bash
-helm upgrade --install portfolio ./deploy/helm/portfolio \
-  --namespace portfolio \
-  --create-namespace \
-  -f deploy/helm/portfolio/values-prod.yaml
-```
+- Argo CD `Application` manifests live in `homelab/k8s/argocd/applications/`
+- prod overrides live in `homelab/k8s/portfolio/values-prod.yaml`
+- `argocd-image-updater` keeps `global.imageTag` up to date as new GHCR images land

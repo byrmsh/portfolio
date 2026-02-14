@@ -1,5 +1,9 @@
 global:
   appLabel: portfolio
+  # Default image tag for all app workloads. Individual `*.image.tag` values can override this.
+  imageTag: dev
+  # Default image pull policy for app workloads. Individual `*.image.pullPolicy` values can override this.
+  imagePullPolicy: IfNotPresent
 
 db:
   pvc:
