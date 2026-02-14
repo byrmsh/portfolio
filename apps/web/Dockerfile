@@ -17,6 +17,7 @@ WORKDIR /app
 RUN apk add --no-cache git
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=deps /app/packages/schema/node_modules ./packages/schema/node_modules
 COPY . .
 # Build Astro SSR (Output: /apps/web/dist)
 RUN pnpm --filter web build

@@ -19,6 +19,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /app/packages/schema/node_modules ./packages/schema/node_modules
 COPY . .
 # Build the API
 RUN pnpm --filter api build
@@ -37,6 +38,7 @@ COPY --from=builder --chown=node:node /app/apps/api/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/node_modules/.pnpm /app/node_modules/.pnpm
 COPY --from=builder --chown=node:node /app/apps/api/package.json ./package.json
 COPY --from=builder --chown=node:node /app/packages/schema /app/packages/schema
+COPY --from=builder --chown=node:node /app/packages/schema/node_modules /app/packages/schema/node_modules
 
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
