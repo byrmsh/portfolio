@@ -65,21 +65,21 @@ export function projectUpworkJobToLead(
     parseMaybeEpochToIso(job?.jobTile?.job?.publishTime) ??
     parseMaybeEpochToIso(job?.jobTile?.job?.createTime) ??
     null;
-	const capturedAt = capturedAtIso ?? publishedAt ?? new Date().toISOString();
+  const capturedAt = capturedAtIso ?? publishedAt ?? new Date().toISOString();
 
-	const rawSkills: unknown[] = Array.isArray(job.ontologySkills)
-		? (job.ontologySkills as unknown[])
-		: [];
+  const rawSkills: unknown[] = Array.isArray(job.ontologySkills)
+    ? (job.ontologySkills as unknown[])
+    : [];
 
-	const tags = uniq(
-		rawSkills
-			.map((s: unknown) => {
-				if (!s || typeof s !== 'object') return undefined;
-				const prettyName = (s as { prettyName?: unknown }).prettyName;
-				return asNonEmptyString(prettyName);
-			})
-			.filter((v: string | undefined): v is string => Boolean(v)),
-	).slice(0, 6);
+  const tags = uniq(
+    rawSkills
+      .map((s: unknown): string | null => {
+        if (!s || typeof s !== 'object') return null;
+        const prettyName = (s as { prettyName?: unknown }).prettyName;
+        return asNonEmptyString(prettyName);
+      })
+      .filter((v: string | null): v is string => v !== null),
+  ).slice(0, 6);
 
   const lead = {
     id: String(job.id),
