@@ -235,6 +235,19 @@ helm upgrade --install portfolio ./deploy/helm/portfolio \
   --set upworkerBot.enabled=true
 ```
 
+To include Upwork images in local builds, opt in:
+
+```bash
+pnpm k8s:local:apply -- --with-upworker --with-upworkerbot
+```
+
+Fast update loops:
+
+```bash
+pnpm k8s:local:api
+pnpm k8s:local:web
+```
+
 ### Production (Manual)
 
 Build images:

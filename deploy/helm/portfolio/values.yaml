@@ -132,7 +132,8 @@ upworkerBot:
       cpu: 500m
 
 upworker:
-  enabled: true
+  # Disabled by default because it requires secrets and will fail rollouts in fresh clusters.
+  enabled: false
   replicas: 1
   image:
     repository: portfolio-upworker

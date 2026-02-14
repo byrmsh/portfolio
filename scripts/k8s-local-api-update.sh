@@ -16,16 +16,17 @@ if ! command -v minikube >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[1/4] Building web image..."
-docker build -f apps/web/Dockerfile -t portfolio-web:dev .
+echo "[1/4] Building api image..."
+docker build -f apps/api/Dockerfile -t portfolio-api:dev .
 
 echo "[2/4] Loading image into minikube..."
-minikube image load --overwrite=true portfolio-web:dev
+minikube image load --overwrite=true portfolio-api:dev
 
-echo "[3/4] Restarting web deployment..."
-kubectl -n portfolio rollout restart deployment/web-deployment
+echo "[3/4] Restarting api deployment..."
+kubectl -n portfolio rollout restart deployment/api-deployment
 
 echo "[4/4] Waiting for rollout..."
-kubectl -n portfolio rollout status deploy/web-deployment
+kubectl -n portfolio rollout status deploy/api-deployment
 
-echo "Web update completed."
+echo "API update completed."
+

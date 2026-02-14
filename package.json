@@ -15,6 +15,7 @@
     "k8s:local:apply": "./scripts/k8s-local-apply.sh",
     "k8s:local:helm": "./scripts/k8s-local-apply.sh",
     "k8s:local:argocd:bootstrap": "./scripts/argocd-local-bootstrap.sh",
+    "k8s:local:api": "./scripts/k8s-local-api-update.sh",
     "k8s:local:web": "./scripts/k8s-local-web-update.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

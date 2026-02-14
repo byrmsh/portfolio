@@ -1,8 +1,49 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+with_upworker=false
+with_upworkerbot=false
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --with-upworker)
+      with_upworker=true
+      shift
+      ;;
+    --with-upworkerbot)
+      with_upworkerbot=true
+      shift
+      ;;
+    -h|--help)
+      cat <<'EOF'
+Usage: k8s-local-apply.sh [--with-upworker] [--with-upworkerbot]
+
+Builds local images, loads them into minikube, and deploys the Helm release.
+
+By default, this builds the core images (api, web, collector, ankiworker, lyricist).
+Upwork components are opt-in because they require secrets.
+EOF
+      exit 0
+      ;;
+    *)
+      echo "Unknown arg: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "kubectl is required." >&2
+  exit 1
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "docker is required." >&2
+  exit 1
+fi
+
+if ! command -v minikube >/dev/null 2>&1; then
+  echo "minikube is required." >&2
   exit 1
 fi
 
@@ -12,8 +53,12 @@ docker build -f apps/web/Dockerfile -t portfolio-web:dev .
 docker build -f apps/collector/Dockerfile -t portfolio-collector:dev .
 docker build -f apps/ankiworker/Dockerfile -t portfolio-ankiworker:dev .
 docker build -f apps/lyricist/Dockerfile -t portfolio-lyricist:dev .
-docker build -f apps/upworker/Dockerfile -t portfolio-upworker:dev .
-docker build -f apps/upworkerbot/Dockerfile -t portfolio-upworkerbot:dev .
+if [ "${with_upworker}" = "true" ]; then
+  docker build -f apps/upworker/Dockerfile -t portfolio-upworker:dev .
+fi
+if [ "${with_upworkerbot}" = "true" ]; then
+  docker build -f apps/upworkerbot/Dockerfile -t portfolio-upworkerbot:dev .
+fi
 
 echo "[2/8] Loading images into minikube..."
 minikube image load --overwrite=true portfolio-api:dev
@@ -26,10 +71,14 @@ minikube image load --overwrite=true portfolio-ankiworker:dev
 echo "Loaded portfolio-ankiworker:dev into minikube"
 minikube image load --overwrite=true portfolio-lyricist:dev
 echo "Loaded portfolio-lyricist:dev into minikube"
-minikube image load --overwrite=true portfolio-upworker:dev
-echo "Loaded portfolio-upworker:dev into minikube"
-minikube image load --overwrite=true portfolio-upworkerbot:dev
-echo "Loaded portfolio-upworkerbot:dev into minikube"
+if [ "${with_upworker}" = "true" ]; then
+  minikube image load --overwrite=true portfolio-upworker:dev
+  echo "Loaded portfolio-upworker:dev into minikube"
+fi
+if [ "${with_upworkerbot}" = "true" ]; then
+  minikube image load --overwrite=true portfolio-upworkerbot:dev
+  echo "Loaded portfolio-upworkerbot:dev into minikube"
+fi
 
 if ! command -v helm >/dev/null 2>&1; then
   echo "helm is required. Install Helm to deploy ./deploy/helm/portfolio." >&2
