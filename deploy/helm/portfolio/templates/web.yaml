@@ -27,6 +27,8 @@ spec:
               value: {{ .Values.web.env.host | quote }}
             - name: PORT
               value: {{ .Values.web.env.port | quote }}
+            - name: WEB_ORIGIN
+              value: {{ .Values.web.env.webOrigin | quote }}
             - name: API_ORIGIN
               value: {{ .Values.web.env.apiOrigin | quote }}
           ports:

@@ -183,8 +183,13 @@ export const GET: APIRoute = async ({ request }) => {
     import.meta.env.API_ORIGIN ??
     import.meta.env.PUBLIC_API_ORIGIN ??
     'http://localhost:3000';
+  const webOrigin =
+    process.env.WEB_ORIGIN ??
+    import.meta.env.WEB_ORIGIN ??
+    import.meta.env.PUBLIC_WEB_ORIGIN ??
+    new URL(request.url).origin;
 
-  const webHealthUrl = new URL('/health', request.url).toString();
+  const webHealthUrl = `${webOrigin.replace(/\/$/, '')}/health`;
   const apiHealthUrl = `${apiOrigin.replace(/\/$/, '')}/health`;
   const apiActivityUrl = `${apiOrigin.replace(/\/$/, '')}/api/activity-monitor`;
   const apiStatusUrl = `${apiOrigin.replace(/\/$/, '')}/api/status`;

@@ -46,6 +46,7 @@ web:
   env:
     host: 0.0.0.0
     port: '8080'
+    webOrigin: http://127.0.0.1:8080
     apiOrigin: http://api-service:3000
   resources:
     requests:
