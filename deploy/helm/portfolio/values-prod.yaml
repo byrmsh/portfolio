@@ -1,13 +1,13 @@
 api:
   image:
     repository: ghcr.io/byrmsh/portfolio-api
-    tag: df5f7b099d540c3f3febc9760f246151579e485f
+    tag: 6f55bdd9371149c70255b433b9c4f5f37eb2f7a6
     pullPolicy: Always
 
 web:
   image:
     repository: ghcr.io/byrmsh/portfolio-web
-    tag: df5f7b099d540c3f3febc9760f246151579e485f
+    tag: 6f55bdd9371149c70255b433b9c4f5f37eb2f7a6
     pullPolicy: Always
 
 collectorCronJobs:
@@ -18,7 +18,7 @@ collectorCronJobs:
     suspend: true
     image:
       repository: ghcr.io/byrmsh/portfolio-collector
-      tag: df5f7b099d540c3f3febc9760f246151579e485f
+      tag: 6f55bdd9371149c70255b433b9c4f5f37eb2f7a6
       pullPolicy: Always
     command:
     - python
@@ -30,7 +30,7 @@ collectorCronJobs:
     suspend: true
     image:
       repository: ghcr.io/byrmsh/portfolio-ankiworker
-      tag: df5f7b099d540c3f3febc9760f246151579e485f
+      tag: 6f55bdd9371149c70255b433b9c4f5f37eb2f7a6
       pullPolicy: Always
     command:
     - python
@@ -42,7 +42,7 @@ collectorCronJobs:
     suspend: true
     image:
       repository: ghcr.io/byrmsh/portfolio-collector
-      tag: df5f7b099d540c3f3febc9760f246151579e485f
+      tag: 6f55bdd9371149c70255b433b9c4f5f37eb2f7a6
       pullPolicy: Always
     command:
     - python
@@ -54,7 +54,7 @@ collectorCronJobs:
     suspend: true
     image:
       repository: ghcr.io/byrmsh/portfolio-lyricist
-      tag: df5f7b099d540c3f3febc9760f246151579e485f
+      tag: 6f55bdd9371149c70255b433b9c4f5f37eb2f7a6
       pullPolicy: Always
     command:
     - python
