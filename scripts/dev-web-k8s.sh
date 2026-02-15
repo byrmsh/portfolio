@@ -60,4 +60,23 @@ if ! curl -fsS "${API_ORIGIN}/health" >/dev/null 2>&1; then
 fi
 
 echo "API available at ${API_ORIGIN}; starting web dev server..."
+jobs_probe="$(curl -fsS "${API_ORIGIN}/api/jobs?limit=1" 2>/dev/null || true)"
+if echo "${jobs_probe}" | grep -q '"source":"redis"'; then
+  echo "Detected stale API (jobs endpoint still backed by Redis). Refreshing local api image + deployment..." >&2
+  cleanup
+  pnpm k8s:local:api
+
+  echo "Restarting port-forward ${NAMESPACE}/${API_SERVICE} ${LOCAL_PORT}:${API_PORT}..." >&2
+  kubectl -n "${NAMESPACE}" port-forward "svc/${API_SERVICE}" "${LOCAL_PORT}:${API_PORT}" >/tmp/portfolio-api-port-forward.log 2>&1 &
+  PF_PID=$!
+  trap cleanup EXIT INT TERM
+
+  for _ in $(seq 1 30); do
+    if curl -fsS "${API_ORIGIN}/health" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.3
+  done
+fi
+
 API_ORIGIN="${API_ORIGIN}" pnpm -C apps/web dev "$@"
