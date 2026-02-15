@@ -94,8 +94,8 @@ const enTranslations = {
     githubDayAria: 'GitHub day {day}',
     ankiDayAria: 'Anki day {day}',
     streak: 'Streak',
-    tooltipWithDate: '{label}: {date} ({count})',
-    tooltipWithoutDate: '{label}: ({count})',
+    tooltipWithDate: '{label}: {date} ({count} {unit})',
+    tooltipWithoutDate: '{label}: ({count} {unit})',
   },
   savedLyrics: {
     title: 'Saved Lyrics',

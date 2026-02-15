@@ -406,13 +406,15 @@ const rangeLabel =
 
     const show = (el, x, y) => {
       const sourceLabel = el.dataset.sourceLabel ?? el.dataset.source ?? '';
+      const source = el.dataset.source ?? '';
       const date = el.dataset.date ?? '';
       const count = Number(el.dataset.count ?? 0);
+      const unit = source === 'anki' ? 'reviews' : 'commits';
       const dateStr = date ? fmtTip.format(parseIsoDate(date)) : '';
 
       tip.textContent = dateStr
-        ? formatTpl(tooltipWithDateTpl, { label: sourceLabel, date: dateStr, count })
-        : formatTpl(tooltipWithoutDateTpl, { label: sourceLabel, count });
+        ? formatTpl(tooltipWithDateTpl, { label: sourceLabel, date: dateStr, count, unit })
+        : formatTpl(tooltipWithoutDateTpl, { label: sourceLabel, count, unit });
       tip.style.left = `${Math.min(window.innerWidth - 10, x + 12)}px`;
       tip.style.top = `${Math.min(window.innerHeight - 10, y + 12)}px`;
       tip.classList.remove('hidden');
