@@ -409,7 +409,7 @@ const rangeLabel =
       const source = el.dataset.source ?? '';
       const date = el.dataset.date ?? '';
       const count = Number(el.dataset.count ?? 0);
-      const unit = source === 'anki' ? 'reviews' : 'commits';
+      const unit = source === 'anki' ? 'reviews' : 'contributions';
       const dateStr = date ? fmtTip.format(parseIsoDate(date)) : '';
 
       tip.textContent = dateStr
