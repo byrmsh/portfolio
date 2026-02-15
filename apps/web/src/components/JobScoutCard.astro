@@ -64,6 +64,11 @@ try {
   latest = page.items[0] ?? null;
 }
 
+if (!latest) {
+  const page = await fetchJobsPageFromUpstream({ limit: 1, before: null });
+  latest = page.items[0] ?? null;
+}
+
 const jobsHref = localizedPath(locale, '/jobs');
 const age = ageMetricFromIso(latest?.capturedAt) ?? null;
 const tags = Array.isArray(latest?.tags) ? latest!.tags.slice(0, 2) : [];

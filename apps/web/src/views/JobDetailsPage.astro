@@ -59,6 +59,11 @@ try {
   job = await fetchJobDetailFromUpstream({ id, cursor });
 }
 
+if (!job) {
+  const cursor = url.searchParams.get('cursor');
+  job = await fetchJobDetailFromUpstream({ id, cursor });
+}
+
 const backHref = localizedPath(locale, '/jobs');
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
 ---
