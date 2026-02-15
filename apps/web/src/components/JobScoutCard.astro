@@ -2,7 +2,6 @@
 import ky from 'ky';
 import { localizedPath, type SupportedLocale } from '../i18n';
 import WidgetHeader from './WidgetHeader.astro';
-import { fetchJobsPageFromUpstream } from '../lib/jobs-board';
 
 interface Props {
   t: (path: string, vars?: Record<string, string | number>) => string;
@@ -46,27 +45,16 @@ function ageMetricFromIso(value: string | null | undefined): string | null {
 
 let latest: JobLead | null = null;
 try {
-  const res = await ky.get(`${apiOrigin}/api/jobs`, {
-    searchParams: { limit: '1' },
-    headers: { accept: 'application/json' },
-    throwHttpErrors: false,
-  });
-
-  if (res.ok) {
-    const json = await res.json<{ data?: { items?: JobLead[] } | null }>();
-    latest = json?.data?.items?.[0] ?? null;
-  } else {
-    const page = await fetchJobsPageFromUpstream({ limit: 1, before: null });
-    latest = page.items[0] ?? null;
-  }
+  const json = await ky
+    .get(`${apiOrigin}/api/jobs`, {
+      searchParams: { limit: '1' },
+      headers: { accept: 'application/json' },
+      throwHttpErrors: false,
+    })
+    .json<{ data?: { items?: JobLead[] } | null }>();
+  latest = json?.data?.items?.[0] ?? null;
 } catch {
-  const page = await fetchJobsPageFromUpstream({ limit: 1, before: null });
-  latest = page.items[0] ?? null;
-}
-
-if (!latest) {
-  const page = await fetchJobsPageFromUpstream({ limit: 1, before: null });
-  latest = page.items[0] ?? null;
+  latest = null;
 }
 
 const jobsHref = localizedPath(locale, '/jobs');
