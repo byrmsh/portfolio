@@ -75,9 +75,9 @@ const enTranslations = {
   },
   contact: {
     description:
-      'Open to new opportunities and technical discussions! GPG key available for encryption.',
+      'Open to new opportunities and technical discussions! PGP key available for encryption.',
     emailLabel: 'Email',
-    gpgLabel: 'GPG Public Key',
+    gpgLabel: 'PGP Public Key',
   },
   hero: {
     subtitle: 'Full-Stack Developer & DevOps Practitioner.',
