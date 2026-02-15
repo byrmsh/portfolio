@@ -5,6 +5,7 @@ import SiteNav from '../components/SiteNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import { SITE } from '../config/site';
 import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
+import { fetchJobsPageFromUpstream } from '../lib/jobs-board';
 
 interface Props {
   url: URL;
@@ -57,16 +58,20 @@ const limit = 25;
 
 let page: JobsPage = { items: [], nextCursor: null };
 try {
-  const json = await ky
-    .get(`${apiOrigin}/api/jobs`, {
-      searchParams: { limit: String(limit), ...(before ? { before } : {}) },
-      headers: { accept: 'application/json' },
-      throwHttpErrors: false,
-    })
-    .json<{ data?: JobsPage | null }>();
-  if (json?.data?.items) page = json.data;
+  const res = await ky.get(`${apiOrigin}/api/jobs`, {
+    searchParams: { limit: String(limit), ...(before ? { before } : {}) },
+    headers: { accept: 'application/json' },
+    throwHttpErrors: false,
+  });
+
+  if (res.ok) {
+    const json = await res.json<{ data?: JobsPage | null }>();
+    if (json?.data?.items) page = json.data;
+  } else {
+    page = await fetchJobsPageFromUpstream({ limit, before });
+  }
 } catch {
-  page = { items: [], nextCursor: null };
+  page = await fetchJobsPageFromUpstream({ limit, before });
 }
 
 const newestHref = localizedPath(locale, '/jobs');

@@ -6,6 +6,7 @@ import SiteFooter from '../components/SiteFooter.astro';
 import JobFacts from '../components/JobFacts.astro';
 import { SITE } from '../config/site';
 import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
+import { fetchJobDetailFromUpstream } from '../lib/jobs-board';
 
 interface Props {
   url: URL;
@@ -41,16 +42,21 @@ const apiOrigin =
 let job: JobRecord | null = null;
 try {
   const cursor = url.searchParams.get('cursor');
-  const json = await ky
-    .get(`${apiOrigin}/api/jobs/${encodeURIComponent(id)}`, {
-      searchParams: cursor ? { cursor } : undefined,
-      headers: { accept: 'application/json' },
-      throwHttpErrors: false,
-    })
-    .json<{ data?: JobRecord }>();
-  if (json?.data) job = json.data;
+  const res = await ky.get(`${apiOrigin}/api/jobs/${encodeURIComponent(id)}`, {
+    searchParams: cursor ? { cursor } : undefined,
+    headers: { accept: 'application/json' },
+    throwHttpErrors: false,
+  });
+
+  if (res.ok) {
+    const json = await res.json<{ data?: JobRecord }>();
+    if (json?.data) job = json.data;
+  } else {
+    job = await fetchJobDetailFromUpstream({ id, cursor });
+  }
 } catch {
-  job = null;
+  const cursor = url.searchParams.get('cursor');
+  job = await fetchJobDetailFromUpstream({ id, cursor });
 }
 
 const backHref = localizedPath(locale, '/jobs');
