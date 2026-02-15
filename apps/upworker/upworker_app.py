@@ -55,6 +55,11 @@ MAX_PAGE_SIZE = 50
 OPTIMAL_PAGE_SIZE = env.int("OPTIMAL_PAGE_SIZE", default=40)
 DEFAULT_FETCH_INTERVAL_SECONDS = env.int("DEFAULT_FETCH_INTERVAL_SECONDS", default=600)
 UPWORK_BEARER_TOKEN = env.str("UPWORK_BEARER_TOKEN", default="").strip()
+# In k8s we generally do NOT want to hammer Upwork when auth breaks (it can trigger enforcement).
+# When enabled, we pause the worker on 401s and wait for a manual token refresh in Redis.
+UPWORK_HALT_ON_401 = env.bool("UPWORK_HALT_ON_401", default=True)
+UPWORK_AUTH_PAUSE_POLL_SECONDS = env.int("UPWORK_AUTH_PAUSE_POLL_SECONDS", default=30)
+UPWORK_AUTH_PAUSE_MAX_SECONDS = env.int("UPWORK_AUTH_PAUSE_MAX_SECONDS", default=24 * 60 * 60)
 # curl_cffi needs browser impersonation to avoid Cloudflare blocking on Upwork.
 # Default to "chrome" (best-effort mapping to a supported Chrome profile).
 CURL_CFFI_IMPERSONATE = env.str("CURL_CFFI_IMPERSONATE", default="chrome").strip()
@@ -229,6 +234,13 @@ def get_static_graphql_headers() -> dict[str, str]:
 
 class UnauthorizedError(HTTPError):
     pass
+
+
+class AuthRefreshRequired(RuntimeError):
+    def __init__(self, reason: str, token: str | None = None):
+        super().__init__(reason)
+        self.reason = reason
+        self.token = token or ""
 
 
 class ProxyForbiddenError(HTTPError):
@@ -599,14 +611,14 @@ def fetch_jobs_page(offset: int, count: int) -> List[UpworkJobResult]:
         res = retry_until_not_forbidden(fetch_jobs_endpoint, (offset, count, token))
     except UnauthorizedError as e:
         status = getattr(getattr(e, "response", None), "status_code", None)
+        logger.info("Unauthorized, auth refresh required", error=str(e), status=status)
+        maybe_alert_auth_issue("unauthorized", status_code=status or 401)
+        if UPWORK_HALT_ON_401:
+            raise AuthRefreshRequired("unauthorized", token=token) from e
+
+        # Legacy behavior: attempt reauth (often blocked by Cloudflare). Prefer halting in k8s.
         logger.info("Token expired, reauthorizing", error=str(e))
-        maybe_alert_auth_issue("token expired", status_code=status or 401)
-        try:
-            token = cache_authorized_token_with_strategy()
-        except Exception:
-            # Login-based reauth is often blocked by Cloudflare; alert once so we notice token expiry.
-            maybe_alert_auth_issue("reauth failed", status_code=status or 401)
-            raise
+        token = cache_authorized_token_with_strategy()
         res = retry_until_not_forbidden(fetch_jobs_endpoint, (offset, count, token))
     except HTTPError as e:
         status = getattr(getattr(e, "response", None), "status_code", None)
@@ -745,12 +757,13 @@ def process_jobs_iteration() -> int:
                         fetch_connects_data_for_job, (job_id, token)
                     )
                 except UnauthorizedError:
+                    maybe_alert_auth_issue("unauthorized when fetching connects", status_code=401)
+                    if UPWORK_HALT_ON_401:
+                        raise AuthRefreshRequired("unauthorized (connects)")
                     if UPWORK_BEARER_TOKEN:
                         raise
                     token = cache_authorized_token_with_strategy()
-                    connects_res = retry_until_not_forbidden(
-                        fetch_connects_data_for_job, (job_id, token)
-                    )
+                    connects_res = retry_until_not_forbidden(fetch_connects_data_for_job, (job_id, token))
                 except HTTPError as e:
                     status = getattr(getattr(e, "response", None), "status_code", None)
                     if status in (401, 403):
@@ -774,6 +787,19 @@ def sleep_by_pid_and_new_count(pid: PID, new_count: int) -> None:
     time.sleep(delay)
 
 
+def _pause_until_token_changes(prev_token: str) -> None:
+    deadline = time.time() + max(1, int(UPWORK_AUTH_PAUSE_MAX_SECONDS))
+    while True:
+        token = r.get(UPWORK_TOKEN_REDIS_KEY) or ""
+        if token and token != prev_token:
+            logger.info("Detected refreshed token in Redis; resuming")
+            return
+        if time.time() >= deadline:
+            logger.warning("Auth pause timeout reached; still no token change; continuing to pause")
+            deadline = time.time() + max(1, int(UPWORK_AUTH_PAUSE_MAX_SECONDS))
+        time.sleep(max(1, int(UPWORK_AUTH_PAUSE_POLL_SECONDS)))
+
+
 def main():
     logger.info("Starting main fetch loop")
     if UPWORK_HEALTH_ENABLED:
@@ -785,6 +811,10 @@ def main():
             new_count = process_jobs_iteration()
             logger.info("Iteration complete", new_jobs_fetched=new_count)
             sleep_by_pid_and_new_count(pid, new_count)
+        except AuthRefreshRequired as e:
+            # Avoid repeated requests when Upwork rejects auth; wait until token is refreshed via Redis.
+            logger.warning("Auth refresh required; pausing", reason=e.reason)
+            _pause_until_token_changes(e.token)
         except Exception as e:
             logger.exception("Iteration failed; backing off", exc_info=e)
             time.sleep(max(1, int(ERROR_BACKOFF_SECONDS)))
