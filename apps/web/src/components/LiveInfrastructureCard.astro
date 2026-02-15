@@ -20,7 +20,9 @@ interface Props {
 }
 
 const { t } = Astro.props;
-const endpoint = new URL('/system-status.json', Astro.url).toString();
+const endpoint = import.meta.env.SSR
+  ? `http://127.0.0.1:${process.env.PORT || '8080'}/system-status.json`
+  : new URL('/system-status.json', Astro.url).toString();
 const strings = {
   notAvailable: t('health.notAvailable'),
   runSingular: t('health.runs.one'),

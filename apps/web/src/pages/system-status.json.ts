@@ -196,8 +196,8 @@ export const GET: APIRoute = async ({ request }) => {
   const apiLyricUrl = `${apiOrigin.replace(/\/$/, '')}/api/ytmusic/saved/latest`;
 
   const [webProbe, apiProbe, activityMonitor, apiStatus, lyricistLastSavedAt] = await Promise.all([
-    probe(webHealthUrl, 1200),
-    probe(apiHealthUrl, 1200),
+    probe(webHealthUrl, 3000),
+    probe(apiHealthUrl, 3000),
     fetchActivityMonitor(apiActivityUrl),
     readApiStatus(apiStatusUrl),
     readLatestLyricSavedAt(apiLyricUrl),
