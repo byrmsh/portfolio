@@ -35,6 +35,12 @@ if ! command -v minikube >/dev/null 2>&1; then
   exit 1
 fi
 
+CTX="${K8S_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
+if [ -z "${CTX}" ]; then
+  echo "kubectl has no current context configured." >&2
+  exit 1
+fi
+
 echo "[1/6] Building local images..."
 docker build -f apps/api/Dockerfile -t portfolio-api:dev .
 docker build -f apps/web/Dockerfile -t portfolio-web:dev .
@@ -63,19 +69,20 @@ echo "[3/6] Deploying Helm release..."
 helm upgrade --install portfolio ./deploy/helm/portfolio \
   --namespace portfolio \
   --create-namespace \
-  --reset-values
+  --reset-values \
+  --kube-context "${CTX}"
 
 restart_deploy_if_exists() {
   local name="$1"
-  if kubectl -n portfolio get deploy "$name" >/dev/null 2>&1; then
-    kubectl -n portfolio rollout restart "deploy/$name"
+  if kubectl --context "${CTX}" -n portfolio get deploy "$name" >/dev/null 2>&1; then
+    kubectl --context "${CTX}" -n portfolio rollout restart "deploy/$name"
   fi
 }
 
 rollout_status_if_exists() {
   local name="$1"
-  if kubectl -n portfolio get deploy "$name" >/dev/null 2>&1; then
-    kubectl -n portfolio rollout status "deploy/$name" --timeout=300s
+  if kubectl --context "${CTX}" -n portfolio get deploy "$name" >/dev/null 2>&1; then
+    kubectl --context "${CTX}" -n portfolio rollout status "deploy/$name" --timeout=300s
   fi
 }
 

@@ -16,6 +16,12 @@ if ! command -v minikube >/dev/null 2>&1; then
   exit 1
 fi
 
+CTX="${K8S_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
+if [ -z "${CTX}" ]; then
+  echo "kubectl has no current context configured." >&2
+  exit 1
+fi
+
 echo "[1/4] Building api image..."
 docker build -f apps/api/Dockerfile -t portfolio-api:dev .
 
@@ -23,10 +29,9 @@ echo "[2/4] Loading image into minikube..."
 minikube image load --overwrite=true portfolio-api:dev
 
 echo "[3/4] Restarting api deployment..."
-kubectl -n portfolio rollout restart deployment/api-deployment
+kubectl --context "${CTX}" -n portfolio rollout restart deployment/api-deployment
 
 echo "[4/4] Waiting for rollout..."
-kubectl -n portfolio rollout status deploy/api-deployment
+kubectl --context "${CTX}" -n portfolio rollout status deploy/api-deployment
 
 echo "API update completed."
-

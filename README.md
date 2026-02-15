@@ -82,6 +82,12 @@ pnpm k8s:local:apply
 pnpm dev
 ```
 
+This assumes your `kubectl` context points at your local cluster (e.g. `minikube`). If you normally have `kubectl` pointed at a remote cluster, either switch contexts first (via `kubectx`) or run:
+
+```bash
+K8S_CONTEXT=minikube pnpm dev
+```
+
 This command:
 
 - starts `kubectl port-forward svc/api-service 3000:3000` in `portfolio`
