@@ -22,7 +22,6 @@ This is a polyglot monorepo containing application code and deployment manifests
 │   ├── collector/          # Personal data collectors (Python)
 │   ├── ankiworker/         # Anki activity worker (Python)
 │   ├── lyricist/           # YT Music lyric-note worker (Python)
-│   └── upworker/           # Upwork ingestion worker (Python)
 ├── deploy/
 │   └── helm/portfolio/     # Helm chart (deployment path)
 ├── packages/               # Reserved for shared UI/Types
@@ -98,13 +97,6 @@ docker run -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly
 ## Workers (uv)
 
 ```bash
-cd apps/upworker
-uv venv
-uv sync
-uv run upworker
-```
-
-```bash
 cd apps/collector
 uv venv
 uv sync
@@ -138,7 +130,6 @@ Services:
 - `web`: http://localhost:4321
 - `api`: http://localhost:3000
 - `redis` (DragonflyDB): localhost:6379
-- `upworker`: Upwork ingestion worker
 - `collector`: personal data collectors
 
 ## Deployment Workflow
@@ -223,23 +214,6 @@ Optional local access:
 ```bash
 kubectl -n portfolio port-forward svc/api-service 3000:3000
 kubectl -n portfolio port-forward svc/web-service 8080:80
-```
-
-Note: `upworker` and `upworkerBot` are disabled by default. Enable them explicitly when you have the required Secrets:
-
-```bash
-helm upgrade --install portfolio ./deploy/helm/portfolio \
-  --namespace portfolio \
-  --create-namespace \
-  --reset-values \
-  --set upworker.enabled=true \
-  --set upworkerBot.enabled=true
-```
-
-To include Upwork images in local builds, opt in:
-
-```bash
-pnpm k8s:local:apply -- --with-upworker --with-upworkerbot
 ```
 
 Fast update loops:

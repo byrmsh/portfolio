@@ -12,13 +12,17 @@ interface Props {
 
 type JobLead = {
   id: string;
-  source: 'upwork';
+  source: 'public';
   title: string;
   summary: string;
   tags: string[];
   publishedAt: string;
   capturedAt: string;
   href?: string;
+  companyName?: string;
+  location?: string;
+  remote?: boolean;
+  jobTypes?: string[];
 };
 
 type JobsPage = {
@@ -95,7 +99,13 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
           page.items.length ? (
             <div class="flex flex-col gap-3">
               {page.items.map((job) => {
-                const detailHref = localizedPath(locale, `/jobs/${encodeURIComponent(job.id)}`);
+                const detailHref = (() => {
+                  const base = localizedPath(locale, `/jobs/${encodeURIComponent(job.id)}`);
+                  if (!before) return base;
+                  const u = new URL(base, url);
+                  u.searchParams.set('cursor', before);
+                  return `${u.pathname}${u.search}`;
+                })();
                 const captured = ageMetricFromIso(job.capturedAt);
                 const publishedLabel = job.publishedAt
                   ? dateFmt.format(new Date(job.publishedAt))

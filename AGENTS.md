@@ -18,7 +18,6 @@ This file defines constraints and operating rules for coding agents. Project arc
 
 - Database: DragonflyDB (Redis API). Use `ioredis` client in the API.
 - Keyspacing: use colons `entity:id:attribute` (e.g., `job:1024:title`).
-- Jobs: `job:{id}` and field keys like `job:{id}:title`.
 - Personal data: `stat:{source}:{id}` (non-observability metrics).
 - Observability: do not store logs/metrics/traces in Redis. Use Grafana stack + OpenTelemetry pipeline instead.
 - Shared schemas:
@@ -32,7 +31,7 @@ This file defines constraints and operating rules for coding agents. Project arc
 
 - Namespace: `portfolio`.
 - Naming: `app-name-resource` (e.g., `api-deployment`, `web-service`).
-- Mandatory labels: `app: portfolio`, `component: [api|web|db|collector|upworker|lyricist]`.
+- Mandatory labels: `app: portfolio`, `component: [api|web|db|collector|lyricist]`.
 - Resources: always define requests/limits (start low: 128Mi RAM).
 - Probes:
 
@@ -74,7 +73,7 @@ kubectl create secret generic db-credentials \
 - Use Conventional Commits for all changes.
 - Format: `type(scope): summary`.
 - `scope` should name the most relevant area (app/package/docs folder). It does not have to be a microservice name; omit the scope if unclear.
-- Example: `feat(upworker): add upwork graphql ingestion`.
+- Example: `feat(collector): add cluster snapshot collector`.
 
 ---
 
@@ -92,7 +91,6 @@ kubectl create secret generic db-credentials \
 
 ## 7. Worker Apps (Python)
 
-- `apps/upworker`: Upwork ingestion worker (Python + uv).
 - `apps/collector`: Personal data collectors (Python + uv).
 - Keep these apps small and task-focused; add a new app only when a task has distinct dependencies or runtime needs.
 - Prefer K8s CronJobs for scheduled runs; long-lived services should stream updates to Redis and the API can expose them.

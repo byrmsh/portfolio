@@ -17,25 +17,6 @@ Some web widgets fetch JSON endpoints during SSR (for example `/system-status.js
   - Recommended in-cluster value is an in-pod origin like `http://127.0.0.1:8080` (chart default) to avoid hairpinning out via ingress/Cloudflare.
 - `web.env.apiOrigin` feeds `API_ORIGIN` for server-side calls to the API (default `http://api-service:3000`).
 
-## Upworker / UpworkerBot Secrets
-
-Examples (fill in your own values):
-
-```bash
-kubectl create secret generic upworker-secrets \
-  --namespace portfolio \
-  --from-literal=UPWORK_BEARER_TOKEN='YOUR_UPWORK_TOKEN'
-```
-
-```bash
-kubectl create secret generic upworker-bot-secrets \
-  --namespace portfolio \
-  --from-literal=TELEGRAM_BOT_TOKEN='YOUR_TOKEN' \
-  --from-literal=TELEGRAM_ALLOWED_CHAT_ID='YOUR_CHAT_ID' \
-  --from-literal=UPWORKERBOT_HTTP_TOKEN='OPTIONAL_HTTP_TOKEN' \
-  --dry-run=client -o yaml | kubectl apply -f -
-```
-
 ## Install / Upgrade
 
 ```bash

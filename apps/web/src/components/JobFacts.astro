@@ -5,16 +5,10 @@ type Primitive = string | number;
 type Translator = (path: string, vars?: Record<string, Primitive>) => string;
 
 type JobFactsJob = {
-  jobType?: 'FIXED' | 'HOURLY';
-  contractorTier?: string;
-  hourlyBudgetMin?: number | null;
-  hourlyBudgetMax?: number | null;
-  fixedPriceAmount?: { isoCurrencyCode?: string | null; amount: string } | null;
-  client?: {
-    country?: string | null;
-    paymentVerificationStatus?: string | null;
-    totalSpent?: { isoCurrencyCode?: string | null; amount: string } | null;
-  };
+  companyName?: string;
+  location?: string;
+  remote?: boolean;
+  jobTypes?: string[];
 };
 
 interface Props {
@@ -23,65 +17,18 @@ interface Props {
   t: Translator;
 }
 
-const { job, locale, t } = Astro.props;
+const { job, t } = Astro.props;
 
 const PLACEHOLDER = '--';
-const moneyFmt = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
-
-function parseAmountString(raw: string | null | undefined): number | null {
-  if (!raw) return null;
-  const n = Number(String(raw).trim());
-  return Number.isFinite(n) ? n : null;
-}
-
-function formatMoney(
-  amount: number | null | undefined,
-  currency: string | null | undefined,
-): string | null {
-  if (typeof amount !== 'number' || !Number.isFinite(amount)) return null;
-  const cur = typeof currency === 'string' && currency.trim().length ? currency.trim() : null;
-  return cur ? `${cur} ${moneyFmt.format(amount)}` : moneyFmt.format(amount);
-}
-
-function formatMoneyFromRawAmount(
-  rawAmount: string | null | undefined,
-  currency: string | null | undefined,
-): string | null {
-  const amt = parseAmountString(rawAmount);
-  return amt === null ? null : formatMoney(amt, currency);
-}
-
-function formatSpentValue(): string {
-  const raw = job.client?.totalSpent?.amount ?? null;
-  if (!raw) return PLACEHOLDER;
-  const cur = job.client?.totalSpent?.isoCurrencyCode ?? null;
-  return formatMoneyFromRawAmount(raw, cur) ?? raw;
-}
-
-function formatBudgetValue(): string {
-  if (job.jobType === 'HOURLY') {
-    const min = formatMoney(job.hourlyBudgetMin ?? null, null);
-    const max = formatMoney(job.hourlyBudgetMax ?? null, null);
-    const combined = [min, max].filter(Boolean).join(' - ');
-    return combined || PLACEHOLDER;
-  }
-
-  const raw = job.fixedPriceAmount?.amount ?? null;
-  if (!raw) return PLACEHOLDER;
-  const cur = job.fixedPriceAmount?.isoCurrencyCode ?? null;
-  return formatMoneyFromRawAmount(raw, cur) ?? raw;
-}
 
 const leftFacts = [
-  { label: t('jobs.factType'), value: job.jobType ?? PLACEHOLDER },
-  { label: t('jobs.factTier'), value: job.contractorTier ?? PLACEHOLDER },
-  { label: t('jobs.factCountry'), value: job.client?.country ?? PLACEHOLDER },
+  { label: t('jobs.factCompany'), value: job.companyName ?? PLACEHOLDER },
+  { label: t('jobs.factLocation'), value: job.location ?? PLACEHOLDER },
 ];
 
 const rightFacts = [
-  { label: t('jobs.factPayment'), value: job.client?.paymentVerificationStatus ?? PLACEHOLDER },
-  { label: t('jobs.factSpent'), value: formatSpentValue() },
-  { label: t('jobs.factBudget'), value: formatBudgetValue() },
+  { label: t('jobs.factRemote'), value: typeof job.remote === 'boolean' ? (job.remote ? 'Yes' : 'No') : PLACEHOLDER },
+  { label: t('jobs.factTypes'), value: Array.isArray(job.jobTypes) && job.jobTypes.length ? job.jobTypes.join(', ') : PLACEHOLDER },
 ];
 ---
 

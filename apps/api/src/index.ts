@@ -16,23 +16,56 @@ import {
   type SavedLyricNote,
   type YtMusicAnalysis,
 } from '@portfolio/schema/dashboard';
-import { upworkJobResultSchema } from '@portfolio/schema/upwork';
 
-import { projectUpworkJobToDetail, projectUpworkJobToLead } from './jobs/upwork.js';
+import { parseJobBoardJob, projectJobBoardJobToDetail } from './jobs/job-board.js';
 
 const app = new Hono();
 
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379/0');
 
+const JOB_CACHE_TTL_MS = 15 * 60 * 1000;
+const jobCache = new Map<string, { expiresAt: number; value: JobDetail }>();
+
+function cacheGetJob(id: string): JobDetail | null {
+  const entry = jobCache.get(id);
+  if (!entry) return null;
+  if (Date.now() >= entry.expiresAt) {
+    jobCache.delete(id);
+    return null;
+  }
+  return entry.value;
+}
+
+function cachePutJob(detail: JobDetail): void {
+  jobCache.set(detail.id, { value: detail, expiresAt: Date.now() + JOB_CACHE_TTL_MS });
+}
+
 function clampInt(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.trunc(n)));
 }
 
-function parseUnixSecondsToIso(value: unknown): string | null {
-  const raw = typeof value === 'string' ? value.trim() : value;
-  const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return new Date(n * 1000).toISOString();
+type JobsCursor = { page: number; offset: number };
+
+function decodeJobsCursor(raw: string | null): JobsCursor {
+  if (!raw) return { page: 1, offset: 0 };
+  const trimmed = raw.trim();
+  if (/^\d+$/.test(trimmed)) return { page: clampInt(Number(trimmed), 1, 100000), offset: 0 };
+
+  try {
+    const json = Buffer.from(trimmed, 'base64url').toString('utf8');
+    const parsed = JSON.parse(json) as { page?: unknown; offset?: unknown };
+    const page =
+      typeof parsed.page === 'number' ? clampInt(parsed.page, 1, 100000) : 1;
+    const offset =
+      typeof parsed.offset === 'number' ? clampInt(parsed.offset, 0, 500) : 0;
+    return { page, offset };
+  } catch {
+    return { page: 1, offset: 0 };
+  }
+}
+
+function encodeJobsCursor(cur: JobsCursor): string {
+  return Buffer.from(JSON.stringify(cur), 'utf8').toString('base64url');
 }
 
 function isoDate(d: Date): string {
@@ -89,7 +122,6 @@ app.get('/health', (c) => {
 
 app.get('/api/status', async (c) => {
   const routeStartMs = Date.now();
-  const jobsStreamKey = process.env.REDIS_STREAM_KEY ?? 'jobs';
   const freshnessMs = 24 * 60 * 60 * 1000;
   const checkedAt = new Date().toISOString();
   type ServiceStatus = 'healthy' | 'partial' | 'degraded' | 'unknown';
@@ -142,28 +174,6 @@ app.get('/api/status', async (c) => {
     }
   };
 
-  const readUpworkerLastFetchedAt = async (): Promise<string | null> => {
-    try {
-      const rows = await redis.xrevrange(jobsStreamKey, '+', '-', 'COUNT', 1);
-      const first = rows[0];
-      if (!first) return null;
-      const [, kv] = first;
-      let fetchedAtRaw: string | null = null;
-      for (let i = 0; i < kv.length - 1; i += 2) {
-        if (kv[i] === 'fetched_at') {
-          fetchedAtRaw = kv[i + 1] ?? null;
-          break;
-        }
-      }
-      if (!fetchedAtRaw) return null;
-      const epochSec = Number(fetchedAtRaw);
-      if (!Number.isFinite(epochSec) || epochSec <= 0) return null;
-      return new Date(epochSec * 1000).toISOString();
-    } catch {
-      return null;
-    }
-  };
-
   const probeRedis = async (): Promise<number | null> => {
     const start = Date.now();
     try {
@@ -174,27 +184,21 @@ app.get('/api/status', async (c) => {
     }
   };
 
-  const [githubUpdatedAt, ankiUpdatedAt, upworkerLastFetchedAt, dragonflyLatency] =
-    await Promise.all([
-      readActivityUpdatedAt('github'),
-      readActivityUpdatedAt('anki'),
-      readUpworkerLastFetchedAt(),
-      probeRedis(),
-    ]);
+  const [githubUpdatedAt, ankiUpdatedAt, dragonflyLatency] = await Promise.all([
+    readActivityUpdatedAt('github'),
+    readActivityUpdatedAt('anki'),
+    probeRedis(),
+  ]);
 
   const collectorRunsRaw = [githubUpdatedAt, ankiUpdatedAt].filter((value): value is string =>
     Boolean(value),
   ).length;
-  const upworkerRunsRaw = upworkerLastFetchedAt ? 1 : 0;
   const collectorMeta = `GitHub ${agoLabel(githubUpdatedAt)} • Anki ${agoLabel(ankiUpdatedAt)}`;
 
   const collectorStatus = combineStatus([
     statusFromAge(githubUpdatedAt),
     statusFromAge(ankiUpdatedAt),
   ]);
-  const upworkerFreshMs = msAgo(upworkerLastFetchedAt);
-  const upworkerStatus: ServiceStatus =
-    upworkerFreshMs === null ? 'unknown' : upworkerFreshMs <= freshnessMs ? 'healthy' : 'partial';
   const dragonflyStatus: ServiceStatus = dragonflyLatency === null ? 'degraded' : 'healthy';
   const collectorLastUpdatedAt =
     [githubUpdatedAt, ankiUpdatedAt]
@@ -228,20 +232,11 @@ app.get('/api/status', async (c) => {
         message: collectorRunsRaw > 0 ? 'Collector tasks reported' : 'Collector has no reports yet',
         meta: collectorMeta,
       },
-      upworker: {
-        status: upworkerStatus,
-        runs: upworkerRunsRaw,
-        message: upworkerRunsRaw > 0 ? 'Jobs stream active' : 'Jobs stream missing',
-        lastFetchedAt: upworkerLastFetchedAt,
-      },
       data: {
         checkedAt,
         uptimeSeconds: Math.floor(process.uptime()),
         collector: {
           lastUpdatedAt: collectorLastUpdatedAt,
-        },
-        upworker: {
-          lastFetchedAt: upworkerLastFetchedAt,
         },
       },
       meta: {
@@ -255,78 +250,73 @@ app.get('/api/status', async (c) => {
 
 app.get('/api/jobs', (c) => {
   return (async () => {
-    const streamKey = process.env.REDIS_STREAM_KEY ?? 'jobs';
     const limitRaw = c.req.query('limit');
-    const beforeRaw = c.req.query('before');
     const limit = clampInt(Number.parseInt(limitRaw ?? '20', 10) || 20, 1, 50);
-    const before =
-      typeof beforeRaw === 'string' && beforeRaw.trim().length > 0 ? beforeRaw.trim() : null;
+    const beforeRaw = c.req.query('before');
+    const cursor = decodeJobsCursor(beforeRaw ?? null);
+    const capturedAtIso = new Date().toISOString();
 
-    let rows: Array<[string, string[]]> = [];
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    let data: unknown[] = [];
+    let hasNext = false;
     try {
-      const count = before ? limit + 1 : limit;
-      rows = await redis.xrevrange(streamKey, before ?? '+', '-', 'COUNT', count);
-    } catch {
-      rows = [];
-    }
-
-    if (before && rows.length && rows[0]?.[0] === before) rows.shift();
-    if (rows.length > limit) rows = rows.slice(0, limit);
-
-    const entries = rows
-      .map(([id, kv]) => {
-        let jobId = '';
-        for (let i = 0; i < kv.length - 1; i += 2) {
-          if (kv[i] === 'job_id') {
-            jobId = String(kv[i + 1] ?? '').trim();
-            break;
-          }
-        }
-        if (!jobId) jobId = String(id).split('-')[0] ?? '';
-        return { streamId: id, kv, jobId };
-      })
-      .filter((e) => e.jobId.length > 0);
-
-    if (!entries.length) {
-      const envelope: ApiEnvelope<{ items: JobLead[]; nextCursor: string | null }> = {
-        data: { items: [], nextCursor: null },
-        meta: { ts: new Date().toISOString(), source: 'redis' },
+      const res = await fetch(`https://www.arbeitnow.com/api/job-board-api?page=${cursor.page}`, {
+        headers: { accept: 'application/json' },
+        signal: controller.signal,
+      });
+      const json = (await res.json()) as {
+        data?: unknown;
+        links?: { next?: unknown } | null;
       };
-      return c.json(envelope);
+      data = Array.isArray(json?.data) ? json.data : [];
+      hasNext = Boolean(json?.links && (json.links as { next?: unknown }).next);
+    } catch {
+      data = [];
+      hasNext = false;
+    } finally {
+      clearTimeout(timeout);
     }
 
-    const pipeline = redis.pipeline();
-    for (const e of entries) pipeline.get(redisKeys.job(e.jobId));
-    const rawJobs = await pipeline.exec();
+    const parsed = data.map(parseJobBoardJob).filter((v): v is NonNullable<typeof v> => !!v);
+    const slice = parsed.slice(cursor.offset, cursor.offset + limit);
 
     const items: JobLead[] = [];
-    for (let i = 0; i < entries.length; i += 1) {
-      const streamKv = entries[i]?.kv ?? [];
-      let fetchedAtIso: string | null = null;
-      for (let j = 0; j < streamKv.length - 1; j += 2) {
-        if (streamKv[j] === 'fetched_at') {
-          fetchedAtIso = parseUnixSecondsToIso(streamKv[j + 1]);
-          break;
-        }
-      }
-
-      const entry = rawJobs?.[i];
-      const raw = entry?.[1];
-      if (typeof raw !== 'string') continue;
-
-      try {
-        const upwork = upworkJobResultSchema.parse(JSON.parse(raw) as unknown);
-        const lead = projectUpworkJobToLead(upwork, fetchedAtIso);
-        if (lead) items.push(lead);
-      } catch {
-        // Skip malformed historical records.
-      }
+    for (const job of slice) {
+      const detail = projectJobBoardJobToDetail(job, capturedAtIso);
+      if (!detail) continue;
+      cachePutJob(detail);
+      const lead: JobLead = {
+        id: detail.id,
+        source: detail.source,
+        title: detail.title,
+        summary: detail.summary,
+        tags: detail.tags,
+        publishedAt: detail.publishedAt,
+        capturedAt: detail.capturedAt,
+        href: detail.href,
+        companyName: detail.companyName,
+        location: detail.location,
+        remote: detail.remote,
+        jobTypes: detail.jobTypes,
+      };
+      items.push(lead);
     }
 
-    const nextCursor = entries.length ? entries[entries.length - 1]!.streamId : null;
+    const nextOffset = cursor.offset + slice.length;
+    const nextCursor =
+      slice.length === 0
+        ? null
+        : nextOffset < parsed.length
+          ? encodeJobsCursor({ page: cursor.page, offset: nextOffset })
+          : hasNext
+            ? encodeJobsCursor({ page: cursor.page + 1, offset: 0 })
+            : null;
+
     const envelope: ApiEnvelope<{ items: JobLead[]; nextCursor: string | null }> = {
       data: { items, nextCursor },
-      meta: { ts: new Date().toISOString(), source: 'redis' },
+      meta: { ts: new Date().toISOString(), source: 'public' },
     };
     return c.json(envelope);
   })();
@@ -334,40 +324,58 @@ app.get('/api/jobs', (c) => {
 
 app.get('/api/jobs/:id', (c) => {
   return (async () => {
-    const streamKey = process.env.REDIS_STREAM_KEY ?? 'jobs';
     const jobId = c.req.param('id');
-    const raw = await redis.get(redisKeys.job(jobId));
-    if (!raw) return c.json({ error: 'not found' }, 404);
 
-    let fetchedAtIso: string | null = null;
-    try {
-      const rows = await redis.xrange(streamKey, `${jobId}-0`, `${jobId}-0`, 'COUNT', 1);
-      const first = rows?.[0];
-      if (first) {
-        const [, kv] = first;
-        for (let i = 0; i < kv.length - 1; i += 2) {
-          if (kv[i] === 'fetched_at') {
-            fetchedAtIso = parseUnixSecondsToIso(kv[i + 1]);
-            break;
-          }
-        }
-      }
-    } catch {
-      fetchedAtIso = null;
-    }
-
-    try {
-      const upwork = upworkJobResultSchema.parse(JSON.parse(raw) as unknown);
-      const detail = projectUpworkJobToDetail(upwork, fetchedAtIso);
-      if (!detail) return c.json({ error: 'invalid record' }, 500);
+    const cached = cacheGetJob(jobId);
+    if (cached) {
       const envelope: ApiEnvelope<JobDetail> = {
-        data: detail,
-        meta: { ts: new Date().toISOString(), source: 'redis' },
+        data: cached,
+        meta: { ts: new Date().toISOString(), source: 'public', cache: 'hit' },
       };
       return c.json(envelope);
-    } catch {
-      return c.json({ error: 'invalid record' }, 500);
     }
+
+    const capturedAtIso = new Date().toISOString();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    const cursorRaw = c.req.query('cursor');
+    const cursorPage = cursorRaw ? decodeJobsCursor(cursorRaw ?? null).page : null;
+    const scanPages = clampInt(
+      Number.parseInt(c.req.query('page') ?? '', 10) || cursorPage || 1,
+      1,
+      100000,
+    );
+    const maxPages = 5;
+
+    try {
+      for (let p = scanPages; p < scanPages + maxPages; p += 1) {
+        const res = await fetch(`https://www.arbeitnow.com/api/job-board-api?page=${p}`, {
+          headers: { accept: 'application/json' },
+          signal: controller.signal,
+        });
+        const json = (await res.json()) as { data?: unknown };
+        const rows = Array.isArray(json?.data) ? json.data : [];
+        const parsed = rows.map(parseJobBoardJob).filter((v): v is NonNullable<typeof v> => !!v);
+        const found = parsed.find((j) => j.slug === jobId);
+        if (!found) continue;
+
+        const detail = projectJobBoardJobToDetail(found, capturedAtIso);
+        if (!detail) return c.json({ error: 'invalid record' }, 500);
+        cachePutJob(detail);
+        const envelope: ApiEnvelope<JobDetail> = {
+          data: detail,
+          meta: { ts: new Date().toISOString(), source: 'public' },
+        };
+        return c.json(envelope);
+      }
+    } catch {
+      // fall through
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    return c.json({ error: 'not found' }, 404);
   })();
 });
 

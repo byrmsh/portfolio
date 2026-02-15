@@ -14,16 +14,10 @@ from portfolio_schema import (
     StatRedisRecord,
     StatRedisRecordValidator,
     SystemHealthSnapshot,
-    UpworkJobResult,
-    UpworkJobResultValidator,
-    UpworkJobSearchResponse,
-    UpworkJobSearchResponseValidator,
     WritingPost,
     validate_dashboard_snapshot,
     validate_job_redis_record,
     validate_stat_redis_record,
-    validate_upwork_job_result,
-    validate_upwork_job_search_response,
 )
 
 __all__ = [
@@ -42,14 +36,8 @@ __all__ = [
     "StatRedisRecord",
     "StatRedisRecordValidator",
     "SystemHealthSnapshot",
-    "UpworkJobResult",
-    "UpworkJobResultValidator",
-    "UpworkJobSearchResponse",
-    "UpworkJobSearchResponseValidator",
     "WritingPost",
     "validate_dashboard_snapshot",
     "validate_job_redis_record",
     "validate_stat_redis_record",
-    "validate_upwork_job_result",
-    "validate_upwork_job_search_response",
 ]

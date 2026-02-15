@@ -10,13 +10,17 @@ interface Props {
 
 type JobLead = {
   id: string;
-  source: 'upwork';
+  source: 'public';
   title: string;
   summary: string;
   tags: string[];
   publishedAt: string;
   capturedAt: string;
   href?: string;
+  companyName?: string;
+  location?: string;
+  remote?: boolean;
+  jobTypes?: string[];
 };
 
 const { t, locale } = Astro.props;

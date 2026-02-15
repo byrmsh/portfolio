@@ -5,8 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./dashboard": "./src/dashboard.ts",
-    "./upwork": "./src/upwork.ts"
+    "./dashboard": "./src/dashboard.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

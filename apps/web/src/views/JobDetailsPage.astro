@@ -14,7 +14,7 @@ interface Props {
 
 type JobRecord = {
   id: string;
-  source: 'upwork';
+  source: 'public';
   title: string;
   summary: string;
   description: string;
@@ -22,23 +22,10 @@ type JobRecord = {
   publishedAt: string;
   capturedAt: string;
   href?: string;
-  jobType?: 'FIXED' | 'HOURLY';
-  hourlyBudgetMin?: number | null;
-  hourlyBudgetMax?: number | null;
-  weeklyRetainerBudget?: number | null;
-  fixedPriceAmount?: { isoCurrencyCode?: string | null; amount: string } | null;
-  contractorTier?: string;
-  enterpriseJob?: boolean;
-  premium?: boolean;
-  personsToHire?: number;
-  totalApplicants?: number | null;
-  client?: {
-    country?: string | null;
-    paymentVerificationStatus?: string | null;
-    totalReviews?: number;
-    totalFeedback?: number;
-    totalSpent?: { isoCurrencyCode?: string | null; amount: string } | null;
-  };
+  companyName?: string;
+  location?: string;
+  remote?: boolean;
+  jobTypes?: string[];
 };
 
 const { url, id } = Astro.props;
@@ -53,8 +40,10 @@ const apiOrigin =
 
 let job: JobRecord | null = null;
 try {
+  const cursor = url.searchParams.get('cursor');
   const json = await ky
     .get(`${apiOrigin}/api/jobs/${encodeURIComponent(id)}`, {
+      searchParams: cursor ? { cursor } : undefined,
       headers: { accept: 'application/json' },
       throwHttpErrors: false,
     })
@@ -111,7 +100,7 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {t('jobs.openUpwork')}
+                    {t('jobs.openListing')}
                   </a>
                 </>
               ) : null}

@@ -24,18 +24,6 @@ services:
     depends_on:
       - api
 
-  upworker:
-    build:
-      context: .
-      dockerfile: apps/upworker/Dockerfile
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-      - REDIS_STREAM_KEY=jobs
-    env_file:
-      - apps/upworker/.env
-    depends_on:
-      - redis
-
   collector:
     build:
       context: .

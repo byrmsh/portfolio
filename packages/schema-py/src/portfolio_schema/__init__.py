@@ -23,23 +23,6 @@ from .dashboard import (
     validate_job_redis_record,
     validate_stat_redis_record,
 )
-from .upwork import (
-    UpworkClientInfo,
-    UpworkFacetValue,
-    UpworkFacets,
-    UpworkFixedPriceAmount,
-    UpworkFreelancerClientRelation,
-    UpworkHistoryData,
-    UpworkJobDetails,
-    UpworkJobResult,
-    UpworkJobResultValidator,
-    UpworkJobSearchResponse,
-    UpworkJobSearchResponseValidator,
-    UpworkJobTile,
-    UpworkOntologySkill,
-    validate_upwork_job_result,
-    validate_upwork_job_search_response,
-)
 
 __all__ = [
     "ActivityCell",
@@ -65,19 +48,4 @@ __all__ = [
     "validate_dashboard_snapshot",
     "validate_job_redis_record",
     "validate_stat_redis_record",
-    "UpworkClientInfo",
-    "UpworkFacetValue",
-    "UpworkFacets",
-    "UpworkFixedPriceAmount",
-    "UpworkFreelancerClientRelation",
-    "UpworkHistoryData",
-    "UpworkJobDetails",
-    "UpworkJobResult",
-    "UpworkJobResultValidator",
-    "UpworkJobSearchResponse",
-    "UpworkJobSearchResponseValidator",
-    "UpworkJobTile",
-    "UpworkOntologySkill",
-    "validate_upwork_job_result",
-    "validate_upwork_job_search_response",
 ]

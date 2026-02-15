@@ -1,5 +1,5 @@
 export type ServiceStatus = 'healthy' | 'partial' | 'degraded' | 'unknown';
-export type ServiceKey = 'web' | 'api' | 'dragonfly' | 'collector' | 'upworker' | 'lyricist';
+export type ServiceKey = 'web' | 'api' | 'dragonfly' | 'collector' | 'lyricist';
 
 export type StatusNode = {
   status: ServiceStatus;
@@ -22,7 +22,6 @@ export type ApiStatusResponse = {
   api: StatusNode;
   dragonfly: StatusNode;
   collector: StatusNode;
-  upworker: StatusNode;
   lyricist: StatusNode;
 };
 
@@ -36,7 +35,6 @@ export const serviceNames: Record<ServiceKey, string> = {
   api: 'apps/api',
   dragonfly: 'dragonfly',
   collector: 'apps/collector',
-  upworker: 'apps/upworker',
   lyricist: 'apps/lyricist',
 };
 
@@ -44,7 +42,6 @@ export const serviceTech: Record<ServiceKey, string> = {
   web: 'Portfolio frontend (Astro)',
   api: 'Portfolio backend API (Hono)',
   collector: 'Personal data collectors',
-  upworker: 'Upwork ingestion worker',
   lyricist: 'Lyrics analysis worker',
   dragonfly: 'Redis-compatible KV store',
 };
@@ -53,7 +50,6 @@ export const serviceOrder: ServiceKey[] = [
   'web',
   'api',
   'collector',
-  'upworker',
   'lyricist',
   'dragonfly',
 ];
@@ -63,7 +59,6 @@ export const DEFAULT_DATA: ApiStatusResponse = {
   api: { status: 'unknown', message: '' },
   dragonfly: { status: 'unknown', message: '' },
   collector: { status: 'unknown', message: '', runs: 0, meta: '' },
-  upworker: { status: 'unknown', message: '', runs: 0, meta: '' },
   lyricist: { status: 'unknown', message: '', runs: 0, meta: '' },
 };
 
@@ -182,25 +177,9 @@ function collectorMetaFromChecks(service: Record<string, unknown> | undefined): 
 function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial<StatusNode>>> {
   if (!payload || typeof payload !== 'object') return {};
   const direct = payload as Partial<Record<ServiceKey, Partial<StatusNode>>> & {
-    upworker?: Partial<StatusNode> & { lastFetchedAt?: unknown };
     lyricist?: Partial<StatusNode> & { lastFetchedAt?: unknown };
   };
-  if (
-    direct.web ||
-    direct.api ||
-    direct.dragonfly ||
-    direct.collector ||
-    direct.upworker ||
-    direct.lyricist
-  ) {
-    const upworkerLastFetchedAt = asIso(direct.upworker?.lastFetchedAt);
-    if (upworkerLastFetchedAt) {
-      const meta = ageMetricFromIso(upworkerLastFetchedAt) ?? '';
-      direct.upworker = {
-        ...direct.upworker,
-        meta,
-      };
-    }
+  if (direct.web || direct.api || direct.dragonfly || direct.collector || direct.lyricist) {
     const lyricistLastFetchedAt = asIso(direct.lyricist?.lastFetchedAt);
     if (lyricistLastFetchedAt) {
       const meta = ageMetricFromIso(lyricistLastFetchedAt) ?? '';
@@ -254,12 +233,6 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
       message: asText(byId.collector?.detail, ''),
       meta: collectorMetaFromChecks(byId.collector),
     },
-    upworker: {
-      status: asStatus(byId.upworker?.status),
-      runs: runsFromChecks(byId.upworker),
-      message: asText(byId.upworker?.detail, ''),
-      meta: ageMetricFromIso(latestUpdatedAtFromChecks(byId.upworker)) ?? '',
-    },
     lyricist: {
       status: asStatus(byId.lyricist?.status),
       runs: runsFromChecks(byId.lyricist),
@@ -289,7 +262,6 @@ function normalizeStatus(
     api: pick('api'),
     dragonfly: pick('dragonfly'),
     collector: pick('collector'),
-    upworker: pick('upworker'),
     lyricist: pick('lyricist'),
   };
 }
@@ -307,7 +279,7 @@ export function dotClass(status: ServiceStatus): string {
 
 export function metricFor(key: ServiceKey, node: StatusNode, strings: SystemHealthStrings): string {
   if (key === 'collector') return collectorMetric(asText(node.meta, '')) ?? strings.notAvailable;
-  if (key === 'upworker' || key === 'lyricist') {
+  if (key === 'lyricist') {
     const freshness = asText(node.meta, '');
     if (freshness) return freshness;
     const runs = asCount(node.runs);
@@ -326,7 +298,7 @@ export function metricClass(value: string): string {
 }
 
 export function labelFor(key: ServiceKey, strings: SystemHealthStrings): string {
-  if (key === 'collector' || key === 'upworker' || key === 'lyricist') return strings.recencyLabel;
+  if (key === 'collector' || key === 'lyricist') return strings.recencyLabel;
   return strings.latencyLabel;
 }
 

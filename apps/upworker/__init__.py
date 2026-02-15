@@ -1,1 +1,0 @@
-"""Jobber worker module."""

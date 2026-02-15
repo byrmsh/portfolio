@@ -32,7 +32,7 @@ runtime contracts.
 
 5. `JobScoutCard`:
 
-- source (Upwork)
+- source (public API)
 - capture age
 - job title
 - tags
@@ -49,16 +49,7 @@ These keys follow the repository rules from `AGENTS.md`.
 
 ### Jobs
 
-- Primary record: `job:{id}`
-- Field keys:
-  - `job:{id}:title`
-  - `job:{id}:summary`
-  - `job:{id}:description`
-  - `job:{id}:tags`
-  - `job:{id}:publishedAt`
-  - `job:{id}:capturedAt`
-- Optional index keys:
-  - `index:job:recent` (sorted set, score = captured timestamp)
+Jobs are fetched on-demand from a public job board API via `apps/api` (`GET /api/jobs`).
 
 ### Personal Stats / Content
 
@@ -86,17 +77,17 @@ These keys follow the repository rules from `AGENTS.md`.
 ## 3) Contract Files
 
 - TypeScript contracts + validators:
-  - canonical: `packages/schema/src/dashboard.ts` and `packages/schema/src/upwork.ts` (Zod + inferred types)
+  - canonical: `packages/schema/src/dashboard.ts` (Zod + inferred types)
   - app bridges: `apps/api/src/schema/index.ts` and `apps/web/src/schema/index.ts`
 - Python contracts + validators:
-  - canonical: `packages/schema-py/src/portfolio_schema/dashboard.py` and `packages/schema-py/src/portfolio_schema/upwork.py`
-  - app bridges: `apps/collector/schema.py`, `apps/upworker/schema.py`
+  - canonical: `packages/schema-py/src/portfolio_schema/dashboard.py`
+  - app bridges: `apps/collector/schema.py`
 
 Both files define:
 
 - card-level UI payloads (`DashboardSnapshot`)
 - Redis-oriented records (`JobRedisRecord`, stat records)
-- key helper builders (`job`, `job_field`, `stat`, `stat_field`)
+- key helper builders (`stat`, `stat_field`)
 
 ## 4) API Shape Recommendation
 

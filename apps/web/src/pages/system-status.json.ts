@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 
 type ServiceStatus = 'healthy' | 'degraded' | 'unknown';
-type ServiceId = 'web' | 'api' | 'collector' | 'upworker' | 'lyricist' | 'db';
+type ServiceId = 'web' | 'api' | 'collector' | 'lyricist' | 'db';
 
 type ServiceCheck = {
   id: string;
@@ -28,9 +28,6 @@ type ApiStatusPayload = {
     uptimeSeconds?: number;
     collector?: {
       lastUpdatedAt?: string | null;
-    };
-    upworker?: {
-      lastFetchedAt?: string | null;
     };
   };
 };
@@ -213,13 +210,11 @@ export const GET: APIRoute = async ({ request }) => {
       .sort((a, b) => a.getTime() - b.getTime())
       .at(-1) ??
     null;
-  const upworkerUpdatedAt = parseIsoDate(apiStatus?.data?.upworker?.lastFetchedAt ?? null);
   const lyricistUpdatedAt = parseIsoDate(lyricistLastSavedAt);
 
   const workerFreshnessMs = 24 * 60 * 60 * 1000;
   const githubCheckStatus = statusFromFreshness(githubUpdatedAt, workerFreshnessMs);
   const ankiCheckStatus = statusFromFreshness(ankiUpdatedAt, workerFreshnessMs);
-  const upworkerCheckStatus = statusFromFreshness(upworkerUpdatedAt, workerFreshnessMs);
   const lyricistCheckStatus = statusFromFreshness(lyricistUpdatedAt, workerFreshnessMs);
 
   const services: ServiceProbe[] = [
@@ -254,20 +249,6 @@ export const GET: APIRoute = async ({ request }) => {
           label: 'Anki collector',
           status: ankiCheckStatus,
           updatedAt: ankiUpdatedAt ? ankiUpdatedAt.toISOString() : null,
-        },
-      ],
-    },
-    {
-      id: 'upworker',
-      status: upworkerCheckStatus,
-      detail: upworkerUpdatedAt ? 'Upworker stream is active' : 'Upworker has no run record',
-      latencyMs: null,
-      checks: [
-        {
-          id: 'jobs',
-          label: 'Jobs stream',
-          status: upworkerCheckStatus,
-          updatedAt: upworkerUpdatedAt ? upworkerUpdatedAt.toISOString() : null,
         },
       ],
     },

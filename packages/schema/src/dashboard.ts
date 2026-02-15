@@ -97,13 +97,17 @@ export const knowledgeGraphSnapshotSchema = z.object({
 
 export const jobLeadSchema = z.object({
   id: z.string().min(1),
-  source: z.literal('upwork'),
+  source: z.literal('public'),
   title: z.string().min(1),
   summary: z.string().min(1),
   tags: z.array(z.string().min(1)),
   publishedAt: isoDatetimeSchema,
   capturedAt: isoDatetimeSchema,
   href: z.string().url().optional(),
+  companyName: z.string().min(1).optional(),
+  location: z.string().min(1).optional(),
+  remote: z.boolean().optional(),
+  jobTypes: z.array(z.string().min(1)).optional(),
 });
 
 export const jobRedisRecordSchema = jobLeadSchema.extend({
@@ -111,37 +115,7 @@ export const jobRedisRecordSchema = jobLeadSchema.extend({
 });
 
 export const jobDetailSchema = jobRedisRecordSchema.extend({
-  jobType: z.enum(['FIXED', 'HOURLY']).optional(),
-  hourlyBudgetMin: z.number().nullable().optional(),
-  hourlyBudgetMax: z.number().nullable().optional(),
-  weeklyRetainerBudget: z.number().nullable().optional(),
-  fixedPriceAmount: z
-    .object({
-      isoCurrencyCode: z.string().nullable().optional(),
-      amount: z.string().min(1),
-    })
-    .nullable()
-    .optional(),
-  contractorTier: z.string().min(1).optional(),
-  enterpriseJob: z.boolean().optional(),
-  premium: z.boolean().optional(),
-  personsToHire: z.number().int().min(0).optional(),
-  totalApplicants: z.number().int().min(0).nullable().optional(),
-  client: z
-    .object({
-      country: z.string().nullable().optional(),
-      paymentVerificationStatus: z.string().nullable().optional(),
-      totalReviews: z.number().int().min(0).optional(),
-      totalFeedback: z.number().min(0).optional(),
-      totalSpent: z
-        .object({
-          isoCurrencyCode: z.string().nullable().optional(),
-          amount: z.string().min(1),
-        })
-        .nullable()
-        .optional(),
-    })
-    .optional(),
+  // The upstream public job board API doesn't provide consistent budget/client metadata; keep details job-centric.
 });
 
 export const serviceHealthSchema = z.object({
@@ -207,13 +181,10 @@ export type ApiEnvelope<T> = {
 };
 
 export const redisKeys = {
-  job: (jobId: string | number) => `job:${jobId}`,
-  jobField: (jobId: string | number, field: string) => `job:${jobId}:${field}`,
   stat: (source: StatSource, id: string | number) => `stat:${source}:${id}`,
   statField: (source: StatSource, id: string | number, field: string) =>
     `stat:${source}:${id}:${field}`,
   index: {
-    jobRecent: 'index:job:recent',
     writingRecent: 'index:writing:recent',
     lyricsRecent: 'index:ytmusic:saved',
   },

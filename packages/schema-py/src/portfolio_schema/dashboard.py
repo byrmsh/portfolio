@@ -102,13 +102,17 @@ class KnowledgeGraphSnapshot(BaseSchema):
 
 class JobLead(BaseSchema):
     id: str
-    source: Literal["upwork"]
+    source: Literal["public"]
     title: str
     summary: str
     tags: list[str]
     publishedAt: datetime
     capturedAt: datetime
     href: str | None = None
+    companyName: str | None = None
+    location: str | None = None
+    remote: bool | None = None
+    jobTypes: list[str] | None = None
 
 
 class JobRedisRecord(JobLead):
@@ -169,17 +173,8 @@ def validate_stat_redis_record(payload: object) -> StatRedisRecord:
 
 
 class RedisKeys:
-    INDEX_JOB_RECENT = "index:job:recent"
     INDEX_WRITING_RECENT = "index:writing:recent"
     INDEX_LYRICS_RECENT = "index:ytmusic:saved"
-
-    @staticmethod
-    def job(job_id: str | int) -> str:
-        return f"job:{job_id}"
-
-    @staticmethod
-    def job_field(job_id: str | int, field: str) -> str:
-        return f"job:{job_id}:{field}"
 
     @staticmethod
     def stat(source: StatSource, item_id: str | int) -> str:
