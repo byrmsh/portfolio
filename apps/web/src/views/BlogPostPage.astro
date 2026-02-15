@@ -21,14 +21,12 @@ if (!post || post.data.draft) return new Response(null, { status: 404 });
 
 const { Content } = await post.render();
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
+// Keep pathspecs valid, otherwise `git log -- <paths>` fails and the widget renders empty.
 const postCommitPathFilters = Array.from(
   new Set([
-    `src/content/blog/${post.id}`,
-    `src/content/blog/${post.slug}.md`,
-    `src/content/blog/${post.slug}.mdx`,
-    `:(top)apps/web/src/content/blog/${post.id}`,
-    `:(top)apps/web/src/content/blog/${post.slug}.md`,
-    `:(top)apps/web/src/content/blog/${post.slug}.mdx`,
+    `apps/web/src/content/blog/${post.id}`,
+    `apps/web/src/content/blog/${post.slug}.md`,
+    `apps/web/src/content/blog/${post.slug}.mdx`,
   ]),
 );
 ---

@@ -80,7 +80,25 @@ try {
     })
     .json<{ data?: ActivityMonitorData }>();
 
-  if (json?.data?.github && json?.data?.anki) activity = json.data;
+  // Allow partial data (e.g. anki present but github hasn't run yet).
+  if (json?.data?.github || json?.data?.anki) {
+    activity = {
+      github:
+        json.data?.github ??
+        ({
+          source: 'github',
+          label: t('activity.githubLabel'),
+          cells: [],
+        } satisfies ActivitySeries),
+      anki:
+        json.data?.anki ??
+        ({
+          source: 'anki',
+          label: t('activity.ankiLabel'),
+          cells: [],
+        } satisfies ActivitySeries),
+    };
+  }
 } catch {
   activity = null;
 }
@@ -99,13 +117,18 @@ const rangeEnd =
 
 const rangeLabel =
   rangeStart && rangeEnd
-    ? `${fmtRange.format(parseIsoDateUTC(rangeStart))} ${t('activity.to')} ${fmtRange.format(parseIsoDateUTC(rangeEnd))}`
+    ? t('activity.rangeLabel', {
+        start: fmtRange.format(parseIsoDateUTC(rangeStart)),
+        end: fmtRange.format(parseIsoDateUTC(rangeEnd)),
+      })
     : t('activity.last7Days');
 ---
 
 <section
   data-activity-monitor
   data-locale={locale}
+  data-api-origin={apiOrigin}
+  data-range-template={t('activity.rangeLabel', { start: '{start}', end: '{end}' })}
   data-tooltip-with-date={t('activity.tooltipWithDate')}
   data-tooltip-without-date={t('activity.tooltipWithoutDate')}
   class="col-span-1 md:col-span-6 lg:col-span-8 min-w-0 rounded-xl border border-neutral-200 bg-white p-6"
@@ -191,6 +214,123 @@ const rangeLabel =
     </div>
   </div>
 </section>
+
+<script is:inline>
+  (() => {
+    const root = document.querySelector('[data-activity-monitor]');
+    if (!root) return;
+
+    const apiOrigin = root.getAttribute('data-api-origin') || '';
+    const locale = root.getAttribute('data-locale') || 'en';
+
+    const ramps = {
+      github: [
+        'bg-neutral-100 text-neutral-400 border-neutral-200',
+        'bg-emerald-100 text-emerald-950 border-emerald-200',
+        'bg-emerald-200 text-emerald-950 border-emerald-300',
+        'bg-emerald-400 text-white border-emerald-400',
+        'bg-emerald-700 text-white border-emerald-700',
+      ],
+      anki: [
+        'bg-neutral-100 text-neutral-400 border-neutral-200',
+        'bg-sky-100 text-sky-950 border-sky-200',
+        'bg-sky-200 text-sky-950 border-sky-300',
+        'bg-sky-400 text-white border-sky-400',
+        'bg-sky-700 text-white border-sky-700',
+      ],
+    };
+
+    const baseBtn =
+      'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400';
+
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, Math.trunc(n)));
+    const parseIsoUTC = (s) => {
+      const [y, m, d] = String(s || '')
+        .split('-')
+        .map((v) => Number(v));
+      return new Date(Date.UTC(y, (m || 1) - 1, d || 1));
+    };
+    const last7 = (cells) => {
+      const list = Array.isArray(cells) ? cells.slice() : [];
+      list.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+      return list.slice(Math.max(0, list.length - 7));
+    };
+    const pad7 = (cells) => {
+      const out = cells.slice(0, 7);
+      while (out.length < 7) out.push({ date: '', count: 0, level: 0 });
+      return out;
+    };
+
+    const fmtDay = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+    const fmtRange = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
+
+    const rangeEl = root.querySelector('[data-range]');
+    const rangeTemplate = root.getAttribute('data-range-template') || '{start} to {end}';
+
+    function setRangeLabel(githubCells, ankiCells) {
+      const rangeStart =
+        githubCells.find((c) => c.date)?.date || ankiCells.find((c) => c.date)?.date || '';
+      const rangeEnd =
+        [...githubCells].reverse().find((c) => c.date)?.date ||
+        [...ankiCells].reverse().find((c) => c.date)?.date ||
+        '';
+
+      if (!rangeEl) return;
+      if (rangeStart && rangeEnd) {
+        const start = fmtRange.format(parseIsoUTC(rangeStart));
+        const end = fmtRange.format(parseIsoUTC(rangeEnd));
+        rangeEl.textContent = rangeTemplate.replaceAll('{start}', start).replaceAll('{end}', end);
+      }
+    }
+
+    function applySeries(source, series) {
+      const container = root.querySelector(`[data-tags=\"${source}\"]`);
+      if (!container) return [];
+      const buttons = Array.from(container.querySelectorAll('button.activity-tag'));
+      const cells = pad7(last7(series && series.cells));
+
+      buttons.forEach((btn, i) => {
+        const cell = cells[i] || { date: '', count: 0, level: 0 };
+        const level = clamp(Number(cell.level || 0), 0, 4);
+        const d = cell.date ? parseIsoUTC(cell.date) : null;
+        const dow = d ? fmtDay.format(d) : '---';
+
+        btn.className = `${baseBtn} ${ramps[source][level]}`;
+        btn.dataset.date = String(cell.date || '');
+        btn.dataset.count = String(cell.count || 0);
+        btn.dataset.level = String(level);
+
+        const dowEl = btn.querySelector('.tag-dow');
+        const countEl = btn.querySelector('.tag-count');
+        if (dowEl) dowEl.textContent = dow;
+        if (countEl) countEl.textContent = String(cell.count || 0);
+      });
+
+      return cells;
+    }
+
+    async function refresh() {
+      const url = `${apiOrigin}/api/activity-monitor`;
+      const res = await fetch(url, { headers: { accept: 'application/json' } });
+      if (!res.ok) return;
+      const json = await res.json();
+      const data = json && json.data ? json.data : null;
+      if (!data) return;
+
+      const githubCells = applySeries('github', data.github || { cells: [] });
+      const ankiCells = applySeries('anki', data.anki || { cells: [], streak: 0 });
+      setRangeLabel(githubCells, ankiCells);
+
+      const streakEl = root.querySelector('[data-streak=\"anki\"]');
+      if (streakEl && typeof data.anki?.streak === 'number') {
+        streakEl.textContent = String(data.anki.streak);
+      }
+    }
+
+    // Refresh after load to avoid requiring a web rebuild for new activity.
+    refresh().catch(() => {});
+  })();
+</script>
 
 <style is:global>
   @supports (container-type: inline-size) {

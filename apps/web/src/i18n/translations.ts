@@ -86,7 +86,7 @@ const enTranslations = {
   activity: {
     title: 'Activity Monitor',
     last7Days: 'Last 7 days',
-    to: 'to',
+    rangeLabel: '{start} to {end}',
     githubLabel: 'GitHub',
     ankiLabel: 'Anki',
     githubAria: 'GitHub activity, last 7 days',
