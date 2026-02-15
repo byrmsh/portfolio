@@ -598,8 +598,15 @@ def fetch_jobs_page(offset: int, count: int) -> List[UpworkJobResult]:
     try:
         res = retry_until_not_forbidden(fetch_jobs_endpoint, (offset, count, token))
     except UnauthorizedError as e:
+        status = getattr(getattr(e, "response", None), "status_code", None)
         logger.info("Token expired, reauthorizing", error=str(e))
-        token = cache_authorized_token_with_strategy()
+        maybe_alert_auth_issue("token expired", status_code=status or 401)
+        try:
+            token = cache_authorized_token_with_strategy()
+        except Exception:
+            # Login-based reauth is often blocked by Cloudflare; alert once so we notice token expiry.
+            maybe_alert_auth_issue("reauth failed", status_code=status or 401)
+            raise
         res = retry_until_not_forbidden(fetch_jobs_endpoint, (offset, count, token))
     except HTTPError as e:
         status = getattr(getattr(e, "response", None), "status_code", None)
