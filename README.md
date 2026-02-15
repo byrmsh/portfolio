@@ -87,6 +87,7 @@ This command:
 
 - starts `kubectl port-forward svc/api-service 3000:3000` in `portfolio`
 - runs `apps/web` dev server with `API_ORIGIN=http://127.0.0.1:3000`
+- in Kubernetes, set `WEB_ORIGIN` to an in-pod origin (Helm default is `http://127.0.0.1:8080`) so SSR status widgets can call back into the web app without hairpinning out via ingress/Cloudflare
 
 4. Optional: run DragonflyDB locally (non-k8s mode):
 

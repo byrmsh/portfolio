@@ -20,8 +20,13 @@ interface Props {
 }
 
 const { t } = Astro.props;
+const webOrigin =
+  process.env.WEB_ORIGIN ??
+  import.meta.env.WEB_ORIGIN ??
+  import.meta.env.PUBLIC_WEB_ORIGIN ??
+  new URL(Astro.request.url).origin;
 const endpoint = import.meta.env.SSR
-  ? `http://127.0.0.1:${process.env.PORT || '8080'}/system-status.json`
+  ? `${webOrigin.replace(/\/$/, '')}/system-status.json`
   : '/system-status.json';
 const strings = {
   notAvailable: t('health.notAvailable'),
