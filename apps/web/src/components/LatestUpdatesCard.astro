@@ -38,8 +38,23 @@ const RECENT_LIMIT = 3;
 const GIT_METADATA_FILE = process.env.GIT_METADATA_FILE ?? './apps/web/dist/git-meta.json';
 const hasPathFilters = pathFilters.length > 0;
 
+function getGitRoot(): string | null {
+  try {
+    const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
+    return root || null;
+  } catch {
+    return null;
+  }
+}
+
+const GIT_ROOT = getGitRoot();
+
 function runGit(args: string[]): string {
-  return execFileSync('git', args, { encoding: 'utf8' }).trim();
+  // `pnpm -C apps/web dev` runs the server from `apps/web/`, but the path filters
+  // we generate are repo-root relative (e.g. `apps/web/src/...`). Force git to
+  // run from the repo root so `git log -- <paths>` resolves consistently.
+  const finalArgs = GIT_ROOT ? ['-C', GIT_ROOT, ...args] : args;
+  return execFileSync('git', finalArgs, { encoding: 'utf8' }).trim();
 }
 
 function getRecentCommits(limit = RECENT_LIMIT, paths: string[] = []): Commit[] {
