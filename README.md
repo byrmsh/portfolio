@@ -82,10 +82,10 @@ pnpm k8s:local:apply
 pnpm dev
 ```
 
-This assumes your `kubectl` context points at your local cluster (e.g. `minikube`). If you normally have `kubectl` pointed at a remote cluster, either switch contexts first (via `kubectx`) or run:
+By default, local scripts use the `minikube` kubecontext. If you use something else (or have multiple local clusters), override it:
 
 ```bash
-K8S_CONTEXT=minikube pnpm dev
+K8S_CONTEXT=your-local-context pnpm dev
 ```
 
 This command:

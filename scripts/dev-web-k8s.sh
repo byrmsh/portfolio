@@ -17,6 +17,39 @@ is_local_context_name() {
   esac
 }
 
+pick_local_context() {
+  if [ -n "${K8S_CONTEXT}" ]; then
+    echo "${K8S_CONTEXT}"
+    return 0
+  fi
+
+  local contexts
+  contexts="$(kubectl config get-contexts -o name 2>/dev/null || true)"
+  if echo "${contexts}" | grep -Fxq "minikube"; then
+    echo "minikube"
+    return 0
+  fi
+  if echo "${contexts}" | grep -Fxq "docker-desktop"; then
+    echo "docker-desktop"
+    return 0
+  fi
+  local first_kind
+  first_kind="$(echo "${contexts}" | grep -E '^kind(-|$)' | head -n 1 || true)"
+  if [ -n "${first_kind}" ]; then
+    echo "${first_kind}"
+    return 0
+  fi
+
+  local cur
+  cur="$(kubectl config current-context 2>/dev/null || true)"
+  if [ -n "${cur}" ] && is_local_context_name "${cur}"; then
+    echo "${cur}"
+    return 0
+  fi
+
+  return 1
+}
+
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "kubectl is required." >&2
   exit 1
@@ -27,16 +60,9 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 1
 fi
 
-CTX="${K8S_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
-if [ -z "${CTX}" ]; then
-  echo "kubectl has no current context configured." >&2
-  exit 1
-fi
-if [ -n "${K8S_CONTEXT}" ] || is_local_context_name "${CTX}"; then
-  :
-else
-  echo "Refusing to run pnpm dev against non-local kubectl context: ${CTX}" >&2
-  echo "Switch to your local cluster (e.g. kubectx minikube) or set K8S_CONTEXT=your-local-context." >&2
+if ! CTX="$(pick_local_context)"; then
+  echo "Could not automatically pick a local kubectl context (minikube/kind/docker-desktop)." >&2
+  echo "Set K8S_CONTEXT to your local context name (example: K8S_CONTEXT=minikube pnpm dev)." >&2
   exit 1
 fi
 

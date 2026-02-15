@@ -35,9 +35,10 @@ if ! command -v minikube >/dev/null 2>&1; then
   exit 1
 fi
 
-CTX="${K8S_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
-if [ -z "${CTX}" ]; then
-  echo "kubectl has no current context configured." >&2
+CTX="${K8S_CONTEXT:-minikube}"
+if ! kubectl --context "${CTX}" version --request-timeout=5s >/dev/null 2>&1; then
+  echo "Kubernetes cluster is unreachable for context: ${CTX}" >&2
+  echo "If you use minikube, start it first: minikube start" >&2
   exit 1
 fi
 
