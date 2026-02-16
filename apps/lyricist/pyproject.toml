@@ -18,6 +18,7 @@ dependencies = [
 [project.scripts]
 lyricist = "lyricist:main"
 lyricist-migrate-note-urls = "migrate_note_urls:main"
+lyricist-manual-analysis = "manual_analysis:main"
 
 [tool.uv]
 package = true
@@ -31,4 +32,4 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["lyricist", "schema", "migrate_note_urls"]
+py-modules = ["lyricist", "schema", "migrate_note_urls", "manual_analysis"]

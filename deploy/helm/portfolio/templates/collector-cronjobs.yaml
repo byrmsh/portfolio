@@ -34,6 +34,12 @@ spec:
                   value: {{ $.Values.collectorCronJobs.sharedEnv.redisUrl | quote }}
                 - name: REDIS_EVENTS_STREAM
                   value: {{ $.Values.collectorCronJobs.sharedEnv.eventsStream | quote }}
+                {{- if $job.env }}
+                {{- range $env := $job.env }}
+                - name: {{ $env.name }}
+                  value: {{ $env.value | quote }}
+                {{- end }}
+                {{- end }}
               envFrom:
                 - secretRef:
                     name: {{ $job.secretRef }}

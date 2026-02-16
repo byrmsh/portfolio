@@ -56,9 +56,13 @@ export const ytmusicBackgroundSchema = z.object({
 });
 
 export const ytmusicVocabularyItemSchema = z.object({
+  id: z.string().min(1),
   term: z.string().min(1),
-  literal: z.string().min(1),
-  meaning: z.string().min(1),
+  exampleDe: z.string().min(1),
+  literalEn: z.string().min(1),
+  meaningEn: z.string().min(1),
+  exampleEn: z.string().min(1),
+  memoryHint: z.string().min(1).nullable().optional(),
   cefr: z.string().min(1).nullable().optional(),
   usage: z.array(z.string().min(1)).nullable().optional(),
 });
@@ -187,6 +191,7 @@ export const redisKeys = {
   index: {
     writingRecent: 'index:writing:recent',
     lyricsRecent: 'index:ytmusic:saved',
+    lyricsAnalysisPending: 'index:ytmusic:analysis:pending',
   },
 } as const;
 

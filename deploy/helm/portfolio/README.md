@@ -9,6 +9,15 @@ pnpm k8s:local:apply
 
 Secrets are intentionally not in chart values/templates. Create/update Kubernetes Secrets separately (see root `README.md`).
 
+## Lyricist CronJobs
+
+The chart runs lyricist in two jobs:
+
+- `lyricist-sync-cronjob`: playlist ingest + queueing
+- `lyricist-analysis-cronjob`: pending analysis processing
+
+Both jobs read shared secrets from `lyricist-secrets`; mode is set per job in values via env.
+
 ## Web SSR Origins (Avoid Hairpin)
 
 Some web widgets fetch JSON endpoints during SSR (for example `/system-status.json`).

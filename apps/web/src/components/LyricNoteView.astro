@@ -1,5 +1,6 @@
 ---
 import type { YtMusicAnalysis } from '@portfolio/schema/dashboard';
+import LyricFlashcardDeck from './LyricFlashcardDeck.svelte';
 
 interface Props {
   locale: string;
@@ -10,9 +11,17 @@ interface Props {
     readLyrics: string;
     updatedAt: string;
     background: string;
-    vocabulary: string;
-    literal: string;
-    meaning: string;
+    flashcards: string;
+    flipHint: string;
+    tapHint: string;
+    rateHint: string;
+    knownHint: string;
+    reviewHint: string;
+    round: string;
+    completed: string;
+    completedSub: string;
+    remaining: string;
+    reset: string;
   };
   analysis: YtMusicAnalysis | null;
   error: string | null;
@@ -89,44 +98,24 @@ const format = (template: string, vars: Record<string, string | number>): string
       </section>
 
       {analysis.vocabulary?.length ? (
-        <section class="rounded-xl border border-neutral-200 bg-white p-6">
-          <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">
-            {labels.vocabulary}
-          </h2>
-          <div class="mt-4 grid gap-3">
-            {analysis.vocabulary.map(
-              (v: {
-                term: string;
-                cefr?: string | null;
-                literal: string;
-                meaning: string;
-                usage?: string[] | null;
-              }) => (
-                <div class="rounded-lg border border-neutral-200 p-4">
-                  <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <div class="text-sm font-semibold text-neutral-900">{v.term}</div>
-                    {v.cefr ? (
-                      <div class="text-xxs font-mono text-neutral-500">{v.cefr}</div>
-                    ) : null}
-                  </div>
-                  <div class="mt-2 text-sm text-neutral-800">
-                    <span class="text-neutral-500">{labels.literal}</span>&nbsp;{v.literal}
-                  </div>
-                  <div class="mt-1 text-sm text-neutral-800">
-                    <span class="text-neutral-500">{labels.meaning}</span>&nbsp;{v.meaning}
-                  </div>
-                  {v.usage?.length ? (
-                    <ul class="mt-2 list-disc pl-5 text-sm text-neutral-700">
-                      {v.usage.map((u: string) => (
-                        <li>{u}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              ),
-            )}
-          </div>
-        </section>
+        <LyricFlashcardDeck
+          client:load
+          trackId={analysis.id}
+          items={analysis.vocabulary}
+          labels={{
+            title: labels.flashcards,
+            flipHint: labels.flipHint,
+            tapHint: labels.tapHint,
+            rateHint: labels.rateHint,
+            knownHint: labels.knownHint,
+            reviewHint: labels.reviewHint,
+            round: labels.round,
+            completed: labels.completed,
+            completedSub: labels.completedSub,
+            remaining: labels.remaining,
+            reset: labels.reset,
+          }}
+        />
       ) : null}
     </>
   ) : null

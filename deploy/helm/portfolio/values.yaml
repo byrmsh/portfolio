@@ -95,9 +95,9 @@ collectorCronJobs:
         - python
         - cluster.py
       secretRef: collector-secrets
-    - name: lyricist-cronjob
+    - name: lyricist-sync-cronjob
       component: collector
-      schedule: '10 5 * * *'
+      schedule: '*/20 * * * *'
       suspend: true
       image:
         repository: portfolio-lyricist
@@ -106,6 +106,24 @@ collectorCronJobs:
       command:
         - python
         - lyricist.py
+      env:
+        - name: LYRICIST_MODE
+          value: sync
+      secretRef: lyricist-secrets
+    - name: lyricist-analysis-cronjob
+      component: collector
+      schedule: '*/30 * * * *'
+      suspend: true
+      image:
+        repository: portfolio-lyricist
+        tag: dev
+        pullPolicy: IfNotPresent
+      command:
+        - python
+        - lyricist.py
+      env:
+        - name: LYRICIST_MODE
+          value: analyze
       secretRef: lyricist-secrets
   sharedEnv:
     redisUrl: redis://db-service:6379/0

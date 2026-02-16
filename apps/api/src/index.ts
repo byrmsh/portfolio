@@ -502,6 +502,15 @@ app.get('/api/ytmusic/saved', async (c) => {
   return c.json(envelope);
 });
 
+app.get('/api/ytmusic/analysis/pending/count', async (c) => {
+  const pending = await redis.zcard(redisKeys.index.lyricsAnalysisPending);
+  const envelope: ApiEnvelope<{ pending: number }> = {
+    data: { pending },
+    meta: { ts: new Date().toISOString(), source: 'redis' },
+  };
+  return c.json(envelope);
+});
+
 app.get('/api/ytmusic/:id/analysis', async (c) => {
   const trackId = c.req.param('id');
   const data = await readYtMusicAnalysis(trackId);

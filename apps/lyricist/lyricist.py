@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import random
+import re
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from environs import env
 
@@ -19,18 +22,33 @@ from pydantic import ValidationError
 from ytmusicapi import YTMusic
 
 from portfolio_common import emit_event, logger, redis_client
-from portfolio_schema import RedisKeys, SavedLyricNote, YtMusicAnalysis
+from portfolio_schema import RedisKeys, SavedLyricNote, YtMusicAnalysis, YtMusicVocabularyItem
 
 
 YTMUSIC_PLAYLIST_ID = env.str("YTMUSIC_PLAYLIST_ID", default="")
 WEB_ORIGIN = env.str("WEB_ORIGIN", default="http://localhost:4321")
 LYRICIST_DRY_RUN = env.bool("LYRICIST_DRY_RUN", default=False)
-LYRICIST_REGENERATE_ANALYSIS = env.bool("LYRICIST_REGENERATE_ANALYSIS", default=False)
-LYRICIST_RETRY_FAILED_ANALYSIS = env.bool("LYRICIST_RETRY_FAILED_ANALYSIS", default=True)
-LYRICIST_RETRY_FAILED_LIMIT = env.int("LYRICIST_RETRY_FAILED_LIMIT", default=3)
-# Ignore the Redis cursor and rescan the playlist from newest->oldest (up to the playlist fetch limit).
-# Useful when you want to force (re)processing existing tracks.
 LYRICIST_IGNORE_CURSOR = env.bool("LYRICIST_IGNORE_CURSOR", default=False)
+
+# Mode:
+# - sync: ingest playlist and enqueue analysis jobs only
+# - analyze: process pending queue only
+# - all: run sync then analyze
+LYRICIST_MODE = env.str("LYRICIST_MODE", default="all").strip().lower()
+
+# Queue-driven analysis controls (free-tier friendly defaults).
+LYRICIST_ANALYSIS_MAX_PER_RUN = max(0, env.int("LYRICIST_ANALYSIS_MAX_PER_RUN", default=3))
+LYRICIST_ANALYSIS_MIN_INTERVAL_SECONDS = max(
+    0.0, env.float("LYRICIST_ANALYSIS_MIN_INTERVAL_SECONDS", default=10.0)
+)
+LYRICIST_ANALYSIS_BACKOFF_BASE_SECONDS = max(
+    1.0, env.float("LYRICIST_ANALYSIS_BACKOFF_BASE_SECONDS", default=60.0)
+)
+LYRICIST_ANALYSIS_BACKOFF_MAX_SECONDS = max(
+    LYRICIST_ANALYSIS_BACKOFF_BASE_SECONDS,
+    env.float("LYRICIST_ANALYSIS_BACKOFF_MAX_SECONDS", default=3600.0),
+)
+LYRICIST_ANALYSIS_MAX_ATTEMPTS = max(1, env.int("LYRICIST_ANALYSIS_MAX_ATTEMPTS", default=5))
 
 # LLM provider wiring:
 # - gemini: native Gemini API (structured output via responseSchema + responseMimeType)
@@ -52,6 +70,18 @@ OPENAI_MODEL = env.str("OPENAI_MODEL", default="gpt-5")
 
 
 CURSOR_KEY = RedisKeys.stat("ytmusic", "cursor")
+PENDING_ZSET_KEY = getattr(RedisKeys, "INDEX_LYRICS_ANALYSIS_PENDING", "index:ytmusic:analysis:pending")
+
+_VOCAB_REQUIRED_FIELDS = {"id", "term", "exampleDe", "literalEn", "meaningEn", "exampleEn"}
+
+
+def _ensure_flashcard_schema() -> None:
+    if _VOCAB_REQUIRED_FIELDS.issubset(set(YtMusicVocabularyItem.model_fields.keys())):
+        return
+    raise RuntimeError(
+        "portfolio-schema in this virtualenv is outdated for flashcards. "
+        "Run: UV_CACHE_DIR=/tmp/uv-cache uv sync --reinstall-package portfolio-schema"
+    )
 
 
 @dataclass(frozen=True)
@@ -67,6 +97,10 @@ def _iso_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _now_ts() -> int:
+    return int(time.time())
+
+
 def _normalize_origin(origin: str) -> str:
     return origin[:-1] if origin.endswith("/") else origin
 
@@ -80,6 +114,10 @@ def _genius_search_url(title: str, artist: str) -> str:
 
     q = quote_plus(f"{title} {artist}")
     return f"https://genius.com/search?q={q}"
+
+
+def _analysis_attempts_key(track_id: str) -> str:
+    return RedisKeys.stat_field("ytmusic", track_id, "analysis_attempts")
 
 
 def _read_cursor(r) -> dict[str, Any] | None:
@@ -129,7 +167,6 @@ def _extract_track(t: dict[str, Any]) -> Track | None:
     album_art_url = None
     thumbs = t.get("thumbnails") or []
     if isinstance(thumbs, list) and thumbs:
-        # pick the largest thumbnail
         best = None
         for th in thumbs:
             if not isinstance(th, dict):
@@ -148,10 +185,18 @@ def _extract_track(t: dict[str, Any]) -> Track | None:
     )
 
 
+def _slug_token(text: str) -> str:
+    t = text.strip().lower()
+    t = re.sub(r"[^a-z0-9]+", "-", t)
+    t = re.sub(r"-{2,}", "-", t).strip("-")
+    return t or "term"
+
+
+def _vocab_item_id(track_id: str, term: str, idx: int) -> str:
+    return f"{track_id}:{_slug_token(term)}:{idx:02d}"
+
+
 def _analysis_json_schema() -> dict[str, Any]:
-    # Keep this in sync with:
-    # - packages/schema/src/dashboard.ts (ytmusicAnalysisSchema)
-    # - packages/schema-py/src/portfolio_schema/dashboard.py (YtMusicAnalysis)
     return {
         "type": "object",
         "additionalProperties": False,
@@ -190,13 +235,24 @@ def _analysis_json_schema() -> dict[str, Any]:
                     "type": "object",
                     "additionalProperties": False,
                     "properties": {
+                        "id": {"type": "string", "minLength": 1},
                         "term": {"type": "string", "minLength": 1},
-                        "literal": {"type": "string", "minLength": 1},
-                        "meaning": {"type": "string", "minLength": 1},
+                        "exampleDe": {"type": "string", "minLength": 1},
+                        "literalEn": {"type": "string", "minLength": 1},
+                        "meaningEn": {"type": "string", "minLength": 1},
+                        "exampleEn": {"type": "string", "minLength": 1},
+                        "memoryHint": {"type": "string"},
                         "cefr": {"type": "string"},
                         "usage": {"type": "array", "items": {"type": "string"}},
                     },
-                    "required": ["term", "literal", "meaning"],
+                    "required": [
+                        "id",
+                        "term",
+                        "exampleDe",
+                        "literalEn",
+                        "meaningEn",
+                        "exampleEn",
+                    ],
                 },
             },
             "updatedAt": {"type": "string", "minLength": 1},
@@ -214,8 +270,6 @@ def _analysis_json_schema() -> dict[str, Any]:
 
 
 def _analysis_gemini_schema() -> dict[str, Any]:
-    # Gemini's responseSchema support is more limited than full JSON Schema.
-    # Use a conservative subset (no additionalProperties/minLength/enum).
     return {
         "type": "object",
         "properties": {
@@ -250,13 +304,24 @@ def _analysis_gemini_schema() -> dict[str, Any]:
                 "items": {
                     "type": "object",
                     "properties": {
+                        "id": {"type": "string"},
                         "term": {"type": "string"},
-                        "literal": {"type": "string"},
-                        "meaning": {"type": "string"},
+                        "exampleDe": {"type": "string"},
+                        "literalEn": {"type": "string"},
+                        "meaningEn": {"type": "string"},
+                        "exampleEn": {"type": "string"},
+                        "memoryHint": {"type": "string"},
                         "cefr": {"type": "string"},
                         "usage": {"type": "array", "items": {"type": "string"}},
                     },
-                    "required": ["term", "literal", "meaning"],
+                    "required": [
+                        "id",
+                        "term",
+                        "exampleDe",
+                        "literalEn",
+                        "meaningEn",
+                        "exampleEn",
+                    ],
                 },
             },
             "updatedAt": {"type": "string"},
@@ -266,7 +331,6 @@ def _analysis_gemini_schema() -> dict[str, Any]:
 
 
 def _analysis_fallback(track: Track, reason: str) -> YtMusicAnalysis:
-    # Keep the pipeline moving even if the LLM is unavailable/misconfigured.
     return YtMusicAnalysis(
         id=track.id,
         source="ytmusic",
@@ -290,48 +354,40 @@ def _is_error_fallback(analysis: YtMusicAnalysis) -> bool:
     return "llm analysis failed:" in t or "llm output invalid:" in t
 
 
-def _raw_analysis_is_error_fallback(raw: str | bytes | None) -> bool:
-    if not raw:
-        return False
-    try:
-        s = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else str(raw)
-        payload = json.loads(s)
-        bg = payload.get("background") if isinstance(payload, dict) else None
-        tldr = (bg or {}).get("tldr") if isinstance(bg, dict) else None
-        if not isinstance(tldr, str):
-            return False
-        t = tldr.lower()
-        return "llm analysis failed:" in t or "llm output invalid:" in t
-    except Exception:
-        return False
-
-
 def _llm_instructions() -> str:
     return (
-        "You write compact, high-signal music notes for a public portfolio site.\n"
+        "You create compact, high-signal German learning notes for a public portfolio app.\n"
         "\n"
-        "Hard rules:\n"
-        "- You MUST NOT quote lyrics or reproduce any lyric lines (even partial lines).\n"
-        "- Vocabulary terms MUST be words/phrases that appear verbatim in the lyrics for this exact track.\n"
-        "  Do not invent idioms or 'related' phrases that are not in the lyrics.\n"
-        "- Do not fabricate factual claims about the artist/song history. If unsure, keep it generic.\n"
-        "- Output must be JSON only and must match the provided schema exactly (no markdown).\n"
+        "Hard rules (must follow):\n"
+        "- NEVER quote lyrics or reproduce lyric lines, even partial.\n"
+        "- Vocabulary terms must appear verbatim in this exact track's lyrics.\n"
+        "- Do not invent historical facts about artist or song. If unsure, keep it generic.\n"
+        "- Output strict JSON only, no markdown and no commentary.\n"
         "\n"
-        "Content goals:\n"
-        "- background.tldr: 1-2 sentences, concrete and specific.\n"
-        "- background.notes: 3-5 notes. Each note: title + 2-4 sentences.\n"
-        "  Prefer: musical arrangement, cultural/historical context (only if confident), themes/imagery,\n"
-        "  language/register, and why it is interesting.\n"
-        "- vocabulary: 8-12 items. Avoid trivial A1 dictionary entries unless there is a non-obvious nuance.\n"
-        "  At least 4 items must be multiword expressions or collocations (and must appear in the lyrics).\n"
-        "  For each item:\n"
-        "  - term: German word/phrase\n"
-        "  - literal: literal gloss\n"
-        "  - meaning: nuanced explanation (register, connotation, grammar quirks)\n"
-        "  - usage: 2-4 short bullet strings with original usage notes (no lyric examples).\n"
-        "    Include collocations, common complements, case/preposition, separable verb patterns,\n"
-        "    or false friends as relevant.\n"
-        "  - cefr: optional; omit if unsure.\n"
+        "Required shape:\n"
+        "- background.tldr: 1-2 concise sentences.\n"
+        "- background.notes: 3-5 notes, each with title and 2-4 sentences.\n"
+        "- vocabulary: 8-12 items.\n"
+        "\n"
+        "For each vocabulary item (required unless explicitly marked optional):\n"
+        "- id: stable item id string\n"
+        "- term: German word or phrase from the lyrics\n"
+        "- exampleDe: original German example sentence using the term (not a lyric quote)\n"
+        "- literalEn: concise literal gloss in English\n"
+        "- meaningEn: optional nuance in English (register, connotation, grammar hints), not a redundant dictionary restatement\n"
+        "- exampleEn: faithful English translation of exampleDe\n"
+        "- cefr: optional CEFR estimate\n"
+        "- memoryHint: optional objective etymology/word-family/compound breakdown if useful\n"
+        "\n"
+        "Quality bar:\n"
+        "- Prioritize harder/high-yield vocabulary (roughly CEFR B1-C2).\n"
+        "- Avoid trivial A1/A2 words unless central to song meaning or idiomatically important.\n"
+        "- Prefer idioms, compounds, figurative terms, and culturally loaded wording when present.\n"
+        "- If the song has few advanced terms, include the best available non-trivial terms.\n"
+        "- Avoid generic dictionary-like filler.\n"
+        "- Do not use subjective mnemonic phrasing (e.g., 'sounds like', 'think of').\n"
+        "- Keep explanations practical for memorization.\n"
+        "- Ensure valid JSON and all required keys are present.\n"
     )
 
 
@@ -339,7 +395,6 @@ def _select_llm_provider() -> str:
     p = (LYRICIST_LLM_PROVIDER or "auto").strip().lower()
     if p in {"gemini", "openai", "none"}:
         return p
-    # auto
     if GEMINI_API_KEY:
         return "gemini"
     if OPENAI_API_KEY:
@@ -350,15 +405,32 @@ def _select_llm_provider() -> str:
 def _strip_code_fences(s: str) -> str:
     t = s.strip()
     if t.startswith("```"):
-        # Remove a single fenced block wrapper if present.
         t = t.split("\n", 1)[1] if "\n" in t else ""
         if t.endswith("```"):
             t = t[: -len("```")]
     return t.strip()
 
 
+def _normalize_url_like(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    s = value.strip()
+    if not s:
+        return s
+    m = re.match(r"^\[([^\]]+)\]\(([^)]+)\)$", s)
+    if not m:
+        return s
+    label, href = m.group(1).strip(), m.group(2).strip()
+    if label.startswith("http://") or label.startswith("https://"):
+        parsed = urlparse(href)
+        if parsed.netloc.endswith("google.com") and parsed.path == "/search":
+            q = parse_qs(parsed.query).get("q", [])
+            if q and q[0].strip() == label:
+                return label
+    return href
+
+
 def _validation_error_summary(e: ValidationError) -> str:
-    # Compact, model-friendly error summary: loc + msg only.
     items: list[str] = []
     for it in e.errors():
         loc = ".".join(str(p) for p in (it.get("loc") or []))
@@ -368,9 +440,6 @@ def _validation_error_summary(e: ValidationError) -> str:
 
 
 def _normalize_analysis_payload(track: Track, payload: dict[str, Any]) -> dict[str, Any]:
-    # Align with TS schema expectations:
-    # - url fields must be valid URLs or null/undefined (never "")
-    # - optional strings should be null/undefined (never "")
     def _blank_to_none(v: Any) -> Any:
         if v is None:
             return None
@@ -386,18 +455,39 @@ def _normalize_analysis_payload(track: Track, payload: dict[str, Any]) -> dict[s
     album = _blank_to_none(payload.get("album"))
     payload["album"] = album if album is not None else (track.album or None)
 
-    album_art = _blank_to_none(payload.get("albumArtUrl"))
+    album_art = _blank_to_none(_normalize_url_like(payload.get("albumArtUrl")))
     payload["albumArtUrl"] = album_art if album_art is not None else (track.album_art_url or None)
 
-    track_url = _blank_to_none(payload.get("trackUrl"))
+    track_url = _blank_to_none(_normalize_url_like(payload.get("trackUrl")))
     payload["trackUrl"] = track_url if track_url is not None else _ytmusic_track_url(track.id)
 
-    lyrics_url = _blank_to_none(payload.get("lyricsUrl"))
+    lyrics_url = _blank_to_none(_normalize_url_like(payload.get("lyricsUrl")))
     payload["lyricsUrl"] = (
         lyrics_url if lyrics_url is not None else _genius_search_url(track.title, track.artist)
     )
 
-    # Always stamp analysis generation time.
+    vocab_raw = payload.get("vocabulary")
+    vocab: list[dict[str, Any]] = []
+    if isinstance(vocab_raw, list):
+        for idx, item in enumerate(vocab_raw, start=1):
+            if not isinstance(item, dict):
+                continue
+            term = str(item.get("term") or "").strip()
+            if not term:
+                continue
+            item["id"] = str(item.get("id") or _vocab_item_id(track.id, term, idx))
+            if not isinstance(item.get("memoryHint"), str) or not str(item.get("memoryHint") or "").strip():
+                item["memoryHint"] = None
+            if not isinstance(item.get("cefr"), str) or not str(item.get("cefr") or "").strip():
+                item["cefr"] = None
+            usage = item.get("usage")
+            if isinstance(usage, list):
+                item["usage"] = [str(u).strip() for u in usage if str(u).strip()]
+            else:
+                item["usage"] = None
+            vocab.append(item)
+    payload["vocabulary"] = vocab
+
     payload["updatedAt"] = _iso_now()
 
     return payload
@@ -412,7 +502,8 @@ def _generate_analysis_openai(track: Track) -> YtMusicAnalysis:
     instructions = _llm_instructions()
 
     user_input = (
-        "Generate background notes and vocabulary explanations for this track.\n"
+        "Generate background notes and flashcard-ready vocabulary for this track.\n"
+        "You may use tools/search to locate lyrics for the exact track but do not quote them.\n"
         f"track_id: {track.id}\n"
         f"title: {track.title}\n"
         f"artist: {track.artist}\n"
@@ -460,7 +551,6 @@ def _gemini_generate_content(
     if response_schema is not None:
         body["generationConfig"]["responseSchema"] = response_schema
     if use_search:
-        # Prefer the newer google_search tool when available; fall back to legacy retrieval.
         if model.startswith("gemini-1.5"):
             body["tools"] = [
                 {
@@ -517,29 +607,33 @@ def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
         "- trackUrl (string)\n"
         "- lyricsUrl (string)\n"
         "- background (object: { tldr: string, notes: [{ title: string, body: string }] })\n"
-        "- vocabulary (array of objects: { term: string, literal: string, meaning: string, cefr?: string, usage?: string[] })\n"
+        "- vocabulary (array of objects with required fields:\n"
+        "  { id: string, term: string, exampleDe: string, literalEn: string, meaningEn: string, exampleEn: string, cefr?: string, memoryHint?: string })\n"
         "- updatedAt (string)\n"
-        "Do not invent additional top-level keys.\n"
-        "Vocabulary requirements:\n"
+        "Do not add extra keys.\n"
+        "Vocabulary quality requirements:\n"
         "- 8-12 items\n"
-        "- at least 4 multiword expressions or collocations\n"
-        "- each item should include 2-4 usage bullets\n"
-        "- every vocabulary term MUST appear verbatim in the lyrics for this exact track\n"
+        "- terms must be in the track lyrics\n"
+        "- examples must be original (not lyric quotes)\n"
+        "- prioritize harder/high-yield terms (roughly CEFR B1-C2) over simple basics\n"
+        "- avoid trivial A1/A2 unless central to song meaning\n"
+        "- literalEn should be short and learner-facing\n"
+        "- meaningEn should add non-redundant nuance only\n"
+        "- memoryHint should be objective etymology/compound info, never 'sounds like' style\n"
     )
 
     base_user_input = (
-        "Generate background notes and vocabulary explanations for this track.\n"
+        "Generate background notes and flashcard-ready vocabulary for this track.\n"
         f"track_id: {track.id}\n"
         f"title: {track.title}\n"
         f"artist: {track.artist}\n"
         f"album: {track.album or ''}\n"
-        "If tools are available, first use web search to find the lyrics for this exact track.\n"
-        "Do not quote lyrics. Use the lyrics only to choose vocabulary terms that actually appear.\n"
+        "Use search/web tools to find the exact track lyrics source first if available.\n"
+        "Never quote lyrics.\n"
         f"{schema_hint}"
         "Return JSON only."
     )
 
-    # Try schema mode first; if it errors, fall back to plain JSON. If validation fails, retry once with repair.
     last_err: Exception | None = None
     user_input = base_user_input
     schema_mode: dict[str, Any] | None = _analysis_gemini_schema()
@@ -609,51 +703,7 @@ def _generate_analysis(track: Track) -> YtMusicAnalysis:
     return _analysis_fallback(track, "LLM analysis not configured.")
 
 
-def _process_track(r, playlist_id: str, track: Track) -> None:
-    saved_at = _iso_now()
-    web_origin = _normalize_origin(WEB_ORIGIN)
-
-    note = SavedLyricNote(
-        id=track.id,
-        source="ytmusic",
-        title=track.title,
-        artist=track.artist,
-        # Static hosting: use a query-param based route so we don't need Astro dynamic SSR.
-        noteUrl=f"{web_origin}/lyrics/note?id={track.id}",
-        albumArtUrl=track.album_art_url,
-        savedAt=saved_at,
-    )
-
-    stat_key = RedisKeys.stat("ytmusic", track.id)
-    analysis_key = RedisKeys.stat_field("ytmusic", track.id, "analysis")
-
-    r.set(stat_key, note.model_dump_json())
-
-    # Analysis can be expensive and depends on external APIs. Avoid regenerating on every touch unless asked.
-    existing_analysis = r.get(analysis_key)
-    if (
-        existing_analysis
-        and not LYRICIST_REGENERATE_ANALYSIS
-        and not _raw_analysis_is_error_fallback(existing_analysis)
-    ):
-        logger.info("lyricist.analysis.skip_existing", track_id=track.id)
-    else:
-        analysis = _generate_analysis(track)
-        # If LLM call failed and we already had an analysis, don't overwrite good data with a fallback.
-        if existing_analysis and _is_error_fallback(analysis):
-            logger.warning("lyricist.analysis.keep_existing_on_error", track_id=track.id)
-        else:
-            r.set(analysis_key, analysis.model_dump_json())
-
-    # Keep an index so the API can find "latest" quickly.
-    r.zadd(RedisKeys.INDEX_LYRICS_RECENT, {track.id: int(time.time())})
-
-    emit_event(r, "ytmusic_saved_updated", {"trackId": track.id, "key": stat_key})
-    _write_cursor(r, playlist_id, track.id)
-
-
 def _list_playlist_tracks(playlist_id: str) -> list[Track]:
-    # ytmusicapi supports multiple auth modes; we keep this worker auth-agnostic for now.
     ytm = YTMusic()
     pl = ytm.get_playlist(playlist_id, limit=100)
     tracks_raw = pl.get("tracks") or []
@@ -667,77 +717,50 @@ def _list_playlist_tracks(playlist_id: str) -> list[Track]:
     return tracks
 
 
-def _retry_failed_recent_analyses(r) -> None:
-    if not LYRICIST_RETRY_FAILED_ANALYSIS:
-        return
-    limit = max(0, int(LYRICIST_RETRY_FAILED_LIMIT or 0))
-    if limit <= 0:
-        return
-
-    ids = r.zrevrange(RedisKeys.INDEX_LYRICS_RECENT, 0, limit - 1)
-    for raw_id in ids:
-        track_id = raw_id.decode("utf-8") if isinstance(raw_id, (bytes, bytearray)) else str(raw_id)
-        if not track_id:
-            continue
-
-        analysis_key = RedisKeys.stat_field("ytmusic", track_id, "analysis")
-        existing = r.get(analysis_key)
-        if existing and not _raw_analysis_is_error_fallback(existing):
-            continue
-
-        stat_key = RedisKeys.stat("ytmusic", track_id)
-        note_raw = r.get(stat_key)
-        if not note_raw:
-            continue
+def _enqueue_for_analysis(r, track_id: str) -> None:
+    # Only keep pending if analysis is missing or invalid.
+    existing_analysis = r.get(RedisKeys.stat_field("ytmusic", track_id, "analysis"))
+    if existing_analysis:
         try:
-            note = json.loads(
-                note_raw.decode("utf-8")
-                if isinstance(note_raw, (bytes, bytearray))
-                else str(note_raw)
+            payload = json.loads(
+                existing_analysis.decode("utf-8")
+                if isinstance(existing_analysis, (bytes, bytearray))
+                else str(existing_analysis)
             )
+            YtMusicAnalysis.model_validate(payload)
+            r.zrem(PENDING_ZSET_KEY, track_id)
+            return
         except Exception:
-            continue
-        if not isinstance(note, dict):
-            continue
-        title = note.get("title")
-        artist = note.get("artist")
-        album_art_url = note.get("albumArtUrl")
-        if not isinstance(title, str) or not isinstance(artist, str):
-            continue
+            pass
 
-        track = Track(
-            id=track_id,
-            title=title,
-            artist=artist,
-            album=None,
-            album_art_url=album_art_url if isinstance(album_art_url, str) else None,
-        )
-
-        logger.info("lyricist.analysis.retry", track_id=track_id)
-        analysis = _generate_analysis(track)
-        if existing and _is_error_fallback(analysis):
-            logger.warning("lyricist.analysis.retry_failed", track_id=track_id)
-            continue
-        r.set(analysis_key, analysis.model_dump_json())
+    r.zadd(PENDING_ZSET_KEY, {track_id: _now_ts()})
 
 
-def main() -> None:
+def _upsert_saved_note_and_index(r, track: Track) -> None:
+    saved_at = _iso_now()
+    web_origin = _normalize_origin(WEB_ORIGIN)
+    note = SavedLyricNote(
+        id=track.id,
+        source="ytmusic",
+        title=track.title,
+        artist=track.artist,
+        noteUrl=f"{web_origin}/lyrics/note?id={track.id}",
+        albumArtUrl=track.album_art_url,
+        savedAt=saved_at,
+    )
+
+    stat_key = RedisKeys.stat("ytmusic", track.id)
+    r.set(stat_key, note.model_dump_json())
+    r.zadd(RedisKeys.INDEX_LYRICS_RECENT, {track.id: _now_ts()})
+    _enqueue_for_analysis(r, track.id)
+    emit_event(r, "ytmusic_saved_updated", {"trackId": track.id, "key": stat_key})
+
+
+def _run_sync(r) -> int:
     if not YTMUSIC_PLAYLIST_ID:
         logger.info("lyricist.no_playlist_configured")
-        return
+        return 0
 
-    if LYRICIST_DRY_RUN:
-        tracks = _list_playlist_tracks(YTMUSIC_PLAYLIST_ID)
-        if not tracks:
-            logger.info("lyricist.sync.empty", playlist_id=YTMUSIC_PLAYLIST_ID)
-            return
-        tr = tracks[0]
-        logger.info("lyricist.dry_run.track", track_id=tr.id, title=tr.title, artist=tr.artist)
-        analysis = _generate_analysis(tr)
-        print(analysis.model_dump_json())
-        return
-
-    r = redis_client()
     cursor = _read_cursor(r)
     last_seen = (cursor or {}).get("lastSeenTrackId")
     if LYRICIST_IGNORE_CURSOR and last_seen:
@@ -750,10 +773,8 @@ def main() -> None:
     tracks = _list_playlist_tracks(YTMUSIC_PLAYLIST_ID)
     if not tracks:
         logger.info("lyricist.sync.empty", playlist_id=YTMUSIC_PLAYLIST_ID)
-        _retry_failed_recent_analyses(r)
-        return
+        return 0
 
-    # YT Music playlists are typically returned newest-first. Process all new tracks until we hit last_seen.
     new_tracks: list[Track] = []
     for tr in tracks:
         if last_seen and tr.id == last_seen:
@@ -762,17 +783,145 @@ def main() -> None:
 
     if not new_tracks:
         logger.info("lyricist.sync.noop", playlist_id=YTMUSIC_PLAYLIST_ID)
-        _retry_failed_recent_analyses(r)
+        return 0
+
+    for tr in reversed(new_tracks):
+        logger.info("lyricist.track.sync", track_id=tr.id, title=tr.title, artist=tr.artist)
+        _upsert_saved_note_and_index(r, tr)
+        _write_cursor(r, YTMUSIC_PLAYLIST_ID, tr.id)
+
+    logger.info("lyricist.sync.done", processed=len(new_tracks))
+    return len(new_tracks)
+
+
+def _track_from_saved_note(r, track_id: str) -> Track | None:
+    raw = r.get(RedisKeys.stat("ytmusic", track_id))
+    if not raw:
+        return None
+    try:
+        payload = json.loads(raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else str(raw))
+    except Exception:
+        return None
+    if not isinstance(payload, dict):
+        return None
+
+    title = payload.get("title")
+    artist = payload.get("artist")
+    album_art_url = payload.get("albumArtUrl")
+    if not isinstance(title, str) or not isinstance(artist, str):
+        return None
+    return Track(
+        id=track_id,
+        title=title,
+        artist=artist,
+        album=None,
+        album_art_url=album_art_url if isinstance(album_art_url, str) else None,
+    )
+
+
+def _read_due_pending_track_ids(r, limit: int) -> list[str]:
+    if limit <= 0:
+        return []
+    now = _now_ts()
+    raw_ids = r.zrangebyscore(PENDING_ZSET_KEY, min="-inf", max=now, start=0, num=limit)
+    out: list[str] = []
+    for rid in raw_ids:
+        if isinstance(rid, (bytes, bytearray)):
+            out.append(rid.decode("utf-8"))
+        else:
+            out.append(str(rid))
+    return [x for x in out if x]
+
+
+def _schedule_retry(r, track_id: str) -> None:
+    attempts_key = _analysis_attempts_key(track_id)
+    attempts = r.incr(attempts_key)
+
+    if attempts >= LYRICIST_ANALYSIS_MAX_ATTEMPTS:
+        logger.warning("lyricist.analysis.max_attempts", track_id=track_id, attempts=attempts)
+        next_ts = _now_ts() + int(LYRICIST_ANALYSIS_BACKOFF_MAX_SECONDS)
+    else:
+        backoff = min(
+            LYRICIST_ANALYSIS_BACKOFF_MAX_SECONDS,
+            LYRICIST_ANALYSIS_BACKOFF_BASE_SECONDS * (2 ** max(0, attempts - 1)),
+        )
+        jitter = random.uniform(0, LYRICIST_ANALYSIS_BACKOFF_BASE_SECONDS)
+        next_ts = _now_ts() + int(backoff + jitter)
+
+    r.zadd(PENDING_ZSET_KEY, {track_id: next_ts})
+
+
+def _mark_analysis_success(r, track_id: str, analysis: YtMusicAnalysis) -> None:
+    analysis_key = RedisKeys.stat_field("ytmusic", track_id, "analysis")
+    r.set(analysis_key, analysis.model_dump_json())
+    r.zrem(PENDING_ZSET_KEY, track_id)
+    r.delete(_analysis_attempts_key(track_id))
+
+
+def _run_analyze(r) -> int:
+    if LYRICIST_ANALYSIS_MAX_PER_RUN <= 0:
+        logger.info("lyricist.analysis.disabled_by_limit")
+        return 0
+
+    ids = _read_due_pending_track_ids(r, LYRICIST_ANALYSIS_MAX_PER_RUN)
+    if not ids:
+        logger.info("lyricist.analysis.no_due_pending")
+        return 0
+
+    processed = 0
+    for idx, track_id in enumerate(ids, start=1):
+        tr = _track_from_saved_note(r, track_id)
+        if not tr:
+            logger.warning("lyricist.analysis.missing_saved_note", track_id=track_id)
+            _schedule_retry(r, track_id)
+            continue
+
+        logger.info("lyricist.analysis.start", track_id=tr.id, title=tr.title, artist=tr.artist)
+        analysis = _generate_analysis(tr)
+        if _is_error_fallback(analysis):
+            logger.warning("lyricist.analysis.failed", track_id=track_id)
+            _schedule_retry(r, track_id)
+            continue
+
+        _mark_analysis_success(r, track_id, analysis)
+        processed += 1
+
+        if idx < len(ids) and LYRICIST_ANALYSIS_MIN_INTERVAL_SECONDS > 0:
+            time.sleep(LYRICIST_ANALYSIS_MIN_INTERVAL_SECONDS)
+
+    logger.info("lyricist.analysis.done", processed=processed, attempted=len(ids))
+    return processed
+
+
+def _mode_enabled(mode: str, value: str) -> bool:
+    return value == "all" or value == mode
+
+
+def main() -> None:
+    _ensure_flashcard_schema()
+    mode = LYRICIST_MODE if LYRICIST_MODE in {"sync", "analyze", "all"} else "all"
+
+    if LYRICIST_DRY_RUN:
+        if not YTMUSIC_PLAYLIST_ID:
+            logger.info("lyricist.no_playlist_configured")
+            return
+        tracks = _list_playlist_tracks(YTMUSIC_PLAYLIST_ID)
+        if not tracks:
+            logger.info("lyricist.sync.empty", playlist_id=YTMUSIC_PLAYLIST_ID)
+            return
+        tr = tracks[0]
+        logger.info("lyricist.dry_run.track", track_id=tr.id, title=tr.title, artist=tr.artist)
+        analysis = _generate_analysis(tr)
+        print(analysis.model_dump_json())
         return
 
-    logger.info("lyricist.sync.new_tracks", count=len(new_tracks))
-    # Process oldest-first so "latest" points at the most recent at the end of the run.
-    for tr in reversed(new_tracks):
-        logger.info("lyricist.track.process", track_id=tr.id, title=tr.title, artist=tr.artist)
-        _process_track(r, YTMUSIC_PLAYLIST_ID, tr)
+    r = redis_client()
 
-    _retry_failed_recent_analyses(r)
-    logger.info("lyricist.sync.done", processed=len(new_tracks))
+    if _mode_enabled("sync", mode):
+        _run_sync(r)
+
+    if _mode_enabled("analyze", mode):
+        _run_analyze(r)
 
 
 if __name__ == "__main__":

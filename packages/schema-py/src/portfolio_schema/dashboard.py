@@ -61,9 +61,13 @@ class YtMusicBackground(BaseSchema):
 
 
 class YtMusicVocabularyItem(BaseSchema):
+    id: str
     term: str
-    literal: str
-    meaning: str
+    exampleDe: str
+    literalEn: str
+    meaningEn: str
+    exampleEn: str
+    memoryHint: str | None = None
     cefr: str | None = None
     usage: list[str] | None = None
 
@@ -175,6 +179,7 @@ def validate_stat_redis_record(payload: object) -> StatRedisRecord:
 class RedisKeys:
     INDEX_WRITING_RECENT = "index:writing:recent"
     INDEX_LYRICS_RECENT = "index:ytmusic:saved"
+    INDEX_LYRICS_ANALYSIS_PENDING = "index:ytmusic:analysis:pending"
 
     @staticmethod
     def stat(source: StatSource, item_id: str | int) -> str:
