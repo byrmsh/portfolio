@@ -31,6 +31,7 @@ type GitMetadata = {
   commits: Commit[];
   totalChanges: number;
   repoUrl: string | null;
+  pathMetadata?: Record<string, Pick<GitMetadata, 'commits' | 'totalChanges'>>;
 };
 
 const { t, locale, pathFilters = [], title } = Astro.props;
@@ -104,10 +105,25 @@ function getGitMetadataFromFile(): GitMetadata | null {
     const totalChanges =
       typeof parsed.totalChanges === 'number' && parsed.totalChanges >= 0 ? parsed.totalChanges : 0;
     const repoUrl = typeof parsed.repoUrl === 'string' ? parsed.repoUrl : null;
-    return { commits, totalChanges, repoUrl };
+    const pathMetadata =
+      parsed.pathMetadata && typeof parsed.pathMetadata === 'object' ? parsed.pathMetadata : undefined;
+    return { commits, totalChanges, repoUrl, pathMetadata };
   } catch {
     return null;
   }
+}
+
+function getPathFilteredMetadata(
+  metadata: GitMetadata | null,
+  paths: string[],
+): Pick<GitMetadata, 'commits' | 'totalChanges'> | null {
+  if (!metadata?.pathMetadata || paths.length === 0) return null;
+  for (const candidate of paths) {
+    const entry = metadata.pathMetadata[candidate];
+    if (!entry) continue;
+    return entry;
+  }
+  return null;
 }
 
 function normalizeGitHubRepoUrl(remote: string): string | null {
@@ -192,11 +208,12 @@ function labelForType(type: string): string {
   return labels[type] ?? type.toUpperCase();
 }
 
-const metadata = hasPathFilters ? null : getGitMetadataFromFile();
-const commits = metadata?.commits.length
-  ? metadata.commits
+const metadata = getGitMetadataFromFile();
+const scopedMetadata = hasPathFilters ? getPathFilteredMetadata(metadata, pathFilters) : metadata;
+const commits = scopedMetadata?.commits.length
+  ? scopedMetadata.commits
   : getRecentCommits(RECENT_LIMIT, pathFilters);
-const totalChanges = metadata ? metadata.totalChanges : getTotalCommitCount(pathFilters);
+const totalChanges = scopedMetadata ? scopedMetadata.totalChanges : getTotalCommitCount(pathFilters);
 const repoUrl = metadata?.repoUrl ?? getRepoUrlFromOrigin();
 const dateFormatter = new Intl.DateTimeFormat(locale, {
   month: 'short',
