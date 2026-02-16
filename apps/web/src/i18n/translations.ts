@@ -57,6 +57,7 @@ const enTranslations = {
   meta: {
     systemsConsole: 'Systems Console',
     blog: 'Blog',
+    contact: 'Contact',
     lyrics: 'Lyrics',
     lyricNote: 'Lyric Note',
     jobs: 'Jobs',
@@ -79,6 +80,8 @@ const enTranslations = {
     language: 'Language',
   },
   contact: {
+    eyebrow: 'Contact',
+    title: 'Get in Touch',
     description:
       'Open to new opportunities and technical discussions! PGP key available for encryption.',
     emailLabel: 'Email',
@@ -162,7 +165,7 @@ const enTranslations = {
     eyebrow: 'Lyrics',
     title: 'Saved Lyrics',
     description:
-      'I like to listen to German songs and disect their lyrics for language learning. Here is my playlist automatically analyzed and served for fun.',
+      'I like dissecting German song lyrics for language learning; here is my playlist processed & served for fun.',
     latest: 'Latest',
     savedAt: 'Saved {date}',
     noTracks: 'No tracks processed yet.',
@@ -201,7 +204,7 @@ const enTranslations = {
   jobs: {
     eyebrow: 'Jobs',
     title: 'Captured Leads',
-    description: 'Recent job leads from a public job board API.',
+    description: 'Jobs fetched as a mini job-board for fun, will update this along the way.',
     empty: 'No jobs captured yet.',
     newest: 'NEWEST',
     next: 'NEXT',
