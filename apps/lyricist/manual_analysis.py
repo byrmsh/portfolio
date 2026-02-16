@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import re
+import urllib.error
+import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from environs import env
 from pydantic import ValidationError
@@ -20,6 +23,10 @@ from portfolio_schema import RedisKeys, YtMusicAnalysis, YtMusicVocabularyItem
 
 BATCH_DIR_DEFAULT = "tmp/lyricist-batches"
 PENDING_ZSET_KEY = getattr(RedisKeys, "INDEX_LYRICS_ANALYSIS_PENDING", "index:ytmusic:analysis:pending")
+LRCLIB_API_BASE = env.str("LRCLIB_API_BASE", default="https://lrclib.net/api")
+LYRICIST_LYRICS_MAX_CHARS = max(1000, env.int("LYRICIST_LYRICS_MAX_CHARS", default=12000))
+LYRICIST_LRCLIB_TIMEOUT_SEC = max(2, env.int("LYRICIST_LRCLIB_TIMEOUT_SEC", default=6))
+LYRICIST_LRCLIB_MAX_WORKERS = max(1, env.int("LYRICIST_LRCLIB_MAX_WORKERS", default=4))
 _MD_LINK_RE = re.compile(r"^\[([^\]]+)\]\(([^)]+)\)$")
 
 _VOCAB_REQUIRED_FIELDS = {"id", "term", "exampleDe", "literalEn", "meaningEn", "exampleEn"}
@@ -137,11 +144,113 @@ def _build_batch(tracks: list[TrackSeed]) -> dict[str, Any]:
     }
 
 
+def _strip_lrc_timestamps(text: str) -> str:
+    return re.sub(r"\[(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\.\d{1,3})?\]", "", text)
+
+
+def _compact_lyrics_for_prompt(text: str, max_chars: int) -> str:
+    lines = [line.strip() for line in text.splitlines()]
+    compact = "\n".join(line for line in lines if line)
+    if len(compact) <= max_chars:
+        return compact
+    return f"{compact[:max_chars].rstrip()}\n...[lyrics truncated]"
+
+
+def _pick_lrclib_lyrics(item: dict[str, Any]) -> str | None:
+    plain = item.get("plainLyrics")
+    if isinstance(plain, str) and plain.strip():
+        return plain.strip()
+
+    synced = item.get("syncedLyrics")
+    if isinstance(synced, str) and synced.strip():
+        stripped = _strip_lrc_timestamps(synced).strip()
+        if stripped:
+            return stripped
+    return None
+
+
+def _lrclib_get_json(path: str, params: dict[str, str]) -> Any:
+    base = LRCLIB_API_BASE.rstrip("/")
+    url = f"{base}/{path}?{urlencode(params)}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "portfolio-lyricist-manual-analysis/1.0",
+        },
+        method="GET",
+    )
+    with urllib.request.urlopen(req, timeout=LYRICIST_LRCLIB_TIMEOUT_SEC) as resp:
+        raw = resp.read().decode("utf-8")
+    return json.loads(raw)
+
+
+def _fetch_lrclib_lyrics(track: TrackSeed) -> tuple[str | None, str | None]:
+    params = {"artist_name": track.artist, "track_name": track.title}
+    endpoints = ("get", "search")
+    for path in endpoints:
+        try:
+            data = _lrclib_get_json(path, params)
+        except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError, TimeoutError):
+            continue
+
+        rows: list[dict[str, Any]] = []
+        if isinstance(data, dict):
+            rows = [data]
+        elif isinstance(data, list):
+            rows = [x for x in data if isinstance(x, dict)]
+
+        for row in rows:
+            lyrics = _pick_lrclib_lyrics(row)
+            if not lyrics:
+                continue
+            lyrics_url = row.get("url") if isinstance(row.get("url"), str) else None
+            return _compact_lyrics_for_prompt(lyrics, LYRICIST_LYRICS_MAX_CHARS), lyrics_url
+
+    return None, None
+
+
+def _build_lyrics_block(t: TrackSeed) -> str:
+    lyrics_text, lyrics_url = _fetch_lrclib_lyrics(t)
+    source = lyrics_url or "https://lrclib.net/"
+    if lyrics_text:
+        return (
+            f"- id: {t.id}\n"
+            f"  title: {t.title}\n"
+            f"  artist: {t.artist}\n"
+            f"  lyrics_source_url: {source}\n"
+            "  lyrics_text_start\n"
+            f"{lyrics_text}\n"
+            "  lyrics_text_end"
+        )
+    return (
+        f"- id: {t.id}\n"
+        f"  title: {t.title}\n"
+        f"  artist: {t.artist}\n"
+        "  lyrics_status: not_found_via_lrclib\n"
+        "  hint: if needed, use search/web tools to verify terms; still do not quote lyrics"
+    )
+
+
+def _build_lyrics_context(tracks: list[TrackSeed]) -> str:
+    workers = min(len(tracks), LYRICIST_LRCLIB_MAX_WORKERS)
+    if workers <= 1:
+        return "\n\n".join(_build_lyrics_block(t) for t in tracks)
+
+    blocks: list[str] = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        for block in pool.map(_build_lyrics_block, tracks):
+            blocks.append(block)
+    return "\n\n".join(blocks)
+
+
 def _build_prompt(tracks: list[TrackSeed]) -> str:
     tracks_json = json.dumps([asdict(t) for t in tracks], ensure_ascii=False, indent=2)
+    lyrics_context = _build_lyrics_context(tracks)
     return (
         "You are generating strict JSON for flashcard-ready German vocabulary analysis.\n"
-        "Use web/search tools to find lyrics for each exact track before choosing terms.\n"
+        "Use provided lyrics text (from lrclib) as the primary source for each track.\n"
+        "Only if lyrics are missing for a track, use web/search tools to verify terms.\n"
         "Do not quote lyrics or partial lyric lines anywhere in the output.\n"
         "\n"
         "Return a JSON array. Each element must match this shape exactly:\n"
@@ -185,6 +294,9 @@ def _build_prompt(tracks: list[TrackSeed]) -> str:
         "\n"
         "Tracks:\n"
         f"{tracks_json}\n"
+        "\n"
+        "Lyrics context by track:\n"
+        f"{lyrics_context}\n"
     )
 
 
