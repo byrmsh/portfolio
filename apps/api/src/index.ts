@@ -54,10 +54,8 @@ function decodeJobsCursor(raw: string | null): JobsCursor {
   try {
     const json = Buffer.from(trimmed, 'base64url').toString('utf8');
     const parsed = JSON.parse(json) as { page?: unknown; offset?: unknown };
-    const page =
-      typeof parsed.page === 'number' ? clampInt(parsed.page, 1, 100000) : 1;
-    const offset =
-      typeof parsed.offset === 'number' ? clampInt(parsed.offset, 0, 500) : 0;
+    const page = typeof parsed.page === 'number' ? clampInt(parsed.page, 1, 100000) : 1;
+    const offset = typeof parsed.offset === 'number' ? clampInt(parsed.offset, 0, 500) : 0;
     return { page, offset };
   } catch {
     return { page: 1, offset: 0 };

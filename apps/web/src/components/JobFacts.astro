@@ -27,8 +27,15 @@ const leftFacts = [
 ];
 
 const rightFacts = [
-  { label: t('jobs.factRemote'), value: typeof job.remote === 'boolean' ? (job.remote ? 'Yes' : 'No') : PLACEHOLDER },
-  { label: t('jobs.factTypes'), value: Array.isArray(job.jobTypes) && job.jobTypes.length ? job.jobTypes.join(', ') : PLACEHOLDER },
+  {
+    label: t('jobs.factRemote'),
+    value: typeof job.remote === 'boolean' ? (job.remote ? 'Yes' : 'No') : PLACEHOLDER,
+  },
+  {
+    label: t('jobs.factTypes'),
+    value:
+      Array.isArray(job.jobTypes) && job.jobTypes.length ? job.jobTypes.join(', ') : PLACEHOLDER,
+  },
 ];
 ---
 

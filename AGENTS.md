@@ -79,12 +79,11 @@ kubectl create secret generic db-credentials \
 
 ## 6.5. Build Check Discipline
 
-- After refactors or UI changes, run the relevant build(s) for the affected app(s).
-- Example: `pnpm -C apps/web build`.
-- If the build fails, fix issues and re-run until it passes.
-- Run lint before finalizing changes and fix violations:
-  - `pnpm lint` for monorepo TypeScript/Astro/Python lint checks.
-  - If scope is limited, run the minimal relevant lint command(s) and mention what was run.
+- Before finalizing changes, run `prek run`.
+- If `.pre-commit-config.yaml` changes, run `prek validate-config`.
+- After refactors or UI changes, run the relevant build(s) for affected app(s).
+- Example build check: `pnpm -C apps/web build`.
+- If a build fails, fix issues and re-run until it passes.
 - Local Python smoke tests should use `uv run --env-file .env ...` (or a temp env file) instead of overwriting repo `.env` files.
 
 ---

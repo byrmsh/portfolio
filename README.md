@@ -62,6 +62,27 @@ Containerization:
 - [ ] Observability: keep logs/metrics/traces out of Redis; wire OpenTelemetry -> Grafana stack and link to it from the dashboard.
 - [ ] Deployment hygiene: CI build + lint, image tags by git SHA, and K8s manifests updated automatically (or documented manual flow).
 
+## Prek (Git Hooks)
+
+This repo uses `prek` as the pre-commit runner with fast built-in hooks plus project-local lint/format checks.
+
+Install `prek` (one-time), then install hooks in this repo:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/j178/prek/releases/download/v0.2.23/prek-installer.sh | sh
+prek install --install-hooks
+```
+
+Useful commands:
+
+```bash
+prek validate-config
+prek run
+prek autoupdate
+```
+
+For automation/agent workflows, prefer `prek run` as the default quality gate instead of manually running separate lint commands.
+
 ## Local Development
 
 1. Install dependencies:

@@ -32,4 +32,3 @@ def emit_event(r: Redis, event_type: str, payload: Dict[str, Any]) -> None:
         },
         "*",
     )
-

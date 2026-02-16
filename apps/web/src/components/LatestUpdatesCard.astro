@@ -106,7 +106,9 @@ function getGitMetadataFromFile(): GitMetadata | null {
       typeof parsed.totalChanges === 'number' && parsed.totalChanges >= 0 ? parsed.totalChanges : 0;
     const repoUrl = typeof parsed.repoUrl === 'string' ? parsed.repoUrl : null;
     const pathMetadata =
-      parsed.pathMetadata && typeof parsed.pathMetadata === 'object' ? parsed.pathMetadata : undefined;
+      parsed.pathMetadata && typeof parsed.pathMetadata === 'object'
+        ? parsed.pathMetadata
+        : undefined;
     return { commits, totalChanges, repoUrl, pathMetadata };
   } catch {
     return null;
@@ -213,7 +215,9 @@ const scopedMetadata = hasPathFilters ? getPathFilteredMetadata(metadata, pathFi
 const commits = scopedMetadata?.commits.length
   ? scopedMetadata.commits
   : getRecentCommits(RECENT_LIMIT, pathFilters);
-const totalChanges = scopedMetadata ? scopedMetadata.totalChanges : getTotalCommitCount(pathFilters);
+const totalChanges = scopedMetadata
+  ? scopedMetadata.totalChanges
+  : getTotalCommitCount(pathFilters);
 const repoUrl = metadata?.repoUrl ?? getRepoUrlFromOrigin();
 const dateFormatter = new Intl.DateTimeFormat(locale, {
   month: 'short',

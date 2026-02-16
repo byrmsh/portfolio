@@ -35,10 +35,30 @@ function isActiveSection(href: string): boolean {
 
 const links = [
   { key: 'home', label: t('nav.home'), href: homeHref, match: 'exact' as const },
-  { key: 'blog', label: t('nav.blog'), href: localizedPath(locale, '/blog', baseSearch), match: 'section' as const },
-  { key: 'lyrics', label: t('nav.lyrics'), href: localizedPath(locale, '/lyrics', baseSearch), match: 'section' as const },
-  { key: 'jobs', label: t('nav.jobs'), href: localizedPath(locale, '/jobs', baseSearch), match: 'section' as const },
-  { key: 'contact', label: t('nav.contact'), href: localizedPath(locale, '/contact', baseSearch), match: 'exact' as const },
+  {
+    key: 'blog',
+    label: t('nav.blog'),
+    href: localizedPath(locale, '/blog', baseSearch),
+    match: 'section' as const,
+  },
+  {
+    key: 'lyrics',
+    label: t('nav.lyrics'),
+    href: localizedPath(locale, '/lyrics', baseSearch),
+    match: 'section' as const,
+  },
+  {
+    key: 'jobs',
+    label: t('nav.jobs'),
+    href: localizedPath(locale, '/jobs', baseSearch),
+    match: 'section' as const,
+  },
+  {
+    key: 'contact',
+    label: t('nav.contact'),
+    href: localizedPath(locale, '/contact', baseSearch),
+    match: 'exact' as const,
+  },
 ];
 ---
 

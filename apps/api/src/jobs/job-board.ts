@@ -65,7 +65,10 @@ function htmlToText(html: string): string {
     .replace(/<\s*li\s*>/gi, '- ');
 
   const stripped = withBreaks.replace(/<[^>]+>/g, '');
-  return decodeHtmlEntities(stripped).replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  return decodeHtmlEntities(stripped)
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function summarize(text: string, maxLen: number): string {

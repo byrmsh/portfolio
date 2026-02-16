@@ -46,13 +46,7 @@ export const serviceTech: Record<ServiceKey, string> = {
   dragonfly: 'Redis-compatible KV store',
 };
 
-export const serviceOrder: ServiceKey[] = [
-  'web',
-  'api',
-  'collector',
-  'lyricist',
-  'dragonfly',
-];
+export const serviceOrder: ServiceKey[] = ['web', 'api', 'collector', 'lyricist', 'dragonfly'];
 
 export const DEFAULT_DATA: ApiStatusResponse = {
   web: { status: 'unknown', message: '' },

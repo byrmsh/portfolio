@@ -1,0 +1,51 @@
+minimum_prek_version: '0.2.23'
+default_stages: [pre-commit]
+fail_fast: false
+exclude: '^(node_modules/|apps/.*/node_modules/|apps/.*/dist/|apps/.*/.astro/|.venv/|apps/.*/.venv/)'
+
+repos:
+  - repo: builtin
+    hooks:
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+        exclude: '^deploy/helm/portfolio/templates/'
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (write)
+        entry: pnpm exec prettier --write
+        language: system
+        files: "\\.(astro|css|js|json|md|mjs|ts|tsx|yaml|yml)$"
+
+      - id: eslint-ts
+        name: eslint (api + shared ts)
+        entry: pnpm exec eslint --no-error-on-unmatched-pattern "apps/api/src/**/*.ts" "packages/**/*.ts"
+        language: system
+        pass_filenames: false
+        files: "^(apps/api/src/.*\\.ts|packages/.*\\.ts)$"
+
+      - id: astro-check
+        name: astro check
+        entry: pnpm -C apps/web check
+        language: system
+        pass_filenames: false
+        files: "^(apps/web/.*\\.(astro|ts|tsx|js|mjs|svelte)|apps/web/tsconfig\\.json|apps/web/astro\\.config\\.mjs)$"
+
+      - id: ruff-check
+        name: ruff check
+        entry: uvx ruff check apps/collector apps/ankiworker apps/lyricist packages/schema-py/src
+        language: system
+        pass_filenames: false
+        files: "^(apps/(collector|ankiworker|lyricist)/.*\\.py|packages/schema-py/src/.*\\.py)$"
