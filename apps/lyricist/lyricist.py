@@ -49,6 +49,9 @@ LYRICIST_ANALYSIS_BACKOFF_MAX_SECONDS = max(
     env.float("LYRICIST_ANALYSIS_BACKOFF_MAX_SECONDS", default=3600.0),
 )
 LYRICIST_ANALYSIS_MAX_ATTEMPTS = max(1, env.int("LYRICIST_ANALYSIS_MAX_ATTEMPTS", default=5))
+LYRICIST_REQUEUE_ERROR_FALLBACK_SCAN_LIMIT = max(
+    0, env.int("LYRICIST_REQUEUE_ERROR_FALLBACK_SCAN_LIMIT", default=300)
+)
 
 # LLM provider wiring:
 # - gemini: native Gemini API (structured output via responseSchema + responseMimeType)
@@ -847,7 +850,10 @@ def _enqueue_for_analysis(r, track_id: str) -> None:
                 if isinstance(existing_analysis, (bytes, bytearray))
                 else str(existing_analysis)
             )
-            YtMusicAnalysis.model_validate(payload)
+            analysis = YtMusicAnalysis.model_validate(payload)
+            if _is_error_fallback(analysis):
+                r.zadd(PENDING_ZSET_KEY, {track_id: _now_ts()})
+                return
             r.zrem(PENDING_ZSET_KEY, track_id)
             return
         except Exception:
@@ -953,6 +959,42 @@ def _read_due_pending_track_ids(r, limit: int) -> list[str]:
     return [x for x in out if x]
 
 
+def _requeue_error_fallbacks(r) -> int:
+    if LYRICIST_REQUEUE_ERROR_FALLBACK_SCAN_LIMIT <= 0:
+        return 0
+
+    raw_ids = r.zrevrange(RedisKeys.INDEX_LYRICS_RECENT, 0, LYRICIST_REQUEUE_ERROR_FALLBACK_SCAN_LIMIT - 1)
+    if not raw_ids:
+        return 0
+
+    now = _now_ts()
+    requeued = 0
+
+    for rid in raw_ids:
+        track_id = rid.decode("utf-8") if isinstance(rid, (bytes, bytearray)) else str(rid)
+        if not track_id:
+            continue
+        if r.zscore(PENDING_ZSET_KEY, track_id) is not None:
+            continue
+
+        raw = r.get(RedisKeys.stat_field("ytmusic", track_id, "analysis"))
+        if not raw:
+            continue
+        try:
+            payload = json.loads(raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else str(raw))
+            analysis = YtMusicAnalysis.model_validate(payload)
+        except Exception:
+            continue
+
+        if _is_error_fallback(analysis):
+            r.zadd(PENDING_ZSET_KEY, {track_id: now})
+            requeued += 1
+
+    if requeued > 0:
+        logger.info("lyricist.analysis.requeued_error_fallbacks", count=requeued)
+    return requeued
+
+
 def _schedule_retry(r, track_id: str) -> None:
     attempts_key = _analysis_attempts_key(track_id)
     attempts = r.incr(attempts_key)
@@ -983,6 +1025,7 @@ def _run_analyze(r) -> int:
         logger.info("lyricist.analysis.disabled_by_limit")
         return 0
 
+    _requeue_error_fallbacks(r)
     ids = _read_due_pending_track_ids(r, LYRICIST_ANALYSIS_MAX_PER_RUN)
     if not ids:
         logger.info("lyricist.analysis.no_due_pending")
