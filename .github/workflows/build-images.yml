@@ -97,6 +97,7 @@ jobs:
             add_target "lyricist" "portfolio-lyricist" "apps/lyricist/Dockerfile"
           fi
 
+          matrix="$(jq -c . <<< "$matrix")"
           count="$(jq '.include | length' <<< "$matrix")"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "count=$count" >> "$GITHUB_OUTPUT"
