@@ -191,20 +191,27 @@ export const GET: APIRoute = async ({ request }) => {
   const apiActivityUrl = `${apiOrigin.replace(/\/$/, '')}/api/activity-monitor`;
   const apiStatusUrl = `${apiOrigin.replace(/\/$/, '')}/api/status`;
   const apiLyricUrl = `${apiOrigin.replace(/\/$/, '')}/api/ytmusic/saved/latest`;
+  const argocdHealthUrl =
+    process.env.ARGOCD_HEALTH_URL ??
+    import.meta.env.ARGOCD_HEALTH_URL ??
+    import.meta.env.PUBLIC_ARGOCD_HEALTH_URL ??
+    null;
   const argocdOrigin =
     process.env.ARGOCD_ORIGIN ??
     import.meta.env.ARGOCD_ORIGIN ??
     import.meta.env.PUBLIC_ARGOCD_ORIGIN ??
     null;
-  const argocdHealthUrl = argocdOrigin
-    ? `${String(argocdOrigin).replace(/\/$/, '')}/healthz`
-    : 'http://argocd-server.argocd.svc.cluster.local/healthz';
+  const resolvedArgocdHealthUrl =
+    argocdHealthUrl ??
+    (argocdOrigin
+      ? `${String(argocdOrigin).replace(/\/$/, '')}/healthz`
+      : 'http://argocd-server-metrics.argocd.svc.cluster.local:8083/metrics');
 
   const [webProbe, apiProbe, argocdProbe, activityMonitor, apiStatus, lyricistLastSavedAt] =
     await Promise.all([
       probe(webHealthUrl, 3000),
       probe(apiHealthUrl, 3000),
-      probe(argocdHealthUrl, 3000),
+      probe(resolvedArgocdHealthUrl, 3000),
       fetchActivityMonitor(apiActivityUrl),
       readApiStatus(apiStatusUrl),
       readLatestLyricSavedAt(apiLyricUrl),
@@ -242,13 +249,13 @@ export const GET: APIRoute = async ({ request }) => {
     },
     {
       id: 'argocd',
-      status: argocdProbe.ok ? 'healthy' : argocdOrigin ? 'degraded' : 'unknown',
+      status: argocdProbe.ok ? 'healthy' : argocdHealthUrl || argocdOrigin ? 'degraded' : 'unknown',
       detail: argocdProbe.ok
         ? 'Argo CD server responding'
-        : argocdOrigin
+        : argocdHealthUrl || argocdOrigin
           ? 'Argo CD health check failed'
           : 'Argo CD endpoint unavailable',
-      latencyMs: argocdProbe.ok || argocdOrigin ? argocdProbe.latencyMs : null,
+      latencyMs: argocdProbe.ok || argocdHealthUrl || argocdOrigin ? argocdProbe.latencyMs : null,
     },
     {
       id: 'collector',

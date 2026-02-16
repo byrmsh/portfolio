@@ -25,6 +25,8 @@ Some web widgets fetch JSON endpoints during SSR (for example `/system-status.js
 - `web.env.webOrigin` feeds `WEB_ORIGIN` for SSR absolute URLs.
   - Recommended in-cluster value is an in-pod origin like `http://127.0.0.1:8080` (chart default) to avoid hairpinning out via ingress/Cloudflare.
 - `web.env.apiOrigin` feeds `API_ORIGIN` for server-side calls to the API (default `http://api-service:3000`).
+- `web.env.argocdHealthUrl` feeds `ARGOCD_HEALTH_URL` for the Argo CD probe used by `/system-status.json`.
+  - Recommended in-cluster value is `http://argocd-server-metrics.argocd.svc.cluster.local:8083/metrics` to avoid TLS trust issues on Argo CD server redirects.
 
 ## Install / Upgrade
 

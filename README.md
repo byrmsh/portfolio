@@ -157,9 +157,11 @@ Probe target precedence in `system-status.json`:
 - Web health: `WEB_ORIGIN` -> `PUBLIC_WEB_ORIGIN` -> request origin, then `GET /health`
 - API health: `API_ORIGIN` -> `PUBLIC_API_ORIGIN`, then `GET /health`
 - Argo CD health:
-  - `ARGOCD_ORIGIN` (preferred for explicit prod config), else
-  - `PUBLIC_ARGOCD_ORIGIN`, else
-  - in-cluster fallback: `http://argocd-server.argocd.svc.cluster.local/healthz`
+  - `ARGOCD_HEALTH_URL` (preferred for exact probe target), else
+  - `PUBLIC_ARGOCD_HEALTH_URL`, else
+  - `ARGOCD_ORIGIN` + `/healthz`, else
+  - `PUBLIC_ARGOCD_ORIGIN` + `/healthz`, else
+  - in-cluster fallback: `http://argocd-server-metrics.argocd.svc.cluster.local:8083/metrics`
 
 Status semantics:
 
@@ -174,8 +176,8 @@ Local dev expectations:
 
 Production recommendation:
 
-- Set `ARGOCD_ORIGIN` for the web runtime to the production Argo CD endpoint.
-- Keep this endpoint source-of-truth in `homelab` (ingress/tunnel config) and mirror the runtime env here.
+- Set `ARGOCD_HEALTH_URL` in chart values for deterministic behavior across environments.
+- Keep this setting source-of-truth in GitOps values (`homelab/k8s/portfolio/values-prod.yaml`).
 
 ## Docker Compose (Optional)
 

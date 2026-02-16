@@ -48,6 +48,7 @@ web:
     port: '8080'
     webOrigin: http://127.0.0.1:8080
     apiOrigin: http://api-service:3000
+    argocdHealthUrl: http://argocd-server-metrics.argocd.svc.cluster.local:8083/metrics
   resources:
     requests:
       memory: 128Mi
