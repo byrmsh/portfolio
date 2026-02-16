@@ -56,13 +56,18 @@ const enTranslations = {
   },
   meta: {
     systemsConsole: 'Systems Console',
+    blog: 'Blog',
     lyrics: 'Lyrics',
     lyricNote: 'Lyric Note',
     jobs: 'Jobs',
   },
   blog: {
-    indexDescription: 'Project logs, notes, and system documentation.',
-    updatedInline: ' · updated {date}',
+    eyebrow: 'Blog',
+    title: 'Writing Log',
+    description: 'Project logs, notes, and system documentation.',
+    backToAll: '← ALL POSTS',
+    published: 'Published {date}',
+    updated: 'Updated {date}',
   },
   nav: {
     home: 'Home',

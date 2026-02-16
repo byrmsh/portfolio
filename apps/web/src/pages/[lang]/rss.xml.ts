@@ -25,8 +25,8 @@ export async function GET(context: { site?: URL; params: { lang?: string } }) {
   const site = context.site ?? new URL(`https://${SITE.domain}`);
 
   return rss({
-    title: `${SITE.name} | ${t('nav.blog')}`,
-    description: t('blog.indexDescription'),
+    title: `${SITE.name} | ${t('meta.blog')}`,
+    description: t('blog.description'),
     site,
     customData: `<language>${locale}</language>`,
     items: posts.map((post) => ({
