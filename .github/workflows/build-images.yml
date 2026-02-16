@@ -14,27 +14,100 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared:
+              - .github/workflows/build-images.yml
+              - package.json
+              - pnpm-lock.yaml
+              - pnpm-workspace.yaml
+            api:
+              - apps/api/**
+              - packages/schema/**
+            web:
+              - apps/web/**
+              - packages/schema/**
+            collector:
+              - apps/collector/**
+              - packages/schema-py/**
+              - packages/common-py/**
+            ankiworker:
+              - apps/ankiworker/**
+              - packages/schema-py/**
+              - packages/common-py/**
+            lyricist:
+              - apps/lyricist/**
+              - packages/schema-py/**
+              - packages/common-py/**
+
+      - name: Build matrix from changes
+        id: matrix
+        run: |
+          matrix='{"include":[]}'
+
+          add_target() {
+            matrix="$(jq \
+              --arg name "$1" \
+              --arg image "$2" \
+              --arg dockerfile "$3" \
+              '.include += [{name:$name,image:$image,dockerfile:$dockerfile}]' \
+              <<< "$matrix")"
+          }
+
+          shared="${{ steps.filter.outputs.shared }}"
+          api="${{ steps.filter.outputs.api }}"
+          web="${{ steps.filter.outputs.web }}"
+          collector="${{ steps.filter.outputs.collector }}"
+          ankiworker="${{ steps.filter.outputs.ankiworker }}"
+          lyricist="${{ steps.filter.outputs.lyricist }}"
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            shared="true"
+            api="true"
+            web="true"
+            collector="true"
+            ankiworker="true"
+            lyricist="true"
+          fi
+
+          if [[ "$shared" == "true" || "$api" == "true" ]]; then
+            add_target "api" "portfolio-api" "apps/api/Dockerfile"
+          fi
+          if [[ "$shared" == "true" || "$web" == "true" ]]; then
+            add_target "web" "portfolio-web" "apps/web/Dockerfile"
+          fi
+          if [[ "$shared" == "true" || "$collector" == "true" ]]; then
+            add_target "collector" "portfolio-collector" "apps/collector/Dockerfile"
+          fi
+          if [[ "$shared" == "true" || "$ankiworker" == "true" ]]; then
+            add_target "ankiworker" "portfolio-ankiworker" "apps/ankiworker/Dockerfile"
+          fi
+          if [[ "$shared" == "true" || "$lyricist" == "true" ]]; then
+            add_target "lyricist" "portfolio-lyricist" "apps/lyricist/Dockerfile"
+          fi
+
+          count="$(jq '.include | length' <<< "$matrix")"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: changes
+    if: ${{ needs.changes.outputs.count != '0' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: api
-            image: portfolio-api
-            dockerfile: apps/api/Dockerfile
-          - name: web
-            image: portfolio-web
-            dockerfile: apps/web/Dockerfile
-          - name: collector
-            image: portfolio-collector
-            dockerfile: apps/collector/Dockerfile
-          - name: ankiworker
-            image: portfolio-ankiworker
-            dockerfile: apps/ankiworker/Dockerfile
-          - name: lyricist
-            image: portfolio-lyricist
-            dockerfile: apps/lyricist/Dockerfile
+      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -69,5 +142,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,scope=${{ matrix.name }},mode=max
