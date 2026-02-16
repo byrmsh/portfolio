@@ -27,7 +27,7 @@ LRCLIB_API_BASE = env.str("LRCLIB_API_BASE", default="https://lrclib.net/api")
 LYRICIST_LYRICS_MAX_CHARS = max(1000, env.int("LYRICIST_LYRICS_MAX_CHARS", default=12000))
 LYRICIST_LRCLIB_TIMEOUT_SEC = max(2, env.int("LYRICIST_LRCLIB_TIMEOUT_SEC", default=6))
 LYRICIST_LRCLIB_MAX_WORKERS = max(1, env.int("LYRICIST_LRCLIB_MAX_WORKERS", default=4))
-_MD_LINK_RE = re.compile(r"^\[([^\]]+)\]\(([^)]+)\)$")
+_MD_LINK_RE = re.compile(r"^\[([^\]]*)\]\(([^)]*)\)$")
 
 _VOCAB_REQUIRED_FIELDS = {"id", "term", "exampleDe", "literalEn", "meaningEn", "exampleEn"}
 
@@ -66,13 +66,19 @@ def _normalize_url_like(value: Any) -> Any:
     if not m:
         return s
     label, href = m.group(1).strip(), m.group(2).strip()
+    if href.startswith("http://") or href.startswith("https://"):
+        return href
     if label.startswith("http://") or label.startswith("https://"):
+        # Some models return [https://example.com]() or wrap URL labels in google redirect links.
+        if not href:
+            return label
         parsed = urlparse(href)
         if parsed.netloc.endswith("google.com") and parsed.path == "/search":
             q = parse_qs(parsed.query).get("q", [])
             if q and q[0].strip() == label:
                 return label
-    return href
+        return label
+    return href or label
 
 
 def _normalize_import_payload(item: dict[str, Any]) -> dict[str, Any]:

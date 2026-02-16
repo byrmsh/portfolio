@@ -523,17 +523,23 @@ def _normalize_url_like(value: Any) -> Any:
     s = value.strip()
     if not s:
         return s
-    m = re.match(r"^\[([^\]]+)\]\(([^)]+)\)$", s)
+    m = re.match(r"^\[([^\]]*)\]\(([^)]*)\)$", s)
     if not m:
         return s
     label, href = m.group(1).strip(), m.group(2).strip()
+    if href.startswith("http://") or href.startswith("https://"):
+        return href
     if label.startswith("http://") or label.startswith("https://"):
+        # Some models return [https://example.com]() or wrap URL labels in google redirect links.
+        if not href:
+            return label
         parsed = urlparse(href)
         if parsed.netloc.endswith("google.com") and parsed.path == "/search":
             q = parse_qs(parsed.query).get("q", [])
             if q and q[0].strip() == label:
                 return label
-    return href
+        return label
+    return href or label
 
 
 def _validation_error_summary(e: ValidationError) -> str:
