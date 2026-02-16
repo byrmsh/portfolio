@@ -155,9 +155,9 @@ const enTranslations = {
   },
   lyrics: {
     eyebrow: 'Lyrics',
-    title: 'Lyric Notes',
+    title: 'Saved Lyrics',
     description:
-      'Background analysis and vocabulary notes. Full lyrics are hosted on external sites.',
+      'I like to listen to German songs and disect their lyrics for language learning. Here is my playlist automatically analyzed and served for fun.',
     latest: 'Latest',
     savedAt: 'Saved {date}',
     noTracks: 'No tracks processed yet.',
