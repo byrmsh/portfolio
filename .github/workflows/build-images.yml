@@ -35,12 +35,6 @@ jobs:
           - name: lyricist
             image: portfolio-lyricist
             dockerfile: apps/lyricist/Dockerfile
-          - name: upworker
-            image: portfolio-upworker
-            dockerfile: apps/upworker/Dockerfile
-          - name: upworkerbot
-            image: portfolio-upworkerbot
-            dockerfile: apps/upworkerbot/Dockerfile
     steps:
       - uses: actions/checkout@v4
         with:
