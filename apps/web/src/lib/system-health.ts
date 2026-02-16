@@ -1,5 +1,5 @@
 export type ServiceStatus = 'healthy' | 'partial' | 'degraded' | 'unknown';
-export type ServiceKey = 'web' | 'api' | 'dragonfly' | 'collector' | 'lyricist';
+export type ServiceKey = 'web' | 'api' | 'argocd' | 'dragonfly' | 'collector' | 'lyricist';
 
 export type StatusNode = {
   status: ServiceStatus;
@@ -20,6 +20,7 @@ export type SystemHealthStrings = {
 export type ApiStatusResponse = {
   web: StatusNode;
   api: StatusNode;
+  argocd: StatusNode;
   dragonfly: StatusNode;
   collector: StatusNode;
   lyricist: StatusNode;
@@ -33,9 +34,10 @@ export type NormalizedPayload = {
 export const serviceNames: Record<ServiceKey, string> = {
   web: 'apps/web',
   api: 'apps/api',
-  dragonfly: 'dragonfly',
   collector: 'apps/collector',
   lyricist: 'apps/lyricist',
+  dragonfly: 'dragonfly',
+  argocd: 'argocd',
 };
 
 export const serviceTech: Record<ServiceKey, string> = {
@@ -44,16 +46,25 @@ export const serviceTech: Record<ServiceKey, string> = {
   collector: 'Personal data collectors',
   lyricist: 'Lyrics analysis worker',
   dragonfly: 'Redis-compatible KV store',
+  argocd: 'GitOps control plane',
 };
 
-export const serviceOrder: ServiceKey[] = ['web', 'api', 'collector', 'lyricist', 'dragonfly'];
+export const serviceOrder: ServiceKey[] = [
+  'web',
+  'api',
+  'collector',
+  'lyricist',
+  'dragonfly',
+  'argocd',
+];
 
 export const DEFAULT_DATA: ApiStatusResponse = {
   web: { status: 'unknown', message: '' },
   api: { status: 'unknown', message: '' },
-  dragonfly: { status: 'unknown', message: '' },
   collector: { status: 'unknown', message: '', runs: 0, meta: '' },
   lyricist: { status: 'unknown', message: '', runs: 0, meta: '' },
+  dragonfly: { status: 'unknown', message: '' },
+  argocd: { status: 'unknown', message: '' },
 };
 
 export function asStatus(value: unknown): ServiceStatus {
@@ -173,7 +184,14 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
   const direct = payload as Partial<Record<ServiceKey, Partial<StatusNode>>> & {
     lyricist?: Partial<StatusNode> & { lastFetchedAt?: unknown };
   };
-  if (direct.web || direct.api || direct.dragonfly || direct.collector || direct.lyricist) {
+  if (
+    direct.web ||
+    direct.api ||
+    direct.argocd ||
+    direct.dragonfly ||
+    direct.collector ||
+    direct.lyricist
+  ) {
     const lyricistLastFetchedAt = asIso(direct.lyricist?.lastFetchedAt);
     if (lyricistLastFetchedAt) {
       const meta = ageMetricFromIso(lyricistLastFetchedAt) ?? '';
@@ -216,6 +234,11 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
       latency: asCount(byId.api?.latencyMs),
       message: asText(byId.api?.detail, ''),
     },
+    argocd: {
+      status: asStatus(byId.argocd?.status),
+      latency: asCount(byId.argocd?.latencyMs),
+      message: asText(byId.argocd?.detail, ''),
+    },
     dragonfly: {
       status: asStatus(byId.db?.status),
       latency: asCount(byId.db?.latencyMs),
@@ -254,6 +277,7 @@ function normalizeStatus(
   return {
     web: pick('web'),
     api: pick('api'),
+    argocd: pick('argocd'),
     dragonfly: pick('dragonfly'),
     collector: pick('collector'),
     lyricist: pick('lyricist'),

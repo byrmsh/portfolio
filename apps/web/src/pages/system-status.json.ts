@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 
 type ServiceStatus = 'healthy' | 'degraded' | 'unknown';
-type ServiceId = 'web' | 'api' | 'collector' | 'lyricist' | 'db';
+type ServiceId = 'web' | 'api' | 'argocd' | 'collector' | 'lyricist' | 'db';
 
 type ServiceCheck = {
   id: string;
@@ -191,14 +191,24 @@ export const GET: APIRoute = async ({ request }) => {
   const apiActivityUrl = `${apiOrigin.replace(/\/$/, '')}/api/activity-monitor`;
   const apiStatusUrl = `${apiOrigin.replace(/\/$/, '')}/api/status`;
   const apiLyricUrl = `${apiOrigin.replace(/\/$/, '')}/api/ytmusic/saved/latest`;
+  const argocdOrigin =
+    process.env.ARGOCD_ORIGIN ??
+    import.meta.env.ARGOCD_ORIGIN ??
+    import.meta.env.PUBLIC_ARGOCD_ORIGIN ??
+    null;
+  const argocdHealthUrl = argocdOrigin
+    ? `${String(argocdOrigin).replace(/\/$/, '')}/healthz`
+    : 'http://argocd-server.argocd.svc.cluster.local/healthz';
 
-  const [webProbe, apiProbe, activityMonitor, apiStatus, lyricistLastSavedAt] = await Promise.all([
-    probe(webHealthUrl, 3000),
-    probe(apiHealthUrl, 3000),
-    fetchActivityMonitor(apiActivityUrl),
-    readApiStatus(apiStatusUrl),
-    readLatestLyricSavedAt(apiLyricUrl),
-  ]);
+  const [webProbe, apiProbe, argocdProbe, activityMonitor, apiStatus, lyricistLastSavedAt] =
+    await Promise.all([
+      probe(webHealthUrl, 3000),
+      probe(apiHealthUrl, 3000),
+      probe(argocdHealthUrl, 3000),
+      fetchActivityMonitor(apiActivityUrl),
+      readApiStatus(apiStatusUrl),
+      readLatestLyricSavedAt(apiLyricUrl),
+    ]);
 
   const apiUptimeSeconds = clampNonNegativeInt(apiStatus?.data?.uptimeSeconds);
   const githubUpdatedAt = activityMonitor.githubUpdatedAt;
@@ -229,6 +239,16 @@ export const GET: APIRoute = async ({ request }) => {
       status: apiProbe.ok ? 'healthy' : 'degraded',
       detail: apiProbe.ok ? 'Hono endpoint reachable' : 'API health check failed',
       latencyMs: apiProbe.latencyMs,
+    },
+    {
+      id: 'argocd',
+      status: argocdProbe.ok ? 'healthy' : argocdOrigin ? 'degraded' : 'unknown',
+      detail: argocdProbe.ok
+        ? 'Argo CD server responding'
+        : argocdOrigin
+          ? 'Argo CD health check failed'
+          : 'Argo CD endpoint unavailable',
+      latencyMs: argocdProbe.ok || argocdOrigin ? argocdProbe.latencyMs : null,
     },
     {
       id: 'collector',

@@ -147,6 +147,36 @@ The homepage **Activity Monitor** is **rendered at build time** in `apps/web` by
 Collector env vars are listed in `apps/collector/.env.sample` (source of truth).
 Ankiworker env vars are listed in `apps/ankiworker/.env.sample` (source of truth).
 
+### System Status Data Flow (LiveInfrastructureCard)
+
+`apps/web/src/components/LiveInfrastructureCard.astro` renders from
+`GET /system-status.json` (`apps/web/src/pages/system-status.json.ts`), not from static content.
+
+Probe target precedence in `system-status.json`:
+
+- Web health: `WEB_ORIGIN` -> `PUBLIC_WEB_ORIGIN` -> request origin, then `GET /health`
+- API health: `API_ORIGIN` -> `PUBLIC_API_ORIGIN`, then `GET /health`
+- Argo CD health:
+  - `ARGOCD_ORIGIN` (preferred for explicit prod config), else
+  - `PUBLIC_ARGOCD_ORIGIN`, else
+  - in-cluster fallback: `http://argocd-server.argocd.svc.cluster.local/healthz`
+
+Status semantics:
+
+- `healthy`: probe/check succeeded and freshness rules passed
+- `degraded`: probe/check failed when an explicit origin is configured
+- `unknown`: origin/source is unavailable in the current environment
+
+Local dev expectations:
+
+- If Argo CD is not reachable from your local web runtime, Argo CD may render as `unknown`.
+- This is expected unless you set `ARGOCD_ORIGIN` (or `PUBLIC_ARGOCD_ORIGIN`) to a reachable URL.
+
+Production recommendation:
+
+- Set `ARGOCD_ORIGIN` for the web runtime to the production Argo CD endpoint.
+- Keep this endpoint source-of-truth in `homelab` (ingress/tunnel config) and mirror the runtime env here.
+
 ## Docker Compose (Optional)
 
 ```bash

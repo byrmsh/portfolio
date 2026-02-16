@@ -37,11 +37,11 @@ runtime contracts.
 - job title
 - tags
 
-6. `SystemHealthCard`:
+6. `LiveInfrastructureCard`:
 
-- namespace label
-- uptime ratio/value
-- service list with status/pulse
+- source: `apps/web/src/pages/system-status.json.ts`
+- rendered by: `apps/web/src/components/LiveInfrastructureCard.astro`
+- service list with status pulse + metric + recency
 
 ## 2) Redis Keyspace Decision
 
@@ -72,7 +72,9 @@ Jobs are fetched on-demand from a public job board API via `apps/api` (`GET /api
   - `stat:obsidian:graph`
 
 - System health summary for UI (not raw telemetry):
-  - `stat:cluster:portfolio`
+  - served dynamically by `/system-status.json` in `apps/web`
+  - current service ids: `web`, `api`, `argocd`, `collector`, `lyricist`, `db`
+  - UI normalization/mapping lives in `apps/web/src/lib/system-health.ts`
 
 ## 3) Contract Files
 
