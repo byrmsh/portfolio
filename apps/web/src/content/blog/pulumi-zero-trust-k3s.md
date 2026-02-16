@@ -46,11 +46,7 @@ The VM technically has a public IP, but it is never used for ingress.
 
 ### Hetzner: One-Time Setup
 
-API Token:
-
 API Token: In the Hetzner Cloud Console, under **Security API Tokens**, create a token with read/write access.
-
-SSH Key:
 
 SSH Key: If you don't already have a key you want to use, create one (for example `ssh-keygen -t ed25519 -C "hetzner-zero-trust"`) and Pulumi will reference the public key.
 
