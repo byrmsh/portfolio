@@ -9,7 +9,7 @@ import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from environs import env
 
@@ -67,6 +67,8 @@ GEMINI_SEARCH_DYNAMIC_THRESHOLD = env.float("GEMINI_SEARCH_DYNAMIC_THRESHOLD", d
 
 OPENAI_API_KEY = env.str("OPENAI_API_KEY", default="")
 OPENAI_MODEL = env.str("OPENAI_MODEL", default="gpt-5")
+LRCLIB_API_BASE = env.str("LRCLIB_API_BASE", default="https://lrclib.net/api")
+LYRICIST_LYRICS_MAX_CHARS = max(1000, env.int("LYRICIST_LYRICS_MAX_CHARS", default=12000))
 
 
 CURSOR_KEY = RedisKeys.stat("ytmusic", "cursor")
@@ -114,6 +116,110 @@ def _genius_search_url(title: str, artist: str) -> str:
 
     q = quote_plus(f"{title} {artist}")
     return f"https://genius.com/search?q={q}"
+
+
+def _strip_lrc_timestamps(text: str) -> str:
+    return re.sub(r"\[(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\.\d{1,3})?\]", "", text)
+
+
+def _compact_lyrics_for_prompt(text: str, max_chars: int) -> str:
+    lines = [line.strip() for line in text.splitlines()]
+    compact = "\n".join(line for line in lines if line)
+    if len(compact) <= max_chars:
+        return compact
+    return f"{compact[:max_chars].rstrip()}\n...[lyrics truncated]"
+
+
+def _pick_lrclib_lyrics(item: dict[str, Any]) -> str | None:
+    plain = item.get("plainLyrics")
+    if isinstance(plain, str) and plain.strip():
+        return plain.strip()
+
+    synced = item.get("syncedLyrics")
+    if isinstance(synced, str) and synced.strip():
+        stripped = _strip_lrc_timestamps(synced).strip()
+        if stripped:
+            return stripped
+    return None
+
+
+def _lrclib_get_json(path: str, params: dict[str, str]) -> tuple[Any, str]:
+    base = LRCLIB_API_BASE.rstrip("/")
+    url = f"{base}/{path}?{urlencode(params)}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "portfolio-lyricist/1.0",
+        },
+        method="GET",
+    )
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        raw = resp.read().decode("utf-8")
+    return json.loads(raw), url
+
+
+def _fetch_lrclib_lyrics(track: Track) -> tuple[str | None, str | None]:
+    common_params = {
+        "artist_name": track.artist,
+        "track_name": track.title,
+    }
+    if track.album:
+        common_params["album_name"] = track.album
+
+    endpoints = (
+        ("get", common_params),
+        ("search", common_params),
+    )
+
+    for path, params in endpoints:
+        try:
+            data, request_url = _lrclib_get_json(path, params)
+        except urllib.error.HTTPError as e:
+            logger.warning(
+                "lyricist.lrclib.http_error",
+                path=path,
+                status=getattr(e, "code", None),
+                track_id=track.id,
+            )
+            continue
+        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+            logger.warning("lyricist.lrclib.error", path=path, track_id=track.id, error=str(e))
+            continue
+
+        rows: list[dict[str, Any]] = []
+        if isinstance(data, dict):
+            rows = [data]
+        elif isinstance(data, list):
+            rows = [x for x in data if isinstance(x, dict)]
+
+        for row in rows:
+            lyrics = _pick_lrclib_lyrics(row)
+            if not lyrics:
+                continue
+            source_url = row.get("url") if isinstance(row.get("url"), str) else None
+            return _compact_lyrics_for_prompt(lyrics, LYRICIST_LYRICS_MAX_CHARS), source_url
+
+        logger.info("lyricist.lrclib.no_lyrics_in_response", path=path, track_id=track.id, url=request_url)
+
+    return None, None
+
+
+def _lyrics_prompt_context(lyrics_text: str | None, lyrics_url: str | None) -> str:
+    if not lyrics_text:
+        return (
+            "No lyrics were returned by lrclib for this track. "
+            "If needed, use search/web tools to verify terms, but still do not quote lyrics.\n"
+        )
+
+    source = lyrics_url or "https://lrclib.net/"
+    return (
+        "Use this provided lyrics text as the primary source for term selection.\n"
+        f"lyrics_source_url: {source}\n"
+        "lyrics_text_start\n"
+        f"{lyrics_text}\n"
+        "lyrics_text_end\n"
+    )
 
 
 def _analysis_attempts_key(track_id: str) -> str:
@@ -439,7 +545,9 @@ def _validation_error_summary(e: ValidationError) -> str:
     return "; ".join(items[:20])
 
 
-def _normalize_analysis_payload(track: Track, payload: dict[str, Any]) -> dict[str, Any]:
+def _normalize_analysis_payload(
+    track: Track, payload: dict[str, Any], *, fallback_lyrics_url: str | None = None
+) -> dict[str, Any]:
     def _blank_to_none(v: Any) -> Any:
         if v is None:
             return None
@@ -463,7 +571,9 @@ def _normalize_analysis_payload(track: Track, payload: dict[str, Any]) -> dict[s
 
     lyrics_url = _blank_to_none(_normalize_url_like(payload.get("lyricsUrl")))
     payload["lyricsUrl"] = (
-        lyrics_url if lyrics_url is not None else _genius_search_url(track.title, track.artist)
+        lyrics_url
+        if lyrics_url is not None
+        else (fallback_lyrics_url or _genius_search_url(track.title, track.artist))
     )
 
     vocab_raw = payload.get("vocabulary")
@@ -493,7 +603,9 @@ def _normalize_analysis_payload(track: Track, payload: dict[str, Any]) -> dict[s
     return payload
 
 
-def _generate_analysis_openai(track: Track) -> YtMusicAnalysis:
+def _generate_analysis_openai(
+    track: Track, *, lyrics_text: str | None, lyrics_url: str | None
+) -> YtMusicAnalysis:
     if not OPENAI_API_KEY:
         return _analysis_fallback(track, "LLM analysis not configured.")
 
@@ -503,11 +615,11 @@ def _generate_analysis_openai(track: Track) -> YtMusicAnalysis:
 
     user_input = (
         "Generate background notes and flashcard-ready vocabulary for this track.\n"
-        "You may use tools/search to locate lyrics for the exact track but do not quote them.\n"
         f"track_id: {track.id}\n"
         f"title: {track.title}\n"
         f"artist: {track.artist}\n"
         f"album: {track.album or ''}\n"
+        f"{_lyrics_prompt_context(lyrics_text, lyrics_url)}"
         "Return JSON only."
     )
 
@@ -527,7 +639,7 @@ def _generate_analysis_openai(track: Track) -> YtMusicAnalysis:
     )
 
     payload = json.loads(resp.output_text)
-    payload = _normalize_analysis_payload(track, payload)
+    payload = _normalize_analysis_payload(track, payload, fallback_lyrics_url=lyrics_url)
     return YtMusicAnalysis.model_validate(payload)
 
 
@@ -590,7 +702,9 @@ def _gemini_extract_text(resp: dict[str, Any]) -> str:
     raise ValueError("gemini: missing text part")
 
 
-def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
+def _generate_analysis_gemini(
+    track: Track, *, lyrics_text: str | None, lyrics_url: str | None
+) -> YtMusicAnalysis:
     if not GEMINI_API_KEY:
         return _analysis_fallback(track, "LLM analysis not configured.")
 
@@ -628,8 +742,7 @@ def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
         f"title: {track.title}\n"
         f"artist: {track.artist}\n"
         f"album: {track.album or ''}\n"
-        "Use search/web tools to find the exact track lyrics source first if available.\n"
-        "Never quote lyrics.\n"
+        f"{_lyrics_prompt_context(lyrics_text, lyrics_url)}"
         f"{schema_hint}"
         "Return JSON only."
     )
@@ -671,7 +784,7 @@ def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
             schema_mode = None
             continue
 
-        payload = _normalize_analysis_payload(track, payload)
+        payload = _normalize_analysis_payload(track, payload, fallback_lyrics_url=lyrics_url)
 
         try:
             return YtMusicAnalysis.model_validate(payload)
@@ -695,11 +808,12 @@ def _generate_analysis_gemini(track: Track) -> YtMusicAnalysis:
 
 
 def _generate_analysis(track: Track) -> YtMusicAnalysis:
+    lyrics_text, lyrics_url = _fetch_lrclib_lyrics(track)
     provider = _select_llm_provider()
     if provider == "gemini":
-        return _generate_analysis_gemini(track)
+        return _generate_analysis_gemini(track, lyrics_text=lyrics_text, lyrics_url=lyrics_url)
     if provider == "openai":
-        return _generate_analysis_openai(track)
+        return _generate_analysis_openai(track, lyrics_text=lyrics_text, lyrics_url=lyrics_url)
     return _analysis_fallback(track, "LLM analysis not configured.")
 
 
