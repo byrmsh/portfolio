@@ -206,6 +206,7 @@ function labelForType(type: string): string {
     chore: t('gitCommits.typeChore'),
     refactor: t('gitCommits.typeRefactor'),
     test: t('gitCommits.typeTest'),
+    perf: t('gitCommits.typePerf'),
   };
   return labels[type] ?? type.toUpperCase();
 }

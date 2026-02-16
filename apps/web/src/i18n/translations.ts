@@ -145,6 +145,7 @@ const enTranslations = {
     typeChore: 'MAINTENANCE',
     typeRefactor: 'REFACTOR',
     typeTest: 'TEST',
+    typePerf: 'PERFORMANCE',
     empty: 'No commit history available.',
   },
   footer: {
