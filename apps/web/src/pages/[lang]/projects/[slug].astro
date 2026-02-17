@@ -1,0 +1,19 @@
+---
+export const prerender = false;
+
+import ProjectDetailsPage from '../../../views/ProjectDetailsPage.astro';
+import { DEFAULT_LOCALE, getLocaleFromUrl, isSupportedLocale, localizedPath } from '../../../i18n';
+
+const { lang, slug } = Astro.params;
+if (!lang || !isSupportedLocale(lang)) return new Response(null, { status: 404 });
+if (lang === DEFAULT_LOCALE) return Astro.redirect(slug ? `/projects/${slug}` : '/projects');
+
+const locale = getLocaleFromUrl(Astro.url);
+if (!slug) {
+  const response = Astro.redirect(localizedPath(locale, '/projects'));
+  void response;
+  return response;
+}
+---
+
+<ProjectDetailsPage slug={slug} url={Astro.url} />

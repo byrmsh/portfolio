@@ -1,0 +1,238 @@
+---
+interface Props {
+  images: string[];
+  title: string;
+  labels: {
+    prev: string;
+    next: string;
+    maximize: string;
+    close: string;
+    imageAlt: string;
+  };
+}
+
+const { images, title, labels } = Astro.props;
+const deduped = images.filter((v, i, arr) => typeof v === 'string' && arr.indexOf(v) === i);
+
+function format(template: string, vars: Record<string, string | number>): string {
+  return template.replaceAll(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`));
+}
+---
+
+{
+  deduped.length ? (
+    <div data-project-gallery class="project-gallery">
+      <div class="relative h-56 sm:h-64 rounded-lg overflow-hidden border border-[var(--border-muted)] bg-[var(--surface-2)]">
+        {deduped.map((image, index) => (
+          <img
+            src={image}
+            alt={format(labels.imageAlt, { index: index + 1, title })}
+            loading={index === 0 ? 'eager' : 'lazy'}
+            class={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            data-gallery-slide
+            data-gallery-index={index}
+          />
+        ))}
+        <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+
+        {deduped.length > 1 ? (
+          <>
+            <button
+              type="button"
+              class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
+              aria-label={labels.prev}
+              data-gallery-prev
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
+              aria-label={labels.next}
+              data-gallery-next
+            >
+              ›
+            </button>
+          </>
+        ) : null}
+
+        <button
+          type="button"
+          class="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full border border-white/35 bg-black/45 text-white hover:bg-black/55"
+          data-gallery-open
+          aria-label={labels.maximize}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" class="h-4 w-4">
+            <path
+              d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {deduped.length > 1 ? (
+        <div class="mt-3 flex items-center gap-2 overflow-x-auto pb-1" data-gallery-thumbs>
+          {deduped.map((image, index) => (
+            <button
+              type="button"
+              class={`shrink-0 w-16 h-11 rounded border overflow-hidden ${index === 0 ? 'border-[var(--color-accent)]' : 'border-[var(--border-subtle)]'}`}
+              data-gallery-thumb
+              data-gallery-index={index}
+              aria-label={format(labels.imageAlt, { index: index + 1, title })}
+            >
+              <img src={image} alt="" loading="lazy" class="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <dialog
+        data-gallery-dialog
+        class="w-[min(96vw,1280px)] max-w-[1280px] bg-transparent p-0 m-auto backdrop:bg-black/88"
+      >
+        <div class="relative h-[min(88vh,980px)] overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)]">
+          <button
+            type="button"
+            class="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full border border-white/35 bg-black/45 text-white hover:bg-black/55"
+            data-gallery-close
+            aria-label={labels.close}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" class="h-4 w-4">
+              <path
+                d="M6 6l12 12M18 6l-12 12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+
+          <div class="relative h-full w-full">
+            {deduped.map((image, index) => (
+              <img
+                src={image}
+                alt={format(labels.imageAlt, { index: index + 1, title })}
+                loading="lazy"
+                class={`absolute inset-0 h-full w-full object-contain transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                data-gallery-dialog-slide
+                data-gallery-index={index}
+              />
+            ))}
+
+            {deduped.length > 1 ? (
+              <>
+                <button
+                  type="button"
+                  class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
+                  aria-label={labels.prev}
+                  data-gallery-dialog-prev
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
+                  aria-label={labels.next}
+                  data-gallery-dialog-next
+                >
+                  ›
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </dialog>
+    </div>
+  ) : null
+}
+
+<script>
+  const galleries = document.querySelectorAll('[data-project-gallery]');
+
+  for (const gallery of galleries) {
+    const slides = Array.from(gallery.querySelectorAll<HTMLImageElement>('[data-gallery-slide]'));
+    const thumbs = Array.from(gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-thumb]'));
+    const prev = gallery.querySelector<HTMLButtonElement>('[data-gallery-prev]');
+    const next = gallery.querySelector<HTMLButtonElement>('[data-gallery-next]');
+    const open = gallery.querySelector<HTMLButtonElement>('[data-gallery-open]');
+    const dialog = gallery.querySelector<HTMLDialogElement>('[data-gallery-dialog]');
+    const close = gallery.querySelector<HTMLButtonElement>('[data-gallery-close]');
+    const dialogSlides = Array.from(
+      gallery.querySelectorAll<HTMLImageElement>('[data-gallery-dialog-slide]'),
+    );
+    const dialogPrev = gallery.querySelector<HTMLButtonElement>('[data-gallery-dialog-prev]');
+    const dialogNext = gallery.querySelector<HTMLButtonElement>('[data-gallery-dialog-next]');
+
+    if (!slides.length) continue;
+
+    let index = 0;
+
+    const setIndex = (nextIndex: number) => {
+      const count = slides.length;
+      index = ((nextIndex % count) + count) % count;
+
+      slides.forEach((slide, i) => {
+        slide.classList.toggle('opacity-100', i === index);
+        slide.classList.toggle('opacity-0', i !== index);
+        slide.classList.toggle('pointer-events-none', i !== index);
+      });
+
+      thumbs.forEach((thumb, i) => {
+        thumb.classList.toggle('border-[var(--color-accent)]', i === index);
+        thumb.classList.toggle('border-[var(--border-subtle)]', i !== index);
+      });
+
+      dialogSlides.forEach((slide, i) => {
+        slide.classList.toggle('opacity-100', i === index);
+        slide.classList.toggle('opacity-0', i !== index);
+        slide.classList.toggle('pointer-events-none', i !== index);
+      });
+    };
+
+    prev?.addEventListener('click', () => setIndex(index - 1));
+    next?.addEventListener('click', () => setIndex(index + 1));
+    dialogPrev?.addEventListener('click', () => setIndex(index - 1));
+    dialogNext?.addEventListener('click', () => setIndex(index + 1));
+
+    thumbs.forEach((thumb, i) => {
+      thumb.addEventListener('click', () => setIndex(i));
+    });
+
+    open?.addEventListener('click', () => {
+      if (dialog && typeof dialog.showModal === 'function') {
+        dialog.showModal();
+      }
+    });
+
+    close?.addEventListener('click', () => {
+      if (dialog && typeof dialog.close === 'function') dialog.close();
+    });
+
+    dialog?.addEventListener('click', (event) => {
+      const target = event.target;
+      if (target === dialog && typeof dialog.close === 'function') dialog.close();
+    });
+
+    window.addEventListener('keydown', (event) => {
+      const modalOpen = !!dialog?.open;
+      if (!modalOpen) return;
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        setIndex(index - 1);
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        setIndex(index + 1);
+      }
+      if (event.key === 'Escape' && dialog && typeof dialog.close === 'function') {
+        dialog.close();
+      }
+    });
+  }
+</script>

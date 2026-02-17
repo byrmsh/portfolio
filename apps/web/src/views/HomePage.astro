@@ -6,7 +6,7 @@ import ActivityMonitor from '../components/ActivityMonitor.astro';
 import SavedLyricsCard from '../components/SavedLyricsCard.astro';
 import WritingCard from '../components/WritingCard.astro';
 import KnowledgeGraphCard from '../components/KnowledgeGraphCard.astro';
-import JobScoutCard from '../components/JobScoutCard.astro';
+import ProjectsShowcaseCard from '../components/ProjectsShowcaseCard.astro';
 import LiveInfrastructureCard from '../components/LiveInfrastructureCard.astro';
 import LatestUpdatesCard from '../components/LatestUpdatesCard.astro';
 import SiteFooter from '../components/SiteFooter.astro';
@@ -50,7 +50,7 @@ const writingPosts = (await getCollection('blog'))
         <SavedLyricsCard locale={locale} t={t} />
         <WritingCard posts={writingPosts} allHref={localizedPath(locale, '/blog')} t={t} />
         <KnowledgeGraphCard t={t} />
-        <JobScoutCard t={t} locale={locale} />
+        <ProjectsShowcaseCard t={t} locale={locale} />
         <LiveInfrastructureCard t={t} />
         <LatestUpdatesCard t={t} locale={locale} />
       </div>

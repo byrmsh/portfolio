@@ -1,10 +1,10 @@
 ---
-import JobsIndexPage from '../../../views/JobsIndexPage.astro';
+import ProjectsIndexPage from '../../../views/ProjectsIndexPage.astro';
 import { DEFAULT_LOCALE, isSupportedLocale } from '../../../i18n';
 
 const { lang } = Astro.params;
 if (!lang || !isSupportedLocale(lang)) return new Response(null, { status: 404 });
-if (lang === DEFAULT_LOCALE) return Astro.redirect('/jobs');
+if (lang === DEFAULT_LOCALE) return Astro.redirect('/projects');
 ---
 
-<JobsIndexPage url={Astro.url} />
+<ProjectsIndexPage url={Astro.url} />

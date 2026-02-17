@@ -1,0 +1,19 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#0a1421"/>
+  <defs>
+    <linearGradient id="g1" x1="210" y1="120" x2="1010" y2="620" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#14b8a6"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="1000" height="520" rx="28" fill="#111a2b" stroke="#27364f" stroke-width="2"/>
+  <rect x="150" y="160" width="900" height="70" rx="12" fill="#0f172a"/>
+  <rect x="180" y="186" width="220" height="18" rx="9" fill="url(#g1)"/>
+  <rect x="150" y="258" width="900" height="54" rx="12" fill="#0f172a"/>
+  <rect x="176" y="278" width="520" height="14" rx="7" fill="#3e4d67"/>
+  <rect x="150" y="330" width="900" height="54" rx="12" fill="#0f172a"/>
+  <rect x="176" y="350" width="640" height="14" rx="7" fill="#3e4d67"/>
+  <rect x="150" y="402" width="900" height="54" rx="12" fill="#0f172a"/>
+  <rect x="176" y="422" width="580" height="14" rx="7" fill="#3e4d67"/>
+  <circle cx="988" cy="518" r="50" fill="url(#g1)" fill-opacity="0.22"/>
+</svg>

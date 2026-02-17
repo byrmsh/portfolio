@@ -1,0 +1,56 @@
+---
+import ChevronRight from '@lucide/astro/icons/chevron-right';
+import { getCollection } from 'astro:content';
+import { localizedPath, type SupportedLocale } from '../i18n';
+import WidgetHeader from './WidgetHeader.astro';
+
+interface Props {
+  t: (path: string, vars?: Record<string, string | number>) => string;
+  locale: SupportedLocale;
+}
+
+const { t, locale } = Astro.props;
+const projectsHref = localizedPath(locale, '/projects');
+
+const featured = (await getCollection('projects'))
+  .filter((p) => !p.data.draft)
+  .sort(
+    (a, b) => Number(b.data.featured) - Number(a.data.featured) || a.data.order - b.data.order,
+  )[0];
+---
+
+<section
+  class="col-span-1 md:col-span-6 lg:col-span-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-5 flex flex-col"
+>
+  <WidgetHeader title={t('projectsWidget.title')} class="mb-3" />
+
+  {
+    featured ? (
+      <article class="rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] p-3">
+        <h3 class="text-sm font-semibold text-[var(--text-primary)] line-clamp-1">
+          {featured.data.title}
+        </h3>
+        <p class="mt-1.5 text-xs text-[var(--text-body)] line-clamp-2">{featured.data.summary}</p>
+        <div class="mt-2.5 flex flex-wrap gap-1.5">
+          {featured.data.stack.slice(0, 3).map((item) => (
+            <span class="text-xxs border border-[var(--border-subtle)] px-1.5 py-0.5 rounded text-[var(--text-subtle)]">
+              {item}
+            </span>
+          ))}
+        </div>
+      </article>
+    ) : (
+      <p class="text-sm text-[var(--text-body)]">{t('projectsWidget.empty')}</p>
+    )
+  }
+
+  <div class="mt-3 pt-3 border-t border-[var(--border-muted)]">
+    <a
+      href={projectsHref}
+      class="text-xs font-medium text-[var(--text-subtle)] hover:text-[var(--text-primary)] flex items-center gap-1"
+    >
+      {t('projectsWidget.viewAll')}
+      <ChevronRight class="w-3 h-3" />
+    </a>
+  </div>
+</section>

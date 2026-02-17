@@ -1,0 +1,16 @@
+---
+export const prerender = false;
+
+import ProjectDetailsPage from '../../views/ProjectDetailsPage.astro';
+import { getLocaleFromUrl, localizedPath } from '../../i18n';
+
+const { slug } = Astro.params;
+const locale = getLocaleFromUrl(Astro.url);
+if (!slug) {
+  const response = Astro.redirect(localizedPath(locale, '/projects'));
+  void response;
+  return response;
+}
+---
+
+<ProjectDetailsPage slug={slug} url={Astro.url} />
