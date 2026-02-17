@@ -79,7 +79,12 @@ const nextHref = (() => {
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
 ---
 
-<Layout title={`${SITE.name} | ${t('meta.jobs')}`} locale={locale}>
+<Layout
+  title={`${SITE.name} | ${t('meta.jobs')}`}
+  locale={locale}
+  description={t('jobs.description')}
+  canonicalPath={localizedPath(locale, '/jobs')}
+>
   <SiteNav locale={locale} t={t} />
 
   <main class="pt-28 px-4 sm:px-6">

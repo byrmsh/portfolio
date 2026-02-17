@@ -33,7 +33,12 @@ const writingPosts = (await getCollection('blog'))
   }));
 ---
 
-<Layout title={`${SITE.name} | ${t('meta.systemsConsole')}`} locale={locale}>
+<Layout
+  title={`${SITE.name} | ${t('meta.systemsConsole')}`}
+  locale={locale}
+  description={t('hero.description')}
+  canonicalPath={localizedPath(locale, '/')}
+>
   <SiteNav locale={locale} t={t} />
 
   <main class="pt-28 px-4 sm:px-6">

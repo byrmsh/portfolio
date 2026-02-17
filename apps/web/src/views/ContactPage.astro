@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import SiteNav from '../components/SiteNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import { SITE } from '../config/site';
-import { getLocaleFromUrl, getTranslator } from '../i18n';
+import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
 
 interface Props {
   url: URL;
@@ -30,7 +30,12 @@ lXz5kk4pd+Ykgyreki1Kq7oNxpppB0ms5k6yDg==
 -----END PGP PUBLIC KEY BLOCK-----`;
 ---
 
-<Layout title={`${SITE.name} | ${t('meta.contact')}`} locale={locale}>
+<Layout
+  title={`${SITE.name} | ${t('meta.contact')}`}
+  locale={locale}
+  description={t('contact.description')}
+  canonicalPath={localizedPath(locale, '/contact')}
+>
   <SiteNav locale={locale} t={t} />
 
   <main class="pt-28 px-4 sm:px-6">

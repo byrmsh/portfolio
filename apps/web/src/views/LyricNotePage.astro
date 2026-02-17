@@ -46,9 +46,17 @@ try {
 } catch (e) {
   error = e instanceof Error ? e.message : t('lyrics.failedToLoad');
 }
+const seoDescription = analysis
+  ? `${analysis.title} by ${analysis.artist}. ${analysis.background.tldr}`
+  : t('lyrics.description');
 ---
 
-<Layout title={`${SITE.name} | ${t('meta.lyricNote')}`} locale={locale}>
+<Layout
+  title={`${SITE.name} | ${analysis?.title ?? t('meta.lyricNote')}`}
+  locale={locale}
+  description={seoDescription}
+  canonicalPath={localizedPath(locale, `/lyrics/${encodeURIComponent(id)}`)}
+>
   <SiteNav locale={locale} t={t} />
 
   <main class="pt-28 px-4 sm:px-6">

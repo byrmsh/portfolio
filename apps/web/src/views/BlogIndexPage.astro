@@ -21,7 +21,12 @@ const posts = (await getCollection('blog'))
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
 ---
 
-<Layout title={`${SITE.name} | ${t('meta.blog')}`} locale={locale}>
+<Layout
+  title={`${SITE.name} | ${t('meta.blog')}`}
+  locale={locale}
+  description={t('blog.description')}
+  canonicalPath={localizedPath(locale, '/blog')}
+>
   <SiteNav locale={locale} t={t} />
 
   <main class="pt-28 px-4 sm:px-6">

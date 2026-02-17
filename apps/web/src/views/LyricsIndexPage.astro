@@ -86,7 +86,12 @@ const latestHref = latest?.id
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
 ---
 
-<Layout title={`${SITE.name} | ${t('meta.lyrics')}`} locale={locale}>
+<Layout
+  title={`${SITE.name} | ${t('meta.lyrics')}`}
+  locale={locale}
+  description={t('lyrics.description')}
+  canonicalPath={localizedPath(locale, '/lyrics')}
+>
   <SiteNav locale={locale} t={t} />
 
   <main class="pt-28 px-4 sm:px-6">

@@ -1,13 +1,33 @@
 ---
 import '../styles/global.css';
-import { localizedPath, type SupportedLocale } from '../i18n';
+import { SITE } from '../config/site';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, localizedPath, type SupportedLocale } from '../i18n';
 
 interface Props {
   title: string;
   locale: SupportedLocale;
+  description?: string;
+  canonicalPath?: string;
+  ogType?: 'website' | 'article';
 }
 
-const { title, locale } = Astro.props;
+const { title, locale, description, canonicalPath, ogType = 'website' } = Astro.props;
+const siteOrigin = `https://${SITE.domain}`;
+const resolvedDescription =
+  description ??
+  'Personal site for software projects, writing, lyrics notes, and live system updates.';
+const canonical = new URL(
+  canonicalPath ?? `${Astro.url.pathname}${Astro.url.search}`,
+  siteOrigin,
+).toString();
+const alternateLinks = SUPPORTED_LOCALES.map((l) => ({
+  locale: l,
+  href: new URL(localizedPath(l, Astro.url.pathname), siteOrigin).toString(),
+}));
+const xDefaultHref = new URL(
+  localizedPath(DEFAULT_LOCALE, Astro.url.pathname),
+  siteOrigin,
+).toString();
 ---
 
 <!doctype html>
@@ -32,6 +52,19 @@ const { title, locale } = Astro.props;
       })();
     </script>
     <title>{title}</title>
+    <meta name="description" content={resolvedDescription} />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={resolvedDescription} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={resolvedDescription} />
+    {alternateLinks.map((alt) => <link rel="alternate" hreflang={alt.locale} href={alt.href} />)}
+    <link rel="alternate" hreflang="x-default" href={xDefaultHref} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />

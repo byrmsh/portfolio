@@ -55,9 +55,15 @@ try {
 
 const backHref = localizedPath(locale, '/jobs');
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
+const seoDescription = job?.summary || t('jobs.description');
 ---
 
-<Layout title={`${SITE.name} | ${t('meta.jobs')}`} locale={locale}>
+<Layout
+  title={`${SITE.name} | ${job?.title ?? t('meta.jobs')}`}
+  locale={locale}
+  description={seoDescription}
+  canonicalPath={localizedPath(locale, `/jobs/${encodeURIComponent(id)}`)}
+>
   <SiteNav locale={locale} t={t} />
 
   <main class="pt-28 px-4 sm:px-6">

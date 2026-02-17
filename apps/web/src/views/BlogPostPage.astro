@@ -31,7 +31,13 @@ const postCommitPathFilters = Array.from(
 );
 ---
 
-<Layout title={`${SITE.name} | ${post.data.title}`} locale={locale}>
+<Layout
+  title={`${SITE.name} | ${post.data.title}`}
+  locale={locale}
+  description={post.data.description}
+  canonicalPath={localizedPath(locale, `/blog/${post.slug}`)}
+  ogType="article"
+>
   <SiteNav locale={locale} t={t} />
 
   <main class="pt-28 px-4 sm:px-6">
