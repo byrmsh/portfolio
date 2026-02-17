@@ -345,7 +345,12 @@ def _ensure_dir(path: Path) -> None:
 def cmd_prepare_batch(args: argparse.Namespace) -> int:
     _ensure_flashcard_schema()
     r = redis_client()
-    ids = _collect_batch_ids(r, args.source, args.batch_size, args.offset)
+    if args.offset is None:
+        offset = (max(args.batch_number, 1) - 1) * args.batch_size
+    else:
+        offset = args.offset
+
+    ids = _collect_batch_ids(r, args.source, args.batch_size, offset)
     tracks: list[TrackSeed] = []
     for track_id in ids:
         tr = _load_saved_track(r, track_id)
@@ -465,7 +470,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_prepare = sub.add_parser("prepare-batch", help="Export a batch and prompt from Redis")
     p_prepare.add_argument("--source", choices=["pending", "missing"], default="pending")
     p_prepare.add_argument("--batch-size", type=int, default=10)
-    p_prepare.add_argument("--offset", type=int, default=0)
+    p_prepare.add_argument("--offset", type=int, default=None)
     p_prepare.add_argument("--out-dir", default=BATCH_DIR_DEFAULT)
     p_prepare.add_argument("--batch-number", type=int, default=1)
     p_prepare.add_argument("--stdout-prompt", action="store_true")

@@ -17,3 +17,4 @@ pnpm-debug.log*
 
 # Local proxy lists (may contain credentials / private endpoints)
 apps/upworker/proxies*.txt
+apps/lyricist/scripts/tmp/

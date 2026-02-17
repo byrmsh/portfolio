@@ -7,6 +7,11 @@ START_BATCH="1"
 OUT_DIR=""
 STRICT_IMPORT="true"
 KEEP_FILES="false"
+GEMINI_AUTO="false"
+GEMINI_URL="https://gemini.google.com/app"
+GEMINI_PROFILE_DIR="${HOME}/.cache/lyricist-gemini-playwright"
+GEMINI_HEADLESS="false"
+GEMINI_ALLOW_NEW_MESSAGE="false"
 
 usage() {
   cat <<'EOF'
@@ -25,6 +30,11 @@ Options:
   --out-dir PATH             Session output directory (default: tmp/lyricist-batches/session-<timestamp>)
   --no-strict-import         Import without --strict
   --keep-files               Keep generated prepare-batch artifacts (default: prompt via stdout only)
+  --gemini-auto              Send prompt to Gemini via Playwright, auto-capture response JSON
+  --gemini-url URL           Gemini chat URL to automate (default: https://gemini.google.com/app)
+  --gemini-profile-dir PATH  Chromium profile dir for Gemini login/session reuse
+  --gemini-headless          Run Playwright browser headless
+  --gemini-allow-new-message Allow fallback to new message if 'Edit prompt' button is unavailable
   -h, --help                 Show this help
 
 Paste mode controls:
@@ -40,7 +50,7 @@ sanitize_json_file() {
   local tmp="${file}.sanitized"
 
   # Remove ANSI/terminal escape sequences (e.g. ESC E / CSI codes from paste artifacts).
-  perl -pe 's/\e(?:\[[0-9;?]*[ -\/]*[@-~]|[@-Z\\-_])//g' "$file" > "$tmp"
+  perl -pe 's/\e(?:\[[0-9;?]*[ -\/]*[@-~]|[@-Z\\-_])//g' "$file" >"$tmp"
 
   # Strip markdown fences if user pasted a fenced block.
   sed -i '/^[[:space:]]*```/d' "$tmp"
@@ -51,48 +61,68 @@ sanitize_json_file() {
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --source)
-      SOURCE="${2:-}"
-      shift 2
-      ;;
-    --batch-size)
-      BATCH_SIZE="${2:-}"
-      shift 2
-      ;;
-    --start-batch)
-      START_BATCH="${2:-}"
-      shift 2
-      ;;
-    --out-dir)
-      OUT_DIR="${2:-}"
-      shift 2
-      ;;
-    --no-strict-import)
-      STRICT_IMPORT="false"
-      shift
-      ;;
-    --keep-files)
-      KEEP_FILES="true"
-      shift
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "Unknown arg: $1" >&2
-      usage
-      exit 1
-      ;;
+  --source)
+    SOURCE="${2:-}"
+    shift 2
+    ;;
+  --batch-size)
+    BATCH_SIZE="${2:-}"
+    shift 2
+    ;;
+  --start-batch)
+    START_BATCH="${2:-}"
+    shift 2
+    ;;
+  --out-dir)
+    OUT_DIR="${2:-}"
+    shift 2
+    ;;
+  --no-strict-import)
+    STRICT_IMPORT="false"
+    shift
+    ;;
+  --keep-files)
+    KEEP_FILES="true"
+    shift
+    ;;
+  --gemini-auto)
+    GEMINI_AUTO="true"
+    shift
+    ;;
+  --gemini-url)
+    GEMINI_URL="${2:-}"
+    shift 2
+    ;;
+  --gemini-profile-dir)
+    GEMINI_PROFILE_DIR="${2:-}"
+    shift 2
+    ;;
+  --gemini-headless)
+    GEMINI_HEADLESS="true"
+    shift
+    ;;
+  --gemini-allow-new-message)
+    GEMINI_ALLOW_NEW_MESSAGE="true"
+    shift
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown arg: $1" >&2
+    usage
+    exit 1
+    ;;
   esac
 done
 
 case "$SOURCE" in
-  pending|missing) ;;
-  *)
-    echo "--source must be pending or missing" >&2
-    exit 1
-    ;;
+pending | missing) ;;
+*)
+  echo "--source must be pending or missing" >&2
+  exit 1
+  ;;
 esac
 
 if ! [[ "$BATCH_SIZE" =~ ^[0-9]+$ ]] || [ "$BATCH_SIZE" -le 0 ]; then
@@ -114,7 +144,8 @@ mkdir -p "$OUT_DIR"
 RESPONSES_DIR="$OUT_DIR/responses"
 mkdir -p "$RESPONSES_DIR"
 RESP_LIST="$OUT_DIR/response-files.txt"
-: > "$RESP_LIST"
+: >"$RESP_LIST"
+mkdir -p "$GEMINI_PROFILE_DIR"
 
 if command -v wl-copy >/dev/null 2>&1; then
   CLIP_TOOL="wl-copy"
@@ -133,6 +164,11 @@ if [ -n "$CLIP_TOOL" ]; then
 else
   echo "No clipboard tool found. Prompt file path will be printed each round."
 fi
+if [ "$GEMINI_AUTO" = "true" ]; then
+  echo "Gemini automation: enabled"
+  echo "Gemini URL: $GEMINI_URL"
+  echo "Gemini profile dir: $GEMINI_PROFILE_DIR"
+fi
 
 batch="$START_BATCH"
 abort_session="false"
@@ -146,7 +182,7 @@ while true; do
   prompt_text=""
   if [ "$KEEP_FILES" = "true" ]; then
     prep_output="$(
-      UV_CACHE_DIR=/tmp/uv-cache uv run lyricist-manual-analysis prepare-batch \
+      uv run lyricist-manual-analysis prepare-batch \
         --source "$SOURCE" \
         --batch-size "$BATCH_SIZE" \
         --batch-number "$batch" \
@@ -165,7 +201,7 @@ while true; do
   else
     set +e
     prompt_text="$(
-      UV_CACHE_DIR=/tmp/uv-cache uv run lyricist-manual-analysis prepare-batch \
+      uv run lyricist-manual-analysis prepare-batch \
         --source "$SOURCE" \
         --batch-size "$BATCH_SIZE" \
         --batch-number "$batch" \
@@ -190,6 +226,44 @@ while true; do
   fi
 
   echo "Batch $batch_id ready."
+  prompt_file_runtime="$OUT_DIR/batch-${batch_id}.prompt.runtime.txt"
+  printf '%s' "$prompt_text" >"$prompt_file_runtime"
+
+  if [ "$GEMINI_AUTO" = "true" ]; then
+    echo "Running Gemini Playwright automation for batch $batch_id..."
+    auto_args=(
+      --url "$GEMINI_URL"
+      --user-data-dir "$GEMINI_PROFILE_DIR"
+      --prompt-file "$prompt_file_runtime"
+      --response-file "$response_file"
+    )
+    if [ "$GEMINI_HEADLESS" = "true" ]; then
+      auto_args+=(--headless)
+    fi
+    if [ "$GEMINI_ALLOW_NEW_MESSAGE" = "true" ]; then
+      auto_args+=(--allow-new-message)
+    fi
+
+    if uv run --with playwright python ./scripts/gemini_playwright.py "${auto_args[@]}"; then
+      if [ -s "$response_file" ]; then
+        sanitize_json_file "$response_file"
+        if uv run lyricist-manual-analysis import-batch --file "$response_file" --dry-run --strict >/dev/null 2>&1; then
+          echo "$response_file" >>"$RESP_LIST"
+          echo "Validated Gemini response for batch $batch_id."
+          batch=$((batch + 1))
+          continue
+        fi
+        echo "Gemini response validation failed for batch $batch_id; falling back to manual paste."
+      else
+        echo "Gemini returned empty response for batch $batch_id; falling back to manual paste."
+      fi
+    else
+      echo "Gemini automation failed for batch $batch_id; falling back to manual paste."
+      echo "Hint: install browser binaries once with:"
+      echo "  uv run --with playwright playwright install chromium"
+    fi
+  fi
+
   if [ -n "$CLIP_TOOL" ]; then
     if [ "$CLIP_TOOL" = "wl-copy" ]; then
       printf '%s' "$prompt_text" | wl-copy
@@ -207,30 +281,30 @@ while true; do
   while true; do
     echo "Paste JSON response for batch $batch_id, then send ':done'."
     echo "Commands: :skip | :quit | :abort"
-    : > "$response_file"
+    : >"$response_file"
     mode="done"
 
     while IFS= read -r line; do
       case "$line" in
-        :done)
-          mode="done"
-          break
-          ;;
-        :skip)
-          mode="skip"
-          break
-          ;;
-        :quit)
-          mode="quit"
-          break
-          ;;
-        :abort)
-          mode="abort"
-          break
-          ;;
-        *)
-          printf '%s\n' "$line" >> "$response_file"
-          ;;
+      :done)
+        mode="done"
+        break
+        ;;
+      :skip)
+        mode="skip"
+        break
+        ;;
+      :quit)
+        mode="quit"
+        break
+        ;;
+      :abort)
+        mode="abort"
+        break
+        ;;
+      *)
+        printf '%s\n' "$line" >>"$response_file"
+        ;;
       esac
     done
 
@@ -260,8 +334,8 @@ while true; do
 
     sanitize_json_file "$response_file"
 
-    if UV_CACHE_DIR=/tmp/uv-cache uv run lyricist-manual-analysis import-batch --file "$response_file" --dry-run --strict >/dev/null 2>&1; then
-      echo "$response_file" >> "$RESP_LIST"
+    if uv run lyricist-manual-analysis import-batch --file "$response_file" --dry-run --strict >/dev/null 2>&1; then
+      echo "$response_file" >>"$RESP_LIST"
       echo "Validated batch $batch_id response."
       break
     fi
@@ -283,7 +357,7 @@ if [ ! -s "$RESP_LIST" ]; then
 fi
 
 COMBINED_FILE="$OUT_DIR/combined.response.json"
-UV_CACHE_DIR=/tmp/uv-cache uv run python - "$RESP_LIST" "$COMBINED_FILE" <<'PY'
+uv run python - "$RESP_LIST" "$COMBINED_FILE" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -307,5 +381,5 @@ if [ "$STRICT_IMPORT" = "true" ]; then
   import_args+=(--strict)
 fi
 
-UV_CACHE_DIR=/tmp/uv-cache uv run lyricist-manual-analysis "${import_args[@]}"
+uv run lyricist-manual-analysis "${import_args[@]}"
 echo "Done."
