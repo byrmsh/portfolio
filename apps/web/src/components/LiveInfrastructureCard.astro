@@ -72,7 +72,7 @@ const initial = await loadInitialStatus();
   data-run-plural={strings.runPlural}
   data-label-latency={strings.latencyLabel}
   data-label-recency={strings.recencyLabel}
-  class="col-span-1 rounded-xl border border-neutral-200 bg-white p-6 md:col-span-6 lg:col-span-12"
+  class="col-span-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6 md:col-span-6 lg:col-span-12"
 >
   <WidgetHeader
     title={t('health.title')}
@@ -81,7 +81,7 @@ const initial = await loadInitialStatus();
   >
     <span
       data-last-check
-      class="ml-auto whitespace-nowrap text-right text-[11px] font-mono tabular-nums uppercase tracking-wide text-neutral-400"
+      class="ml-auto whitespace-nowrap text-right text-[11px] font-mono tabular-nums uppercase tracking-wide text-[var(--text-muted)]"
       >{`${t('health.checkedPrefix')}: ${formatCheckedValue(initial.checkedAt)}`}</span
     >
   </WidgetHeader>
@@ -94,13 +94,13 @@ const initial = await loadInitialStatus();
         const detail = detailFor(key, node, strings);
         return (
           <article data-service-row={key} class="service-cell min-w-0">
-            <h3 class="mb-1 flex items-center gap-1.5 text-[11px] font-mono tracking-wide text-neutral-500">
+            <h3 class="mb-1 flex items-center gap-1.5 text-[11px] font-mono tracking-wide text-[var(--text-subtle)]">
               <span data-service-dot class:list={['h-2 w-2 rounded-full', dotClass(node.status)]} />
               <span class="truncate">{serviceNames[key]}</span>
             </h3>
             <div class="mb-2 mt-1 flex flex-wrap gap-1">
               {servicePills[key].map((pill) => (
-                <span class="rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-sans text-neutral-500">
+                <span class="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-0.5 text-[10px] font-sans text-[var(--text-subtle)]">
                   {pill}
                 </span>
               ))}
@@ -109,14 +109,14 @@ const initial = await loadInitialStatus();
               {metric}
             </p>
             <p
-              class="text-[11px] font-mono uppercase tracking-wide text-neutral-400"
+              class="text-[11px] font-mono uppercase tracking-wide text-[var(--text-muted)]"
               data-service-label
             >
               {labelFor(key, strings)}
             </p>
             <p
               class:list={[
-                'text-[11px] font-sans text-neutral-500',
+                'text-[11px] font-sans text-[var(--text-subtle)]',
                 { hidden: detail.length === 0 },
               ]}
               data-service-detail

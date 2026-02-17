@@ -22,6 +22,86 @@
   --color-neutral-900: #171717;
 }
 
+:root {
+  --page-bg: #f5f5f4;
+  --surface: #ffffff;
+  --surface-2: #fafaf9;
+  --surface-3: #f5f5f4;
+  --surface-hover: #f5f5f4;
+  --surface-inverse: #171717;
+  --surface-inverse-text: #f5f5f5;
+  --text-inverse-muted: #a3a3a3;
+  --text-inverse-subtle: #737373;
+  --text-primary: #171717;
+  --text-body: #404040;
+  --text-subtle: #525252;
+  --text-muted: #737373;
+  --border-muted: #f1f1f1;
+  --border-subtle: #e5e5e5;
+  --border-strong: #d4d4d4;
+  --border-inverse: #404040;
+  --ring-subtle: #a3a3a3;
+  --header-glass-bg: rgba(245, 245, 244, 0.82);
+  --grid-line-color: rgba(0, 0, 0, 0.02);
+  --radial-accent-color: rgba(16, 185, 129, 0.05);
+  color-scheme: light;
+
+  /* Backward-compatible aliases (temporary during migration). */
+  --surface-app: var(--page-bg);
+  --surface-card: var(--surface);
+  --surface-muted: var(--surface-2);
+  --surface-elevated: var(--surface-3);
+  --surface-strong: var(--surface-inverse);
+  --surface-strong-text: var(--surface-inverse-text);
+  --text-secondary: var(--text-body);
+  --text-tertiary: var(--text-subtle);
+  --text-strong-muted: var(--text-inverse-muted);
+  --text-strong-subtle: var(--text-inverse-subtle);
+  --border-soft: var(--border-muted);
+  --border-contrast: var(--border-inverse);
+  --glass-header-bg: var(--header-glass-bg);
+}
+
+html[data-theme='dark'] {
+  --page-bg: #121212;
+  --surface: #1b1b1b;
+  --surface-2: #222222;
+  --surface-3: #292929;
+  --surface-hover: #303030;
+  --surface-inverse: #0f0f0f;
+  --surface-inverse-text: #f5f5f5;
+  --text-inverse-muted: #b5b5b5;
+  --text-inverse-subtle: #8f8f8f;
+  --text-primary: #f5f5f5;
+  --text-body: #d4d4d4;
+  --text-subtle: #b5b5b5;
+  --text-muted: #8f8f8f;
+  --border-muted: #2a2a2a;
+  --border-subtle: #383838;
+  --border-strong: #4a4a4a;
+  --border-inverse: #666666;
+  --ring-subtle: #737373;
+  --header-glass-bg: rgba(18, 18, 18, 0.82);
+  --grid-line-color: rgba(255, 255, 255, 0.05);
+  --radial-accent-color: rgba(16, 185, 129, 0.08);
+  color-scheme: dark;
+
+  /* Backward-compatible aliases (temporary during migration). */
+  --surface-app: var(--page-bg);
+  --surface-card: var(--surface);
+  --surface-muted: var(--surface-2);
+  --surface-elevated: var(--surface-3);
+  --surface-strong: var(--surface-inverse);
+  --surface-strong-text: var(--surface-inverse-text);
+  --text-secondary: var(--text-body);
+  --text-tertiary: var(--text-subtle);
+  --text-strong-muted: var(--text-inverse-muted);
+  --text-strong-subtle: var(--text-inverse-subtle);
+  --border-soft: var(--border-muted);
+  --border-contrast: var(--border-inverse);
+  --glass-header-bg: var(--header-glass-bg);
+}
+
 /* Custom Utility for text-xxs */
 @utility text-xxs {
   font-size: 0.65rem;
@@ -32,7 +112,7 @@
 @layer base {
   html {
     /* Fallback behind everything (including during rubber-band/overscroll). */
-    background-color: #f5f5f4;
+    background-color: var(--page-bg);
   }
 
   body {
@@ -48,11 +128,11 @@
     position: fixed;
     inset: 0;
     z-index: -1;
-    background-color: #f5f5f4;
+    background-color: var(--page-bg);
     background-image:
-      radial-gradient(circle at top left, rgba(16, 185, 129, 0.05), transparent 40%),
-      linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+      radial-gradient(circle at top left, var(--radial-accent-color), transparent 40%),
+      linear-gradient(var(--grid-line-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
     background-size:
       auto,
       40px 40px,
@@ -69,15 +149,15 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d4;
+  background: var(--border-strong);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a3a3a3;
+  background: var(--ring-subtle);
 }
 
 .glass-header {
-  background: rgba(245, 245, 244, 0.8);
+  background: var(--header-glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }

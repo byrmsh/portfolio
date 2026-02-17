@@ -85,16 +85,16 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
   <main class="pt-28 px-4 sm:px-6">
     <div class="max-w-3xl mx-auto flex flex-col gap-8">
       <header>
-        <div class="text-xs font-bold uppercase tracking-widest text-neutral-400">
+        <div class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">
           {t('jobs.eyebrow')}
         </div>
-        <h1 class="mt-2 text-2xl font-semibold text-neutral-900">{t('jobs.title')}</h1>
-        <p class="mt-2 text-sm text-neutral-700">
+        <h1 class="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{t('jobs.title')}</h1>
+        <p class="mt-2 text-sm text-[var(--text-body)]">
           {t('jobs.description')}
         </p>
       </header>
 
-      <section class="rounded-xl border border-neutral-200 bg-white p-6">
+      <section class="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6">
         {
           page.items.length ? (
             <div class="flex flex-col gap-3">
@@ -111,22 +111,24 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
                   ? dateFmt.format(new Date(job.publishedAt))
                   : '';
                 return (
-                  <article class="rounded-lg border border-neutral-200 p-4 hover:bg-neutral-50 transition-colors">
+                  <article class="rounded-lg border border-[var(--border-subtle)] p-4 hover:bg-[var(--surface-2)] transition-colors">
                     <a href={detailHref} class="block">
                       <div class="flex items-start gap-3">
                         <div class="min-w-0 flex-1">
-                          <h2 class="text-sm font-semibold text-neutral-900 line-clamp-2">
+                          <h2 class="text-sm font-semibold text-[var(--text-primary)] line-clamp-2">
                             {job.title}
                           </h2>
-                          <p class="mt-2 text-xs text-neutral-700 line-clamp-3">{job.summary}</p>
+                          <p class="mt-2 text-xs text-[var(--text-body)] line-clamp-3">
+                            {job.summary}
+                          </p>
                           <div class="mt-3 flex flex-wrap gap-2">
                             {(Array.isArray(job.tags) ? job.tags.slice(0, 6) : []).map((tag) => (
-                              <span class="text-xxs border border-neutral-200 px-1 py-0.5 rounded text-neutral-500">
+                              <span class="text-xxs border border-[var(--border-subtle)] px-1 py-0.5 rounded text-[var(--text-subtle)]">
                                 {tag}
                               </span>
                             ))}
                           </div>
-                          <div class="mt-3 flex items-center gap-3 text-xxs font-mono text-neutral-400">
+                          <div class="mt-3 flex items-center gap-3 text-xxs font-mono text-[var(--text-muted)]">
                             <span>{job.source.toUpperCase()}</span>
                             <span>•</span>
                             <span>{captured ?? '--'}</span>
@@ -141,7 +143,7 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
               })}
             </div>
           ) : (
-            <p class="text-sm text-neutral-700">{t('jobs.empty')}</p>
+            <p class="text-sm text-[var(--text-body)]">{t('jobs.empty')}</p>
           )
         }
 
@@ -150,7 +152,7 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
             before ? (
               <a
                 href={newestHref}
-                class="text-xs font-mono text-neutral-400 hover:text-neutral-900 transition-colors"
+                class="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
               >
                 {t('jobs.newest')}
               </a>
@@ -160,7 +162,7 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
             nextHref ? (
               <a
                 href={nextHref}
-                class="ml-auto text-xs font-mono text-neutral-400 hover:text-neutral-900 transition-colors"
+                class="ml-auto text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
               >
                 {t('jobs.next')}
               </a>

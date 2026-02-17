@@ -11,9 +11,9 @@ interface Props {
 const { t, locale } = Astro.props;
 ---
 
-<footer class="border-t border-neutral-200 py-8 mt-4">
+<footer class="border-t border-[var(--border-subtle)] py-8 mt-4">
   <div
-    class="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-neutral-500"
+    class="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-[var(--text-subtle)]"
   >
     <div class="font-mono">
       {
@@ -24,12 +24,12 @@ const { t, locale } = Astro.props;
       }
     </div>
     <div class="flex items-center gap-2">
-      <label class="text-xxs font-mono text-neutral-500" for="footer-lang-select"
+      <label class="text-xxs font-mono text-[var(--text-subtle)]" for="footer-lang-select"
         >{t('nav.language')}</label
       >
       <select
         id="footer-lang-select"
-        class="text-xs border border-neutral-200 rounded-md px-2 py-1 bg-white"
+        class="text-xs border border-[var(--border-subtle)] rounded-md px-2 py-1 bg-[var(--surface)]"
         aria-label={t('nav.language')}
         data-footer-locale-select
       >
@@ -43,8 +43,12 @@ const { t, locale } = Astro.props;
       </select>
     </div>
     <div class="flex items-center gap-6">
-      <a href="#" class="hover:text-neutral-900 transition-colors">{t('footer.source')}</a>
-      <a href={localizedPath(locale, '/rss.xml')} class="hover:text-neutral-900 transition-colors">
+      <a href="#" class="hover:text-[var(--text-primary)] transition-colors">{t('footer.source')}</a
+      >
+      <a
+        href={localizedPath(locale, '/rss.xml')}
+        class="hover:text-[var(--text-primary)] transition-colors"
+      >
         {t('footer.rss')}
       </a>
     </div>

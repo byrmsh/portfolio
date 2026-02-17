@@ -186,16 +186,16 @@ function commitTypeClass(type: string): string {
     feat: 'bg-emerald-100 text-emerald-700 border-emerald-300',
     fix: 'bg-amber-100 text-amber-700 border-amber-300',
     docs: 'bg-sky-100 text-sky-700 border-sky-300',
-    chore: 'bg-zinc-100 text-zinc-700 border-zinc-300',
+    chore: 'bg-[var(--surface-3)] text-[var(--text-body)] border-[var(--border-strong)]',
     refactor: 'bg-cyan-100 text-cyan-700 border-cyan-300',
     perf: 'bg-lime-100 text-lime-700 border-lime-300',
     test: 'bg-orange-100 text-orange-700 border-orange-300',
     ci: 'bg-indigo-100 text-indigo-700 border-indigo-300',
     build: 'bg-teal-100 text-teal-700 border-teal-300',
-    style: 'bg-neutral-100 text-neutral-700 border-neutral-300',
+    style: 'bg-[var(--surface-3)] text-[var(--text-body)] border-[var(--border-strong)]',
   };
 
-  return map[type] ?? 'bg-neutral-100 text-neutral-700 border-neutral-300';
+  return map[type] ?? 'bg-[var(--surface-3)] text-[var(--text-body)] border-[var(--border-strong)]';
 }
 
 function labelForType(type: string): string {
@@ -228,10 +228,10 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
 ---
 
 <section
-  class="col-span-1 md:col-span-6 lg:col-span-12 rounded-xl border border-neutral-200 bg-white p-6"
+  class="col-span-1 md:col-span-6 lg:col-span-12 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6"
 >
   <WidgetHeader title={title ?? t('gitCommits.title')} class="mb-5">
-    <span class="text-xxs font-mono text-neutral-400 whitespace-nowrap">
+    <span class="text-xxs font-mono text-[var(--text-muted)] whitespace-nowrap">
       {t('gitCommits.totalChanges', { value: totalChanges })}
     </span>
   </WidgetHeader>
@@ -242,10 +242,10 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
         {commits.map((commit) => {
           const parsed = parseConventionalSubject(commit.subject);
           return (
-            <article class="border-b border-neutral-200 px-2 py-1.5 transition-colors hover:bg-neutral-50 last:border-0 md:border-b-0">
+            <article class="border-b border-[var(--border-subtle)] px-2 py-1.5 transition-colors hover:bg-[var(--surface-2)] last:border-0 md:border-b-0">
               <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div class="min-w-0 flex-1">
-                  <p class="mb-2 text-sm font-medium font-sans text-neutral-700 leading-snug break-words md:mb-0">
+                  <p class="mb-2 text-sm font-medium font-sans text-[var(--text-body)] leading-snug break-words md:mb-0">
                     {parsed.description}
                   </p>
                   <div class="md:hidden">
@@ -259,7 +259,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                         {labelForType(parsed.type)}
                       </span>
                       {parsed.scope ? (
-                        <span class="inline-flex shrink-0 items-center rounded-md border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] font-mono text-neutral-600 whitespace-nowrap">
+                        <span class="inline-flex shrink-0 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-body)] whitespace-nowrap">
                           {parsed.scope}
                         </span>
                       ) : null}
@@ -270,17 +270,17 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                       ) : null}
                     </div>
                     <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-                      <span class="text-right text-xs font-bold uppercase tracking-wider text-neutral-400">
+                      <span class="text-right text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
                         {t('gitCommits.hash')}
                       </span>
-                      <span class="inline-flex min-w-0 items-center gap-1.5 text-left text-xs font-mono text-neutral-800">
+                      <span class="inline-flex min-w-0 items-center gap-1.5 text-left text-xs font-mono text-[var(--text-primary)]">
                         <code title={commit.hash}>{commit.shortHash}</code>
                         {repoUrl ? (
                           <a
                             href={`${repoUrl}/commit/${commit.hash}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="inline-flex shrink-0 text-neutral-400 transition-colors hover:text-neutral-700"
+                            class="inline-flex shrink-0 text-[var(--text-muted)] transition-colors hover:text-[var(--text-body)]"
                             aria-label={t('gitCommits.openCommit', { hash: commit.shortHash })}
                             title={t('gitCommits.openCommit', { hash: commit.shortHash })}
                           >
@@ -289,30 +289,33 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                         ) : null}
                       </span>
 
-                      <span class="text-right text-xs font-bold uppercase tracking-wider text-neutral-400">
+                      <span class="text-right text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
                         {t('gitCommits.date')}
                       </span>
                       <time
-                        class="text-left text-xs font-mono text-neutral-800"
+                        class="text-left text-xs font-mono text-[var(--text-primary)]"
                         datetime={commit.authoredAt}
                       >
                         {dateFormatter.format(new Date(commit.authoredAt))}
                       </time>
 
-                      <span class="text-right text-xs font-bold uppercase tracking-wider text-neutral-400">
+                      <span class="text-right text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
                         {t('gitCommits.author')}
                       </span>
-                      <span class="text-left text-xs font-mono text-neutral-800 break-words">
+                      <span class="text-left text-xs font-mono text-[var(--text-primary)] break-words">
                         {commit.author}
                       </span>
                     </div>
                   </div>
                   <div class="mt-1 hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs md:flex">
                     <span class="inline-flex items-center gap-1.5">
-                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">
+                      <span class="font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
                         {t('gitCommits.hash')}:
                       </span>
-                      <code class="font-mono text-[11px] text-neutral-600" title={commit.hash}>
+                      <code
+                        class="font-mono text-[11px] text-[var(--text-body)]"
+                        title={commit.hash}
+                      >
                         {commit.shortHash}
                       </code>
                       {repoUrl ? (
@@ -320,7 +323,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                           href={`${repoUrl}/commit/${commit.hash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          class="inline-flex text-neutral-400 hover:text-neutral-700 transition-colors"
+                          class="inline-flex text-[var(--text-muted)] hover:text-[var(--text-body)] transition-colors"
                           aria-label={t('gitCommits.openCommit', { hash: commit.shortHash })}
                           title={t('gitCommits.openCommit', { hash: commit.shortHash })}
                         >
@@ -329,16 +332,16 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                       ) : null}
                     </span>
                     <span class="inline-flex items-center gap-1.5">
-                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">
+                      <span class="font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
                         {t('gitCommits.author')}:
                       </span>
-                      <span class="text-neutral-700">{commit.author}</span>
+                      <span class="text-[var(--text-body)]">{commit.author}</span>
                     </span>
                     <span class="inline-flex items-center gap-1.5">
-                      <span class="font-mono text-[11px] uppercase tracking-wide text-neutral-400">
+                      <span class="font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
                         {t('gitCommits.date')}:
                       </span>
-                      <time class="text-neutral-700" datetime={commit.authoredAt}>
+                      <time class="text-[var(--text-body)]" datetime={commit.authoredAt}>
                         {dateFormatter.format(new Date(commit.authoredAt))}
                       </time>
                     </span>
@@ -355,7 +358,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                     {labelForType(parsed.type)}
                   </span>
                   {parsed.scope ? (
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] font-mono text-neutral-600 whitespace-nowrap">
+                    <span class="inline-flex shrink-0 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-body)] whitespace-nowrap">
                       {parsed.scope}
                     </span>
                   ) : null}
@@ -371,7 +374,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
         })}
       </div>
     ) : (
-      <p class="text-sm text-neutral-500">{t('gitCommits.empty')}</p>
+      <p class="text-sm text-[var(--text-subtle)]">{t('gitCommits.empty')}</p>
     )
   }
 </section>

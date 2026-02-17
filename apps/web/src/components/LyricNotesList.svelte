@@ -107,33 +107,33 @@
   }
 </script>
 
-<section class="rounded-xl border border-neutral-200 bg-white p-6" style="overflow-anchor: none;">
+<section class="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6" style="overflow-anchor: none;">
   <div class="flex items-baseline justify-between gap-6">
-    <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">{format(labels.all, { count: data.total || data.items.length })}</h2>
-    <div class="flex items-center gap-2 text-xxs font-mono text-neutral-500">
+    <h2 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{format(labels.all, { count: data.total || data.items.length })}</h2>
+    <div class="flex items-center gap-2 text-xxs font-mono text-[var(--text-subtle)]">
       <span>{format(labels.page, { page: data.page, totalPages: Math.max(1, data.totalPages || 1) })}</span>
-      <span class="text-neutral-300">·</span>
+      <span class="text-[var(--text-muted)]">·</span>
       <span>{format(labels.perPage, { count: data.pageSize })}</span>
     </div>
   </div>
 
   {#if error}
-    <p class="mt-3 text-sm text-neutral-700">{format(labels.couldNotLoadPage, { error })}</p>
+    <p class="mt-3 text-sm text-[var(--text-body)]">{format(labels.couldNotLoadPage, { error })}</p>
   {:else if !data.items.length}
-    <p class="mt-3 text-sm text-neutral-700">{labels.noTracks}</p>
+    <p class="mt-3 text-sm text-[var(--text-body)]">{labels.noTracks}</p>
   {:else}
     <div class="mt-4 grid gap-3">
       {#each data.items as t (t.id)}
-        <a href={buildItemHref(t.id)} class="flex items-center gap-4 rounded-lg border border-neutral-200 p-3 hover:bg-neutral-50">
-          <div class="w-12 h-12 rounded-lg bg-neutral-900 overflow-hidden shrink-0">
+        <a href={buildItemHref(t.id)} class="flex items-center gap-4 rounded-lg border border-[var(--border-subtle)] p-3 hover:bg-[var(--surface-2)]">
+          <div class="w-12 h-12 rounded-lg bg-[var(--surface-inverse)] overflow-hidden shrink-0">
             {#if t.albumArtUrl}
               <img src={t.albumArtUrl} alt="" class="w-12 h-12 object-cover" loading="lazy" />
             {/if}
           </div>
           <div class="min-w-0">
-            <div class="text-sm font-semibold text-neutral-900 line-clamp-1">{t.title}</div>
-            <div class="text-xs text-neutral-600 mt-1 line-clamp-1">{t.artist}</div>
-            <div class="text-xxs font-mono text-neutral-400 mt-2">
+            <div class="text-sm font-semibold text-[var(--text-primary)] line-clamp-1">{t.title}</div>
+            <div class="text-xs text-[var(--text-body)] mt-1 line-clamp-1">{t.artist}</div>
+            <div class="text-xxs font-mono text-[var(--text-muted)] mt-2">
               {format(labels.savedAt, {
                 date: new Date(t.savedAt).toLocaleString(locale),
               })}
@@ -147,7 +147,7 @@
   <div class="mt-5 flex items-center justify-between">
     {#if data.page > 1}
       <a
-        class="text-xxs font-mono rounded-full border border-neutral-200 px-3 py-1 hover:bg-neutral-50"
+        class="text-xxs font-mono rounded-full border border-[var(--border-subtle)] px-3 py-1 hover:bg-[var(--surface-2)]"
         href={buildPageHref(data.page - 1)}
         aria-disabled={loading}
         on:click|preventDefault={() => loadPage(data.page - 1)}
@@ -160,7 +160,7 @@
 
     {#if data.page < data.totalPages}
       <a
-        class="text-xxs font-mono rounded-full border border-neutral-200 px-3 py-1 hover:bg-neutral-50"
+        class="text-xxs font-mono rounded-full border border-[var(--border-subtle)] px-3 py-1 hover:bg-[var(--surface-2)]"
         href={buildPageHref(data.page + 1)}
         aria-disabled={loading}
         on:click|preventDefault={() => loadPage(data.page + 1)}

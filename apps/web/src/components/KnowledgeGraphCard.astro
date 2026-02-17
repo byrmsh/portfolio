@@ -9,23 +9,23 @@ const { t } = Astro.props;
 ---
 
 <section
-  class="col-span-1 md:col-span-6 lg:col-span-4 rounded-xl border border-neutral-200 bg-neutral-900 text-white p-6 relative overflow-hidden"
+  class="col-span-1 md:col-span-6 lg:col-span-4 rounded-xl border border-[var(--border-inverse)] bg-[var(--surface-inverse)] text-[var(--surface-inverse-text)] p-6 relative overflow-hidden"
 >
   <div class="relative z-10 flex flex-col h-full justify-between">
     <WidgetHeader
       title={t('knowledgeGraph.title')}
-      titleClass="text-neutral-500"
+      titleClass="text-[var(--text-inverse-subtle)]"
       class="items-start"
     >
       <span
-        class="text-xxs font-mono text-neutral-500 border border-neutral-700 px-1.5 py-0.5 rounded"
+        class="text-xxs font-mono text-[var(--text-inverse-subtle)] border border-[var(--border-inverse)] px-1.5 py-0.5 rounded"
       >
         {t('knowledgeGraph.source')}
       </span>
     </WidgetHeader>
     <div class="mt-4">
       <div class="text-2xl font-light">{t('knowledgeGraph.nodes', { count: 142 })}</div>
-      <p class="text-xs text-neutral-400 mt-1">
+      <p class="text-xs text-[var(--text-inverse-muted)] mt-1">
         {t('knowledgeGraph.description')}
       </p>
     </div>

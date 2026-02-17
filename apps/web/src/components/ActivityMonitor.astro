@@ -29,14 +29,14 @@ function levelClass(source: 'github' | 'anki', level: number): string {
   const l = clampInt(level ?? 0, 0, 4);
   const ramps: Record<'github' | 'anki', string[]> = {
     github: [
-      'bg-neutral-100 text-neutral-400 border-neutral-200',
+      'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
       'bg-emerald-100 text-emerald-950 border-emerald-200',
       'bg-emerald-200 text-emerald-950 border-emerald-300',
       'bg-emerald-400 text-white border-emerald-400',
       'bg-emerald-700 text-white border-emerald-700',
     ],
     anki: [
-      'bg-neutral-100 text-neutral-400 border-neutral-200',
+      'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
       'bg-sky-100 text-sky-950 border-sky-200',
       'bg-sky-200 text-sky-950 border-sky-300',
       'bg-sky-400 text-white border-sky-400',
@@ -131,16 +131,16 @@ const rangeLabel =
   data-range-template={t('activity.rangeLabel', { start: '{start}', end: '{end}' })}
   data-tooltip-with-date={t('activity.tooltipWithDate')}
   data-tooltip-without-date={t('activity.tooltipWithoutDate')}
-  class="col-span-1 md:col-span-6 lg:col-span-8 min-w-0 rounded-xl border border-neutral-200 bg-white p-6"
+  class="col-span-1 md:col-span-6 lg:col-span-8 min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6"
 >
   <WidgetHeader title={t('activity.title')} class="mb-4">
-    <div class="text-xxs font-mono text-neutral-400" data-range>{rangeLabel}</div>
+    <div class="text-xxs font-mono text-[var(--text-muted)]" data-range>{rangeLabel}</div>
   </WidgetHeader>
 
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-6 lg:gap-x-8 lg:gap-y-0 min-w-0">
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
-        <Code class="w-4 h-4 text-neutral-800" />
+        <Code class="w-4 h-4 text-[var(--text-primary)]" />
         <span class="text-sm font-semibold">{t('activity.githubLabel')}</span>
       </div>
 
@@ -153,7 +153,7 @@ const rangeLabel =
               <button
                 type="button"
                 class:list={[
-                  'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400',
+                  'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-[var(--ring-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-subtle)]',
                   levelClass('github', cell.level),
                 ]}
                 aria-label={t('activity.githubDayAria', { day: i + 1 })}
@@ -172,13 +172,13 @@ const rangeLabel =
       </div>
     </div>
 
-    <div class="hidden lg:block w-px bg-neutral-100 rounded-full" aria-hidden="true"></div>
+    <div class="hidden lg:block w-px bg-[var(--surface-3)] rounded-full" aria-hidden="true"></div>
 
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
-        <BrainCircuit class="w-4 h-4 text-neutral-800" />
+        <BrainCircuit class="w-4 h-4 text-[var(--text-primary)]" />
         <span class="text-sm font-semibold">{t('activity.ankiLabel')}</span>
-        <span class="text-xs text-neutral-400 ml-auto">
+        <span class="text-xs text-[var(--text-muted)] ml-auto">
           {t('activity.streak')}: <span data-streak="anki"
             >{typeof activity?.anki?.streak === 'number' ? activity.anki.streak : 0}</span
           >
@@ -194,7 +194,7 @@ const rangeLabel =
               <button
                 type="button"
                 class:list={[
-                  'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400',
+                  'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-[var(--ring-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-subtle)]',
                   levelClass('anki', cell.level),
                 ]}
                 aria-label={t('activity.ankiDayAria', { day: i + 1 })}
@@ -225,14 +225,14 @@ const rangeLabel =
 
     const ramps = {
       github: [
-        'bg-neutral-100 text-neutral-400 border-neutral-200',
+        'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
         'bg-emerald-100 text-emerald-950 border-emerald-200',
         'bg-emerald-200 text-emerald-950 border-emerald-300',
         'bg-emerald-400 text-white border-emerald-400',
         'bg-emerald-700 text-white border-emerald-700',
       ],
       anki: [
-        'bg-neutral-100 text-neutral-400 border-neutral-200',
+        'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
         'bg-sky-100 text-sky-950 border-sky-200',
         'bg-sky-200 text-sky-950 border-sky-300',
         'bg-sky-400 text-white border-sky-400',
@@ -241,7 +241,7 @@ const rangeLabel =
     };
 
     const baseBtn =
-      'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-400';
+      'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-[var(--ring-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-subtle)]';
 
     const clamp = (n, min, max) => Math.max(min, Math.min(max, Math.trunc(n)));
     const parseIsoUTC = (s) => {
@@ -401,7 +401,7 @@ const rangeLabel =
     const tip = document.createElement('div');
     tip.setAttribute('data-tooltip', 'activity');
     tip.className =
-      'pointer-events-none fixed z-50 hidden rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] text-neutral-800 shadow-lg';
+      'pointer-events-none fixed z-50 hidden rounded-md border border-[var(--border-subtle)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--text-primary)] shadow-lg';
     document.body.appendChild(tip);
 
     const show = (el, x, y) => {

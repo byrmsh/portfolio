@@ -311,8 +311,8 @@ export function metricFor(key: ServiceKey, node: StatusNode, strings: SystemHeal
 export function metricClass(value: string): string {
   const base = 'min-h-[2.25rem] flex items-end';
   return /\d/.test(value)
-    ? `${base} text-3xl font-mono font-medium text-neutral-900`
-    : `${base} text-3xl font-mono font-medium uppercase tracking-wide text-neutral-300`;
+    ? `${base} text-3xl font-mono font-medium text-[var(--text-primary)]`
+    : `${base} text-3xl font-mono font-medium uppercase tracking-wide text-[var(--text-muted)]`;
 }
 
 export function labelFor(key: ServiceKey, strings: SystemHealthStrings): string {

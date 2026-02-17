@@ -63,31 +63,31 @@ const tags = Array.isArray(latest?.tags) ? latest!.tags.slice(0, 2) : [];
 ---
 
 <section
-  class="col-span-1 md:col-span-6 lg:col-span-4 rounded-xl border border-neutral-200 bg-white p-6 flex flex-col"
+  class="col-span-1 md:col-span-6 lg:col-span-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6 flex flex-col"
 >
   <WidgetHeader title={t('jobScout.title')} class="mb-4">
     <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
   </WidgetHeader>
 
   <div class="flex-grow flex flex-col justify-center">
-    <div class="p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+    <div class="p-3 bg-[var(--surface-2)] rounded-lg border border-[var(--border-muted)]">
       <div class="flex justify-between items-start mb-2">
-        <span class="text-xs font-bold text-neutral-700">{t('jobScout.source')}</span>
-        <span class="text-xxs font-mono text-neutral-400">{age ?? '--'}</span>
+        <span class="text-xs font-bold text-[var(--text-body)]">{t('jobScout.source')}</span>
+        <span class="text-xxs font-mono text-[var(--text-muted)]">{age ?? '--'}</span>
       </div>
-      <p class="text-sm font-medium text-neutral-900 line-clamp-2">
+      <p class="text-sm font-medium text-[var(--text-primary)] line-clamp-2">
         {latest?.title ?? t('jobScout.emptyLead')}
       </p>
       <div class="mt-2 flex gap-2">
         {
           tags.length ? (
             tags.map((tag) => (
-              <span class="text-xxs border border-neutral-200 px-1 py-0.5 rounded text-neutral-500">
+              <span class="text-xxs border border-[var(--border-subtle)] px-1 py-0.5 rounded text-[var(--text-subtle)]">
                 {tag}
               </span>
             ))
           ) : (
-            <span class="text-xxs border border-neutral-200 px-1 py-0.5 rounded text-neutral-500">
+            <span class="text-xxs border border-[var(--border-subtle)] px-1 py-0.5 rounded text-[var(--text-subtle)]">
               {t('jobScout.emptyTag')}
             </span>
           )
@@ -97,7 +97,9 @@ const tags = Array.isArray(latest?.tags) ? latest!.tags.slice(0, 2) : [];
   </div>
 
   <div class="mt-4 text-center">
-    <a href={jobsHref} class="text-xs text-neutral-400 hover:text-neutral-900 transition-colors"
+    <a
+      href={jobsHref}
+      class="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
       >{t('jobScout.viewAll')}</a
     >
   </div>

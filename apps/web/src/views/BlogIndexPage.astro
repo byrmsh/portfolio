@@ -27,14 +27,14 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
   <main class="pt-28 px-4 sm:px-6">
     <div class="max-w-3xl mx-auto flex flex-col gap-8">
       <header>
-        <div class="text-xs font-bold uppercase tracking-widest text-neutral-400">
+        <div class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">
           {t('blog.eyebrow')}
         </div>
-        <h1 class="mt-2 text-2xl font-semibold text-neutral-900">{t('blog.title')}</h1>
-        <p class="mt-2 text-sm text-neutral-700">{t('blog.description')}</p>
+        <h1 class="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{t('blog.title')}</h1>
+        <p class="mt-2 text-sm text-[var(--text-body)]">{t('blog.description')}</p>
       </header>
 
-      <section class="rounded-xl border border-neutral-200 bg-white p-6">
+      <section class="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6">
         <ul class="space-y-5">
           {
             posts.map((post) => (
@@ -43,11 +43,13 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
                   href={localizedPath(locale, `/blog/${post.slug}`)}
                   class="block hover:opacity-90"
                 >
-                  <div class="text-xxs font-mono text-neutral-400">
+                  <div class="text-xxs font-mono text-[var(--text-muted)]">
                     {dateFmt.format(post.data.pubDate)}
                   </div>
-                  <div class="mt-1 text-base font-semibold text-neutral-900">{post.data.title}</div>
-                  <div class="mt-1 text-sm text-neutral-700">{post.data.description}</div>
+                  <div class="mt-1 text-base font-semibold text-[var(--text-primary)]">
+                    {post.data.title}
+                  </div>
+                  <div class="mt-1 text-sm text-[var(--text-body)]">{post.data.description}</div>
                 </a>
               </li>
             ))

@@ -15,6 +15,22 @@ const { title, locale } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const media = window.matchMedia('(prefers-color-scheme: dark)');
+        const applyTheme = () => {
+          root.dataset.theme = media.matches ? 'dark' : 'light';
+        };
+
+        applyTheme();
+        if (typeof media.addEventListener === 'function') {
+          media.addEventListener('change', applyTheme);
+        } else {
+          media.addListener(applyTheme);
+        }
+      })();
+    </script>
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -36,7 +52,7 @@ const { title, locale } = Astro.props;
       rel="stylesheet"
     />
   </head>
-  <body class="text-neutral-900 antialiased min-h-screen pb-6">
+  <body class="text-[var(--text-primary)] antialiased min-h-screen pb-6">
     <slot />
   </body>
 </html>

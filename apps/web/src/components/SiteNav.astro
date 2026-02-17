@@ -63,7 +63,10 @@ const links = [
 ];
 ---
 
-<nav id="site-nav" class="fixed top-0 left-0 right-0 z-50 border-b border-neutral-200 glass-header">
+<nav
+  id="site-nav"
+  class="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border-subtle)] glass-header"
+>
   <div
     id="mobile-nav-shell"
     class="max-w-5xl mx-auto px-4 sm:px-6 overflow-hidden max-h-14 transition-[max-height] duration-300 ease-out"
@@ -76,7 +79,7 @@ const links = [
         {SITE.domain}
       </a>
       <div class="flex items-center gap-3">
-        <div class="hidden sm:flex items-center gap-6 text-sm font-medium text-neutral-600">
+        <div class="hidden sm:flex items-center gap-6 text-sm font-medium text-[var(--text-body)]">
           {
             links.map((link) => {
               // Home should only be active at the locale root (e.g. "/" or "/es"), not on subpages.
@@ -90,7 +93,11 @@ const links = [
                 <a
                   href={link.href}
                   aria-current={active ? 'page' : undefined}
-                  class={active ? 'text-neutral-900' : 'hover:text-neutral-900 transition-colors'}
+                  class={
+                    active
+                      ? 'text-[var(--text-primary)]'
+                      : 'hover:text-[var(--text-primary)] transition-colors'
+                  }
                 >
                   {link.label}
                 </a>
@@ -106,13 +113,15 @@ const links = [
           aria-controls="mobile-menu"
           aria-expanded="false"
         >
-          <Menu id="mobile-menu-open-icon" class="w-5 h-5 text-neutral-600" />
-          <X id="mobile-menu-close-icon" class="hidden w-5 h-5 text-neutral-600" />
+          <Menu id="mobile-menu-open-icon" class="w-5 h-5 text-[var(--text-body)]" />
+          <X id="mobile-menu-close-icon" class="hidden w-5 h-5 text-[var(--text-body)]" />
         </button>
       </div>
     </div>
     <div id="mobile-menu" class="sm:hidden pb-3 opacity-0 transition-opacity duration-200 ease-out">
-      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium text-neutral-600">
+      <div
+        class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium text-[var(--text-body)]"
+      >
         {
           links.map((link) => {
             const active =
@@ -125,7 +134,11 @@ const links = [
               <a
                 href={link.href}
                 aria-current={active ? 'page' : undefined}
-                class={active ? 'text-neutral-900' : 'hover:text-neutral-900 transition-colors'}
+                class={
+                  active
+                    ? 'text-[var(--text-primary)]'
+                    : 'hover:text-[var(--text-primary)] transition-colors'
+                }
               >
                 {link.label}
               </a>

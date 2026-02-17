@@ -306,10 +306,10 @@
   });
 </script>
 
-<section class="rounded-xl border border-neutral-200 bg-white p-6 pb-12">
+<section class="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6 pb-12">
   <div class="flex items-baseline justify-between gap-4">
-    <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400">{labels.title}</h2>
-    <div class="text-xxs font-mono text-neutral-500">
+    <h2 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{labels.title}</h2>
+    <div class="text-xxs font-mono text-[var(--text-subtle)]">
       {format(labels.remaining, { count: deck.length + reviewQueue.length })}
     </div>
   </div>
@@ -332,19 +332,19 @@
     {:else if top}
       {#if deck.length > 1}
         <div
-          class="absolute inset-x-3 inset-y-3 rounded-2xl border border-neutral-200 bg-neutral-50"
+          class="absolute inset-x-3 inset-y-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-2)]"
         ></div>
       {/if}
       {#if deck.length > 2}
         <div
-          class="absolute inset-x-6 inset-y-6 rounded-2xl border border-neutral-200 bg-neutral-100"
+          class="absolute inset-x-6 inset-y-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-3)]"
         ></div>
       {/if}
       {#key top.id}
         <button
           in:scale={{ start: 0.97, duration: 140 }}
           out:fade={{ duration: 90 }}
-          class="absolute inset-0 h-full w-full rounded-2xl border border-neutral-200 bg-white p-5 text-left shadow-sm transition-transform duration-200 sm:p-6"
+          class="absolute inset-0 h-full w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-5 text-left shadow-sm transition-transform duration-200 sm:p-6"
           class:cursor-grab={isFlipped}
           class:cursor-pointer={!isFlipped}
           type="button"
@@ -383,41 +383,41 @@
           {#if !isFlipped}
             <div class="relative z-10 flex h-full flex-col">
               <div class="flex items-start justify-between gap-4">
-                <div class="text-2xl font-semibold text-neutral-900 sm:text-3xl">{top.term}</div>
+                <div class="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">{top.term}</div>
                 {#if top.cefr}
                   <div
-                    class="rounded-full border border-neutral-300 px-2 py-1 text-xxs font-mono text-neutral-600"
+                    class="rounded-full border border-[var(--border-strong)] px-2 py-1 text-xxs font-mono text-[var(--text-body)]"
                   >
                     {top.cefr}
                   </div>
                 {/if}
               </div>
-              <p class="mt-5 text-base leading-relaxed text-neutral-800">{top.exampleDe}</p>
-              <div class="mt-auto text-xxs font-mono text-neutral-500">{labels.flipHint}</div>
+              <p class="mt-5 text-base leading-relaxed text-[var(--text-primary)]">{top.exampleDe}</p>
+              <div class="mt-auto text-xxs font-mono text-[var(--text-subtle)]">{labels.flipHint}</div>
             </div>
           {:else}
             <div class="relative z-10 flex h-full flex-col">
               <div class="flex items-start justify-between gap-4">
-                <div class="text-xl font-semibold text-neutral-900 sm:text-2xl">
+                <div class="text-xl font-semibold text-[var(--text-primary)] sm:text-2xl">
                   {primaryTranslation(top)}
                 </div>
                 {#if top.cefr}
                   <div
-                    class="rounded-full border border-neutral-300 px-2 py-1 text-xxs font-mono text-neutral-600"
+                    class="rounded-full border border-[var(--border-strong)] px-2 py-1 text-xxs font-mono text-[var(--text-body)]"
                   >
                     {top.cefr}
                   </div>
                 {/if}
               </div>
-              <p class="mt-5 text-base leading-relaxed text-neutral-800">{top.exampleEn}</p>
+              <p class="mt-5 text-base leading-relaxed text-[var(--text-primary)]">{top.exampleEn}</p>
               {#if visibleMemoryHint(top)}
-                <div class="mt-4 space-y-1 text-sm text-neutral-600">
+                <div class="mt-4 space-y-1 text-sm text-[var(--text-body)]">
                   {#if visibleMemoryHint(top)}
-                    <p class="text-neutral-500">{visibleMemoryHint(top)}</p>
+                    <p class="text-[var(--text-subtle)]">{visibleMemoryHint(top)}</p>
                   {/if}
                 </div>
               {/if}
-              <div class="mt-auto text-xxs font-mono text-neutral-500">{labels.rateHint}</div>
+              <div class="mt-auto text-xxs font-mono text-[var(--text-subtle)]">{labels.rateHint}</div>
             </div>
           {/if}
         </button>
@@ -425,27 +425,27 @@
     {/if}
   </div>
 
-  <div class="hidden items-center justify-center gap-2 text-xxs text-neutral-500 sm:flex">
-    <kbd class="rounded border border-neutral-300 px-1.5 py-0.5 font-mono text-[10px] leading-none"
+  <div class="hidden items-center justify-center gap-2 text-xxs text-[var(--text-subtle)] sm:flex">
+    <kbd class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >←</kbd
     >
-    <kbd class="rounded border border-neutral-300 px-1.5 py-0.5 font-mono text-[10px] leading-none"
+    <kbd class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >2</kbd
     >
     <span class="font-sans">{labels.reviewHint}</span>
     <kbd
-      class="ml-2 rounded border border-neutral-300 px-1.5 py-0.5 font-mono text-[10px] leading-none"
+      class="ml-2 rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >→</kbd
     >
-    <kbd class="rounded border border-neutral-300 px-1.5 py-0.5 font-mono text-[10px] leading-none"
+    <kbd class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >4</kbd
     >
     <span class="font-sans">{labels.knownHint}</span>
     <kbd
-      class="ml-2 rounded border border-neutral-300 px-1.5 py-0.5 font-mono text-[10px] leading-none"
+      class="ml-2 rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >Space</kbd
     >
-    <kbd class="rounded border border-neutral-300 px-1.5 py-0.5 font-mono text-[10px] leading-none"
+    <kbd class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >Enter</kbd
     >
     <span class="font-sans">{labels.tapHint}</span>
