@@ -9,17 +9,20 @@ interface Props {
   description?: string;
   canonicalPath?: string;
   ogType?: 'website' | 'article';
+  ogImagePath?: string;
 }
 
-const { title, locale, description, canonicalPath, ogType = 'website' } = Astro.props;
+const { title, locale, description, canonicalPath, ogType = 'website', ogImagePath } = Astro.props;
 const siteOrigin = `https://${SITE.domain}`;
 const resolvedDescription =
   description ??
   'Personal site for software projects, writing, lyrics notes, and live system updates.';
+const resolvedOgImagePath = ogImagePath ?? '/og-image.jpg';
 const canonical = new URL(
   canonicalPath ?? `${Astro.url.pathname}${Astro.url.search}`,
   siteOrigin,
 ).toString();
+const ogImage = new URL(resolvedOgImagePath, siteOrigin).toString();
 const alternateLinks = SUPPORTED_LOCALES.map((l) => ({
   locale: l,
   href: new URL(localizedPath(l, Astro.url.pathname), siteOrigin).toString(),
@@ -28,6 +31,7 @@ const xDefaultHref = new URL(
   localizedPath(DEFAULT_LOCALE, Astro.url.pathname),
   siteOrigin,
 ).toString();
+const faviconVersion = '20260217';
 ---
 
 <!doctype html>
@@ -60,16 +64,35 @@ const xDefaultHref = new URL(
     <meta property="og:title" content={title} />
     <meta property="og:description" content={resolvedDescription} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`${SITE.name} - portfolio preview`} />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={resolvedDescription} />
+    <meta name="twitter:image" content={ogImage} />
     {alternateLinks.map((alt) => <link rel="alternate" hreflang={alt.locale} href={alt.href} />)}
     <link rel="alternate" hreflang="x-default" href={xDefaultHref} />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href={`/favicon.svg?v=${faviconVersion}`} />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href={`/favicon-32x32.png?v=${faviconVersion}`}
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href={`/favicon-16x16.png?v=${faviconVersion}`}
+    />
+    <link rel="shortcut icon" href={`/favicon.ico?v=${faviconVersion}`} />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href={`/apple-touch-icon.png?v=${faviconVersion}`}
+    />
     <link
       rel="alternate"
       type="application/rss+xml"
