@@ -9,35 +9,37 @@ const { t } = Astro.props;
 ---
 
 <section
-  class="col-span-1 md:col-span-6 lg:col-span-4 rounded-xl border border-[var(--border-inverse)] bg-[var(--surface-inverse)] text-[var(--surface-inverse-text)] p-6 relative overflow-hidden"
+  class="col-span-1 md:col-span-6 lg:col-span-4 rounded-xl border border-[var(--border-hero)] bg-[var(--surface-hero)] text-[var(--text-hero)] p-6 relative overflow-hidden"
 >
   <div class="relative z-10 flex flex-col h-full justify-between">
     <WidgetHeader
       title={t('knowledgeGraph.title')}
-      titleClass="text-[var(--text-inverse-subtle)]"
+      titleClass="text-[var(--text-hero-subtle)]"
       class="items-start"
     >
       <span
-        class="text-xxs font-mono text-[var(--text-inverse-subtle)] border border-[var(--border-inverse)] px-1.5 py-0.5 rounded"
+        class="text-xxs font-mono text-[var(--text-hero-subtle)] border border-[var(--border-hero)] px-1.5 py-0.5 rounded"
       >
         {t('knowledgeGraph.source')}
       </span>
     </WidgetHeader>
     <div class="mt-4">
       <div class="text-2xl font-light">{t('knowledgeGraph.nodes', { count: 142 })}</div>
-      <p class="text-xs text-[var(--text-inverse-muted)] mt-1">
+      <p class="text-xs text-[var(--text-hero-muted)] mt-1">
         {t('knowledgeGraph.description')}
       </p>
     </div>
   </div>
 
-  <div class="absolute inset-0 opacity-20 pointer-events-none">
+  <div class="absolute inset-0 opacity-35 pointer-events-none">
     <svg width="100%" height="100%">
-      <circle cx="80%" cy="20%" r="3" fill="white"></circle>
-      <circle cx="20%" cy="80%" r="3" fill="white"></circle>
-      <circle cx="50%" cy="50%" r="2" fill="white"></circle>
-      <line x1="20%" y1="80%" x2="50%" y2="50%" stroke="white" stroke-width="0.5"></line>
-      <line x1="80%" y1="20%" x2="50%" y2="50%" stroke="white" stroke-width="0.5"></line>
+      <circle cx="80%" cy="20%" r="3" fill="var(--hero-node-color)"></circle>
+      <circle cx="20%" cy="80%" r="3" fill="var(--hero-node-color)"></circle>
+      <circle cx="50%" cy="50%" r="2" fill="var(--hero-node-color)"></circle>
+      <line x1="20%" y1="80%" x2="50%" y2="50%" stroke="var(--hero-line-color)" stroke-width="0.5"
+      ></line>
+      <line x1="80%" y1="20%" x2="50%" y2="50%" stroke="var(--hero-line-color)" stroke-width="0.5"
+      ></line>
     </svg>
   </div>
 </section>
