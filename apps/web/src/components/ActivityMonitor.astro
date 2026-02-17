@@ -30,17 +30,17 @@ function levelClass(source: 'github' | 'anki', level: number): string {
   const ramps: Record<'github' | 'anki', string[]> = {
     github: [
       'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
-      'bg-emerald-100 text-emerald-950 border-emerald-200',
-      'bg-emerald-200 text-emerald-950 border-emerald-300',
-      'bg-emerald-400 text-white border-emerald-400',
-      'bg-emerald-700 text-white border-emerald-700',
+      'bg-emerald-100 text-emerald-950 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-900',
+      'bg-emerald-200 text-emerald-950 border-emerald-300 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-800',
+      'bg-emerald-400 text-white border-emerald-400 dark:bg-emerald-700 dark:text-emerald-50 dark:border-emerald-600',
+      'bg-emerald-700 text-white border-emerald-700 dark:bg-emerald-600 dark:text-emerald-50 dark:border-emerald-500',
     ],
     anki: [
       'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
-      'bg-sky-100 text-sky-950 border-sky-200',
-      'bg-sky-200 text-sky-950 border-sky-300',
-      'bg-sky-400 text-white border-sky-400',
-      'bg-sky-700 text-white border-sky-700',
+      'bg-sky-100 text-sky-950 border-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-900',
+      'bg-sky-200 text-sky-950 border-sky-300 dark:bg-sky-900 dark:text-sky-100 dark:border-sky-800',
+      'bg-sky-400 text-white border-sky-400 dark:bg-sky-700 dark:text-sky-50 dark:border-sky-600',
+      'bg-sky-700 text-white border-sky-700 dark:bg-sky-600 dark:text-sky-50 dark:border-sky-500',
     ],
   };
   return ramps[source][l];
@@ -226,17 +226,17 @@ const rangeLabel =
     const ramps = {
       github: [
         'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
-        'bg-emerald-100 text-emerald-950 border-emerald-200',
-        'bg-emerald-200 text-emerald-950 border-emerald-300',
-        'bg-emerald-400 text-white border-emerald-400',
-        'bg-emerald-700 text-white border-emerald-700',
+        'bg-emerald-100 text-emerald-950 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-900',
+        'bg-emerald-200 text-emerald-950 border-emerald-300 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-800',
+        'bg-emerald-400 text-white border-emerald-400 dark:bg-emerald-700 dark:text-emerald-50 dark:border-emerald-600',
+        'bg-emerald-700 text-white border-emerald-700 dark:bg-emerald-600 dark:text-emerald-50 dark:border-emerald-500',
       ],
       anki: [
         'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
-        'bg-sky-100 text-sky-950 border-sky-200',
-        'bg-sky-200 text-sky-950 border-sky-300',
-        'bg-sky-400 text-white border-sky-400',
-        'bg-sky-700 text-white border-sky-700',
+        'bg-sky-100 text-sky-950 border-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-900',
+        'bg-sky-200 text-sky-950 border-sky-300 dark:bg-sky-900 dark:text-sky-100 dark:border-sky-800',
+        'bg-sky-400 text-white border-sky-400 dark:bg-sky-700 dark:text-sky-50 dark:border-sky-600',
+        'bg-sky-700 text-white border-sky-700 dark:bg-sky-600 dark:text-sky-50 dark:border-sky-500',
       ],
     };
 
