@@ -1,5 +1,6 @@
 ---
 import Menu from '@lucide/astro/icons/menu';
+import X from '@lucide/astro/icons/x';
 import { SITE } from '../config/site';
 import { localizedPath, type SupportedLocale } from '../i18n';
 
@@ -62,19 +63,58 @@ const links = [
 ];
 ---
 
-<nav class="fixed top-0 left-0 right-0 z-50 border-b border-neutral-200 glass-header">
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-    <a
-      href={localizedPath(locale, '/', baseSearch)}
-      class="font-mono text-sm font-semibold tracking-tight hover:opacity-70 transition-opacity"
-    >
-      {SITE.domain}
-    </a>
-    <div class="flex items-center gap-3">
-      <div class="hidden sm:flex items-center gap-6 text-sm font-medium text-neutral-600">
+<nav id="site-nav" class="fixed top-0 left-0 right-0 z-50 border-b border-neutral-200 glass-header">
+  <div
+    id="mobile-nav-shell"
+    class="max-w-5xl mx-auto px-4 sm:px-6 overflow-hidden max-h-14 transition-[max-height] duration-300 ease-out"
+  >
+    <div class="h-14 flex items-center justify-between gap-4">
+      <a
+        href={localizedPath(locale, '/', baseSearch)}
+        class="font-mono text-sm font-semibold tracking-tight hover:opacity-70 transition-opacity"
+      >
+        {SITE.domain}
+      </a>
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-6 text-sm font-medium text-neutral-600">
+          {
+            links.map((link) => {
+              // Home should only be active at the locale root (e.g. "/" or "/es"), not on subpages.
+              const active =
+                link.match === 'exact'
+                  ? isActiveExact(link.href)
+                  : link.href === homeHref
+                    ? isActiveExact(link.href)
+                    : isActiveSection(link.href);
+              return (
+                <a
+                  href={link.href}
+                  aria-current={active ? 'page' : undefined}
+                  class={active ? 'text-neutral-900' : 'hover:text-neutral-900 transition-colors'}
+                >
+                  {link.label}
+                </a>
+              );
+            })
+          }
+        </div>
+        <button
+          id="mobile-menu-toggle"
+          class="sm:hidden p-1"
+          type="button"
+          aria-label={t('nav.openMenu')}
+          aria-controls="mobile-menu"
+          aria-expanded="false"
+        >
+          <Menu id="mobile-menu-open-icon" class="w-5 h-5 text-neutral-600" />
+          <X id="mobile-menu-close-icon" class="hidden w-5 h-5 text-neutral-600" />
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="sm:hidden pb-3 opacity-0 transition-opacity duration-200 ease-out">
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium text-neutral-600">
         {
           links.map((link) => {
-            // Home should only be active at the locale root (e.g. "/" or "/es"), not on subpages.
             const active =
               link.match === 'exact'
                 ? isActiveExact(link.href)
@@ -93,9 +133,55 @@ const links = [
           })
         }
       </div>
-      <button class="sm:hidden p-1" aria-label={t('nav.openMenu')}>
-        <Menu class="w-5 h-5 text-neutral-600" />
-      </button>
     </div>
   </div>
 </nav>
+
+<script>
+  const shell = document.getElementById('mobile-nav-shell');
+  const toggle = document.getElementById('mobile-menu-toggle');
+  const menu = document.getElementById('mobile-menu');
+  const openIcon = document.getElementById('mobile-menu-open-icon');
+  const closeIcon = document.getElementById('mobile-menu-close-icon');
+  const mediaQuery = window.matchMedia('(min-width: 640px)');
+
+  if (shell && toggle && menu && openIcon && closeIcon) {
+    const menuLinks = menu.querySelectorAll('a');
+
+    const setExpanded = (expanded: boolean) => {
+      toggle.setAttribute('aria-expanded', expanded.toString());
+      shell.classList.toggle('max-h-14', !expanded);
+      shell.classList.toggle('max-h-40', expanded);
+      menu.classList.toggle('opacity-0', !expanded);
+      menu.classList.toggle('opacity-100', expanded);
+      openIcon.classList.toggle('hidden', expanded);
+      closeIcon.classList.toggle('hidden', !expanded);
+    };
+
+    toggle.addEventListener('click', () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      setExpanded(!expanded);
+    });
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (toggle.getAttribute('aria-expanded') === 'true') setExpanded(false);
+      },
+      { passive: true },
+    );
+
+    window.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true')
+        setExpanded(false);
+    });
+
+    mediaQuery.addEventListener('change', (event: MediaQueryListEvent) => {
+      if (event.matches) setExpanded(false);
+    });
+
+    for (const link of menuLinks) {
+      link.addEventListener('click', () => setExpanded(false));
+    }
+  }
+</script>
