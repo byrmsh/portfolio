@@ -37,13 +37,71 @@ def _sanitize_response(path: Path) -> None:
         return
 
     candidate = text[start:]
-    try:
-        parsed = json.loads(candidate)
-        if isinstance(parsed, list):
-            path.write_text(json.dumps(parsed, ensure_ascii=False, indent=2) + "\n")
-            return
-    except Exception:
-        pass
+    def _try_parse_list(raw: str) -> list[dict] | list | None:
+        try:
+            parsed_obj = json.loads(raw)
+        except Exception:
+            return None
+        if isinstance(parsed_obj, list):
+            return parsed_obj
+        return None
+
+    def _repair_unescaped_quotes(raw: str) -> str:
+        # Heuristic repair for common Gemini output issue where inner quotes
+        # inside string values are not escaped (e.g. 12" Dance Mix).
+        out: list[str] = []
+        in_string = False
+        escaped = False
+        n = len(raw)
+
+        def _next_non_ws(idx: int) -> str:
+            j = idx + 1
+            while j < n and raw[j].isspace():
+                j += 1
+            return raw[j] if j < n else ""
+
+        for i, ch in enumerate(raw):
+            if not in_string:
+                out.append(ch)
+                if ch == '"':
+                    in_string = True
+                    escaped = False
+                continue
+
+            if escaped:
+                out.append(ch)
+                escaped = False
+                continue
+
+            if ch == "\\":
+                out.append(ch)
+                escaped = True
+                continue
+
+            if ch == '"':
+                nxt = _next_non_ws(i)
+                # Valid closing quote for JSON key/value strings.
+                if nxt in {":", ",", "}", "]", ""}:
+                    out.append(ch)
+                    in_string = False
+                else:
+                    out.append('\\"')
+                continue
+
+            out.append(ch)
+
+        return "".join(out)
+
+    parsed = _try_parse_list(candidate)
+    if parsed is not None:
+        path.write_text(json.dumps(parsed, ensure_ascii=False, indent=2) + "\n")
+        return
+
+    repaired = _repair_unescaped_quotes(candidate)
+    parsed = _try_parse_list(repaired)
+    if parsed is not None:
+        path.write_text(json.dumps(parsed, ensure_ascii=False, indent=2) + "\n")
+        return
 
     depth = 0
     in_str = False
@@ -117,6 +175,54 @@ def _click_edit_prompt(page) -> bool:
     return False
 
 
+def _click_edit_first_prompt(page) -> bool:
+    # Always target the first user turn in DOM order so each run edits the
+    # original seed prompt instead of appending new user turns.
+    first_turn = page.locator("conversation-turn", has=page.locator("user-query")).first
+    if first_turn.count() > 0:
+        try:
+            first_turn.scroll_into_view_if_needed(timeout=3000)
+        except Exception:
+            pass
+        try:
+            first_turn.hover(timeout=2000)
+        except Exception:
+            pass
+
+        edit = _first_visible(first_turn.get_by_role("button", name=re.compile("edit prompt", re.I)))
+        if edit:
+            edit.click()
+            return True
+
+        edit_css = _first_visible(first_turn.locator("button[aria-label='Edit prompt'], button[mattooltip='Edit prompt']"))
+        if edit_css:
+            edit_css.click()
+            return True
+
+    # Fallback to previous global behavior if turn-scoped lookup fails.
+    return _click_edit_prompt(page)
+
+
+def _find_editor(root) -> Locator | None:
+    # Prefer focused edit controls first, then fallback to visible textbox-like nodes.
+    candidates = root.locator(
+        "[contenteditable='true'][role='textbox'][aria-label*='prompt'], "
+        "rich-textarea .ql-editor[contenteditable='true'][role='textbox'], "
+        "textarea[aria-label*='prompt'], "
+        "textarea"
+    )
+    focused = root.locator(
+        "[contenteditable='true'][role='textbox'][aria-label*='prompt']:focus, "
+        "rich-textarea .ql-editor[contenteditable='true'][role='textbox']:focus, "
+        "textarea[aria-label*='prompt']:focus, "
+        "textarea:focus"
+    )
+    node = _first_visible(focused)
+    if node:
+        return node
+    return _last_visible(candidates)
+
+
 def _has_edit_prompt(page) -> bool:
     edit = _last_visible(page.get_by_role("button", name=re.compile("edit prompt", re.I)))
     if edit:
@@ -151,21 +257,26 @@ def _chat_like_url(url: str) -> bool:
 
 
 def _user_message_count(page) -> int:
+    # Count only user turns and ignore broad container nodes that can include
+    # assistant content and transient UI wrappers.
     value = page.evaluate(
         """
 () => {
-  const selectors = [
-    'user-query',
-    'query-container user-query',
-    'query-container',
-    'conversation-turn user-query'
-  ];
-  let maxCount = 0;
-  for (const s of selectors) {
-    const count = document.querySelectorAll(s).length;
-    if (count > maxCount) maxCount = count;
-  }
-  return maxCount;
+  const nodes = Array.from(
+    document.querySelectorAll(
+      'user-query, query-container user-query, conversation-turn user-query'
+    )
+  );
+  const unique = Array.from(new Set(nodes));
+  const visible = unique.filter((el) => {
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden') {
+      return false;
+    }
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  });
+  return visible.length || unique.length;
 }
 """
     )
@@ -173,6 +284,23 @@ def _user_message_count(page) -> int:
         return int(value)
     except Exception:
         return 0
+
+
+def _stable_user_message_count(page, settle_sec: float = 1.0, timeout_sec: float = 8.0) -> int:
+    deadline = time.time() + timeout_sec
+    last = _user_message_count(page)
+    stable_deadline = time.time() + settle_sec
+
+    while time.time() < deadline:
+        current = _user_message_count(page)
+        if current != last:
+            last = current
+            stable_deadline = time.time() + settle_sec
+        elif time.time() >= stable_deadline:
+            return current
+        time.sleep(0.2)
+
+    return last
 
 
 def _resolve_chat_url(cache_file: Path, explicit_url: str | None) -> str | None:
@@ -192,13 +320,15 @@ def _persist_chat_url(cache_file: Path, page_url: str) -> None:
     cache_file.write_text(page_url + "\n")
 
 
-def _set_prompt_text(page, prompt: str) -> None:
-    editor = _last_visible(
-        page.locator(
-            "div[contenteditable='true'][role='textbox'][aria-label*='prompt'], "
-            "rich-textarea .ql-editor[contenteditable='true'][role='textbox']"
-        )
-    )
+def _set_prompt_text(page, prompt: str, prefer_first_turn_edit: bool = False) -> None:
+    editor: Locator | None = None
+    if prefer_first_turn_edit:
+        first_turn = page.locator("conversation-turn", has=page.locator("user-query")).first
+        if first_turn.count() > 0:
+            editor = _find_editor(first_turn)
+
+    if not editor:
+        editor = _find_editor(page)
     if not editor:
         raise RuntimeError("Could not find Gemini prompt editor.")
 
@@ -208,16 +338,21 @@ def _set_prompt_text(page, prompt: str) -> None:
     page.keyboard.insert_text(prompt)
 
 
-def _click_send(page) -> None:
+def _click_send_or_update(page) -> None:
     deadline = time.time() + 30
-    send_locator = page.get_by_role("button", name=re.compile("send message", re.I))
+    update_locator = page.get_by_role("button", name=re.compile("update|save", re.I))
+    send_locator = page.get_by_role("button", name=re.compile("send message|send", re.I))
     while time.time() < deadline:
+        update_btn = _last_visible(update_locator)
+        if update_btn and update_btn.is_enabled():
+            update_btn.click()
+            return
         btn = _last_visible(send_locator)
         if btn and btn.is_enabled():
             btn.click()
             return
         time.sleep(0.2)
-    raise RuntimeError("Send button is not available or enabled.")
+    raise RuntimeError("Update/Send button is not available or enabled.")
 
 
 def _latest_response_text(page) -> str:
@@ -293,7 +428,7 @@ def _prepare_batch(cwd: Path, source: str, batch_size: int, batch_number: int) -
     return cp.stdout
 
 
-def _validate_response(cwd: Path, response_file: Path) -> bool:
+def _validate_response(cwd: Path, response_file: Path) -> tuple[bool, str]:
     cmd = [
         "uv",
         "run",
@@ -305,7 +440,64 @@ def _validate_response(cwd: Path, response_file: Path) -> bool:
         "--strict",
     ]
     cp = _run(cmd, cwd)
-    return cp.returncode == 0
+    details = "\n".join(x for x in (cp.stdout.strip(), cp.stderr.strip()) if x).strip()
+    return cp.returncode == 0, details
+
+
+def _schema_missing_field_hints(response_file: Path, max_hints: int = 12) -> list[str]:
+    try:
+        payload = json.loads(response_file.read_text())
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+
+    top_required = (
+        "id",
+        "source",
+        "title",
+        "artist",
+        "album",
+        "albumArtUrl",
+        "trackUrl",
+        "lyricsUrl",
+        "background",
+        "vocabulary",
+        "updatedAt",
+    )
+    vocab_required = ("id", "term", "exampleDe", "literalEn", "meaningEn", "exampleEn")
+
+    hints: list[str] = []
+    for i, item in enumerate(payload, start=1):
+        if len(hints) >= max_hints:
+            break
+        if not isinstance(item, dict):
+            hints.append(f"[{i}] item must be an object")
+            continue
+
+        for key in top_required:
+            if key not in item:
+                hints.append(f"[{i}].{key} is missing")
+                if len(hints) >= max_hints:
+                    break
+        if len(hints) >= max_hints:
+            break
+
+        vocab = item.get("vocabulary")
+        if not isinstance(vocab, list):
+            continue
+        for j, vocab_item in enumerate(vocab, start=1):
+            if len(hints) >= max_hints:
+                break
+            if not isinstance(vocab_item, dict):
+                hints.append(f"[{i}].vocabulary[{j}] must be an object")
+                continue
+            for key in vocab_required:
+                if key not in vocab_item:
+                    hints.append(f"[{i}].vocabulary[{j}].{key} is missing")
+                    if len(hints) >= max_hints:
+                        break
+    return hints
 
 
 def _import_combined(cwd: Path, combined_file: Path, strict: bool) -> None:
@@ -381,9 +573,9 @@ def run(args: argparse.Namespace) -> int:
                 response_file = responses_dir / f"batch-{batch_id}.response.json"
                 prompt_file.write_text(prompt)
 
-                user_count_before = _user_message_count(page)
+                user_count_before = _stable_user_message_count(page, settle_sec=0.8, timeout_sec=6.0)
                 require_edit = seeded_chat
-                edited = _click_edit_prompt(page)
+                edited = _click_edit_first_prompt(page)
                 if require_edit and not edited:
                     if not args.gemini_allow_new_message:
                         raise RuntimeError(
@@ -393,14 +585,14 @@ def run(args: argparse.Namespace) -> int:
                         )
                     print(f"Warning: batch {batch_id} is sending as a new message because edit mode was unavailable.")
 
-                _set_prompt_text(page, prompt)
-                _click_send(page)
+                _set_prompt_text(page, prompt, prefer_first_turn_edit=require_edit)
+                _click_send_or_update(page)
                 response = _wait_for_generation(page, timeout_sec=args.timeout_sec, stable_sec=args.stable_sec)
                 _copy_latest_response(page)
                 response_file.write_text(response)
                 _sanitize_response(response_file)
                 _persist_chat_url(chat_url_cache, page.url)
-                user_count_after = _user_message_count(page)
+                user_count_after = _stable_user_message_count(page, settle_sec=1.4, timeout_sec=10.0)
 
                 if require_edit and user_count_after > user_count_before:
                     raise RuntimeError(
@@ -411,8 +603,12 @@ def run(args: argparse.Namespace) -> int:
                 if not response_file.read_text().strip():
                     raise RuntimeError(f"Gemini returned empty response for batch {batch_id}")
 
-                if not _validate_response(app_dir, response_file):
-                    raise RuntimeError(f"Validation failed for batch {batch_id}: {response_file}")
+                is_valid, validation_details = _validate_response(app_dir, response_file)
+                if not is_valid:
+                    hints = _schema_missing_field_hints(response_file)
+                    hint_text = f"\nSchema hints: {', '.join(hints)}" if hints else ""
+                    details_text = f"\nValidator output:\n{validation_details}" if validation_details else ""
+                    raise RuntimeError(f"Validation failed for batch {batch_id}: {response_file}{details_text}{hint_text}")
 
                 response_files.append(response_file)
                 print(f"Validated batch {batch_id}: {response_file}")

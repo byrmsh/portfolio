@@ -27,6 +27,7 @@ LRCLIB_API_BASE = env.str("LRCLIB_API_BASE", default="https://lrclib.net/api")
 LYRICIST_LYRICS_MAX_CHARS = max(1000, env.int("LYRICIST_LYRICS_MAX_CHARS", default=12000))
 LYRICIST_LRCLIB_TIMEOUT_SEC = max(2, env.int("LYRICIST_LRCLIB_TIMEOUT_SEC", default=6))
 LYRICIST_LRCLIB_MAX_WORKERS = max(1, env.int("LYRICIST_LRCLIB_MAX_WORKERS", default=4))
+LYRICS_CACHE_JSONL_DEFAULT = "scripts/tmp/lrclib/saved-lyrics.jsonl"
 _MD_LINK_RE = re.compile(r"^\[([^\]]*)\]\(([^)]*)\)$")
 
 _VOCAB_REQUIRED_FIELDS = {"id", "term", "exampleDe", "literalEn", "meaningEn", "exampleEn"}
@@ -119,7 +120,12 @@ def _analysis_exists_and_valid(r, track_id: str) -> bool:
         return False
     try:
         payload = json.loads(_decode(raw))
-        YtMusicAnalysis.model_validate(payload)
+        analysis = YtMusicAnalysis.model_validate(payload)
+        # Treat known fallback/error analyses as not complete so they are eligible
+        # for reprocessing by `--source missing`.
+        tldr = (analysis.background.tldr or "").lower()
+        if "llm analysis failed:" in tldr or "llm output invalid:" in tldr:
+            return False
         return True
     except Exception:
         return False
@@ -216,8 +222,40 @@ def _fetch_lrclib_lyrics(track: TrackSeed) -> tuple[str | None, str | None]:
     return None, None
 
 
-def _build_lyrics_block(t: TrackSeed) -> str:
-    lyrics_text, lyrics_url = _fetch_lrclib_lyrics(t)
+def _load_saved_lyrics_cache(path: Path) -> dict[str, tuple[str | None, str | None]]:
+    if not path.exists():
+        return {}
+    out: dict[str, tuple[str | None, str | None]] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except Exception:
+            continue
+        if not isinstance(row, dict):
+            continue
+        track_id = row.get("trackId")
+        if not isinstance(track_id, str) or not track_id.strip():
+            continue
+        lyrics = row.get("lyrics")
+        lyrics_text = _compact_lyrics_for_prompt(lyrics, LYRICIST_LYRICS_MAX_CHARS) if isinstance(lyrics, str) and lyrics.strip() else None
+        lyrics_url = row.get("lyricsUrl") if isinstance(row.get("lyricsUrl"), str) and row.get("lyricsUrl") else None
+        out[track_id] = (lyrics_text, lyrics_url)
+    return out
+
+
+def _build_lyrics_block(t: TrackSeed, lyrics_cache: dict[str, tuple[str | None, str | None]] | None = None) -> str:
+    lyrics_text: str | None = None
+    lyrics_url: str | None = None
+    from_cache = False
+
+    if lyrics_cache is not None and t.id in lyrics_cache:
+        lyrics_text, lyrics_url = lyrics_cache[t.id]
+        from_cache = True
+    else:
+        lyrics_text, lyrics_url = _fetch_lrclib_lyrics(t)
+
     source = lyrics_url or "https://lrclib.net/"
     if lyrics_text:
         return (
@@ -225,6 +263,7 @@ def _build_lyrics_block(t: TrackSeed) -> str:
             f"  title: {t.title}\n"
             f"  artist: {t.artist}\n"
             f"  lyrics_source_url: {source}\n"
+            f"  lyrics_source_type: {'cache_jsonl' if from_cache else 'lrclib_live'}\n"
             "  lyrics_text_start\n"
             f"{lyrics_text}\n"
             "  lyrics_text_end"
@@ -233,29 +272,31 @@ def _build_lyrics_block(t: TrackSeed) -> str:
         f"- id: {t.id}\n"
         f"  title: {t.title}\n"
         f"  artist: {t.artist}\n"
-        "  lyrics_status: not_found_via_lrclib\n"
+        f"  lyrics_status: {'not_found_in_cache_jsonl' if from_cache else 'not_found_via_lrclib'}\n"
         "  hint: if needed, use search/web tools to verify terms; still do not quote lyrics"
     )
 
 
-def _build_lyrics_context(tracks: list[TrackSeed]) -> str:
+def _build_lyrics_context(
+    tracks: list[TrackSeed], lyrics_cache: dict[str, tuple[str | None, str | None]] | None = None
+) -> str:
     workers = min(len(tracks), LYRICIST_LRCLIB_MAX_WORKERS)
     if workers <= 1:
-        return "\n\n".join(_build_lyrics_block(t) for t in tracks)
+        return "\n\n".join(_build_lyrics_block(t, lyrics_cache=lyrics_cache) for t in tracks)
 
     blocks: list[str] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        for block in pool.map(_build_lyrics_block, tracks):
+        for block in pool.map(lambda t: _build_lyrics_block(t, lyrics_cache=lyrics_cache), tracks):
             blocks.append(block)
     return "\n\n".join(blocks)
 
 
-def _build_prompt(tracks: list[TrackSeed]) -> str:
+def _build_prompt(tracks: list[TrackSeed], lyrics_cache: dict[str, tuple[str | None, str | None]] | None = None) -> str:
     tracks_json = json.dumps([asdict(t) for t in tracks], ensure_ascii=False, indent=2)
-    lyrics_context = _build_lyrics_context(tracks)
+    lyrics_context = _build_lyrics_context(tracks, lyrics_cache=lyrics_cache)
     return (
         "You are generating strict JSON for flashcard-ready German vocabulary analysis.\n"
-        "Use provided lyrics text (from lrclib) as the primary source for each track.\n"
+        "Use provided lyrics text (from cache_jsonl or lrclib) as the primary source for each track.\n"
         "Only if lyrics are missing for a track, use web/search tools to verify terms.\n"
         "Do not quote lyrics or partial lyric lines anywhere in the output.\n"
         "\n"
@@ -363,7 +404,17 @@ def cmd_prepare_batch(args: argparse.Namespace) -> int:
         # Allow wrapper scripts to detect "empty batch" without parsing output.
         return 3 if args.stdout_prompt else 0
 
-    prompt = _build_prompt(tracks)
+    lyrics_cache: dict[str, tuple[str | None, str | None]] | None = None
+    if args.lyrics_cache_jsonl:
+        lyrics_cache = _load_saved_lyrics_cache(Path(args.lyrics_cache_jsonl))
+        if not args.quiet:
+            cache_hits = sum(1 for t in tracks if t.id in lyrics_cache)
+            print(
+                f"Lyrics cache: {args.lyrics_cache_jsonl} | hits: {cache_hits}/{len(tracks)} | "
+                f"misses: {len(tracks) - cache_hits}"
+            )
+
+    prompt = _build_prompt(tracks, lyrics_cache=lyrics_cache)
     if args.stdout_prompt:
         print(prompt, end="")
 
@@ -476,6 +527,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_prepare.add_argument("--stdout-prompt", action="store_true")
     p_prepare.add_argument("--no-files", action="store_true")
     p_prepare.add_argument("--quiet", action="store_true")
+    p_prepare.add_argument(
+        "--lyrics-cache-jsonl",
+        default=LYRICS_CACHE_JSONL_DEFAULT,
+        help=f"Optional cache JSONL from fetch_saved_lyrics_from_redis.py (default: {LYRICS_CACHE_JSONL_DEFAULT})",
+    )
     p_prepare.set_defaults(func=cmd_prepare_batch)
 
     p_import = sub.add_parser("import-batch", help="Import local analysis JSON into Redis")
