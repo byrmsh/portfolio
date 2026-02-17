@@ -35,11 +35,11 @@ cat > apps/web/public/favicon.svg <<'SVG'
   <rect width="64" height="64" rx="12" fill="#0f172a" />
   <text
     x="32"
-    y="35"
+    y="33"
     text-anchor="middle"
     dominant-baseline="middle"
     font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace"
-    font-size="26"
+    font-size="34"
     font-weight="700"
     fill="#f8fafc"
     letter-spacing="-1"
@@ -50,7 +50,7 @@ SVG
 magick -size 512x512 xc:none \
   -fill '#0f172a' -draw 'roundrectangle 0,0 511,511 96,96' \
   -font /tmp/ibm-plex-mono-font/IBMPlexMono-Bold.ttf \
-  -fill '#f8fafc' -gravity center -pointsize 230 -kerning -6 -annotate +0+6 'B$' \
+  -fill '#f8fafc' -gravity center -pointsize 310 -kerning -6 -annotate +0+2 'B$' \
   apps/web/public/favicon-512.png
 
 magick apps/web/public/favicon-512.png -resize 180x180 apps/web/public/apple-touch-icon.png

@@ -2,11 +2,11 @@
   <rect width="64" height="64" rx="12" fill="#0f172a" />
   <text
     x="32"
-    y="35"
+    y="33"
     text-anchor="middle"
     dominant-baseline="middle"
     font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace"
-    font-size="26"
+    font-size="34"
     font-weight="700"
     fill="#f8fafc"
     letter-spacing="-1"
