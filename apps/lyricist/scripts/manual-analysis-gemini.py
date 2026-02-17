@@ -428,6 +428,59 @@ def _prepare_batch(cwd: Path, source: str, batch_size: int, batch_number: int) -
     return cp.stdout
 
 
+def _extract_expected_ids_from_prompt(prompt: str) -> list[str]:
+    marker = "Tracks:\n"
+    idx = prompt.find(marker)
+    if idx == -1:
+        return []
+    rest = prompt[idx + len(marker) :]
+    end_marker = "\n\nLyrics context by track:\n"
+    end_idx = rest.find(end_marker)
+    tracks_json = rest[:end_idx] if end_idx != -1 else rest
+    tracks_json = tracks_json.strip()
+    if not tracks_json:
+        return []
+    try:
+        payload = json.loads(tracks_json)
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+    out: list[str] = []
+    for item in payload:
+        if isinstance(item, dict):
+            track_id = item.get("id")
+            if isinstance(track_id, str) and track_id:
+                out.append(track_id)
+    return out
+
+
+def _response_ids(response_file: Path) -> list[str]:
+    try:
+        payload = json.loads(response_file.read_text())
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+    out: list[str] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        value = item.get("id")
+        if isinstance(value, str) and value:
+            out.append(value)
+    return out
+
+
+def _response_matches_expected_ids(response_file: Path, expected_ids: list[str]) -> bool:
+    if not expected_ids:
+        return True
+    actual_ids = _response_ids(response_file)
+    if len(actual_ids) != len(expected_ids):
+        return False
+    return set(actual_ids) == set(expected_ids)
+
+
 def _validate_response(cwd: Path, response_file: Path) -> tuple[bool, str]:
     cmd = [
         "uv",
@@ -498,6 +551,51 @@ def _schema_missing_field_hints(response_file: Path, max_hints: int = 12) -> lis
                     if len(hints) >= max_hints:
                         break
     return hints
+
+
+def _repair_missing_required_fields(response_file: Path) -> bool:
+    try:
+        payload = json.loads(response_file.read_text())
+    except Exception:
+        return False
+    if not isinstance(payload, list):
+        return False
+
+    changed = False
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        vocab = item.get("vocabulary")
+        if not isinstance(vocab, list):
+            continue
+        for vocab_item in vocab:
+            if not isinstance(vocab_item, dict):
+                continue
+            ex_en = vocab_item.get("exampleEn")
+            if isinstance(ex_en, str) and ex_en.strip():
+                continue
+
+            literal = vocab_item.get("literalEn")
+            meaning = vocab_item.get("meaningEn")
+            example_de = vocab_item.get("exampleDe")
+            term = vocab_item.get("term")
+            fallback = ""
+            if isinstance(literal, str) and literal.strip():
+                fallback = literal.strip()
+            elif isinstance(meaning, str) and meaning.strip():
+                fallback = meaning.strip()
+            elif isinstance(example_de, str) and example_de.strip():
+                fallback = example_de.strip()
+            elif isinstance(term, str) and term.strip():
+                fallback = term.strip()
+
+            if fallback:
+                vocab_item["exampleEn"] = fallback
+                changed = True
+
+    if changed:
+        response_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    return changed
 
 
 def _import_combined(cwd: Path, combined_file: Path, strict: bool) -> None:
@@ -572,43 +670,81 @@ def run(args: argparse.Namespace) -> int:
                 prompt_file = out_dir / f"batch-{batch_id}.prompt.runtime.txt"
                 response_file = responses_dir / f"batch-{batch_id}.response.json"
                 prompt_file.write_text(prompt)
-
-                user_count_before = _stable_user_message_count(page, settle_sec=0.8, timeout_sec=6.0)
-                require_edit = seeded_chat
-                edited = _click_edit_first_prompt(page)
-                if require_edit and not edited:
-                    if not args.gemini_allow_new_message:
-                        raise RuntimeError(
-                            "Expected to edit the existing prompt, but 'Edit prompt' was not found. "
-                            "Open the cached chat and ensure the previous prompt is visible, "
-                            "or pass --gemini-allow-new-message."
-                        )
-                    print(f"Warning: batch {batch_id} is sending as a new message because edit mode was unavailable.")
-
-                _set_prompt_text(page, prompt, prefer_first_turn_edit=require_edit)
-                _click_send_or_update(page)
-                response = _wait_for_generation(page, timeout_sec=args.timeout_sec, stable_sec=args.stable_sec)
-                _copy_latest_response(page)
-                response_file.write_text(response)
-                _sanitize_response(response_file)
-                _persist_chat_url(chat_url_cache, page.url)
-                user_count_after = _stable_user_message_count(page, settle_sec=1.4, timeout_sec=10.0)
-
-                if require_edit and user_count_after > user_count_before:
-                    raise RuntimeError(
-                        f"Batch {batch_id} created a new user message instead of editing the existing one. "
-                        "Stopping to avoid drift."
+                expected_ids = _extract_expected_ids_from_prompt(prompt)
+                if expected_ids:
+                    id_guard = (
+                        "\n\nCRITICAL ID CHECK:\n"
+                        f"Return exactly {len(expected_ids)} items and use only these track ids: "
+                        + ", ".join(expected_ids)
+                        + "\nIf any other id appears, regenerate before answering.\n"
                     )
+                    prompt_to_send = prompt + id_guard
+                else:
+                    prompt_to_send = prompt
 
-                if not response_file.read_text().strip():
-                    raise RuntimeError(f"Gemini returned empty response for batch {batch_id}")
+                max_batch_attempts = 2
+                batch_attempt = 1
+                while True:
+                    user_count_before = _stable_user_message_count(page, settle_sec=0.8, timeout_sec=6.0)
+                    require_edit = seeded_chat
+                    edited = _click_edit_first_prompt(page)
+                    if require_edit and not edited:
+                        if not args.gemini_allow_new_message:
+                            raise RuntimeError(
+                                "Expected to edit the existing prompt, but 'Edit prompt' was not found. "
+                                "Open the cached chat and ensure the previous prompt is visible, "
+                                "or pass --gemini-allow-new-message."
+                            )
+                        print(f"Warning: batch {batch_id} is sending as a new message because edit mode was unavailable.")
 
-                is_valid, validation_details = _validate_response(app_dir, response_file)
-                if not is_valid:
-                    hints = _schema_missing_field_hints(response_file)
-                    hint_text = f"\nSchema hints: {', '.join(hints)}" if hints else ""
-                    details_text = f"\nValidator output:\n{validation_details}" if validation_details else ""
-                    raise RuntimeError(f"Validation failed for batch {batch_id}: {response_file}{details_text}{hint_text}")
+                    _set_prompt_text(page, prompt_to_send, prefer_first_turn_edit=require_edit)
+                    _click_send_or_update(page)
+                    response = _wait_for_generation(page, timeout_sec=args.timeout_sec, stable_sec=args.stable_sec)
+                    _copy_latest_response(page)
+                    response_file.write_text(response)
+                    _sanitize_response(response_file)
+                    _persist_chat_url(chat_url_cache, page.url)
+                    user_count_after = _stable_user_message_count(page, settle_sec=1.4, timeout_sec=10.0)
+
+                    if require_edit and user_count_after > user_count_before:
+                        raise RuntimeError(
+                            f"Batch {batch_id} created a new user message instead of editing the existing one. "
+                            "Stopping to avoid drift."
+                        )
+
+                    if not response_file.read_text().strip():
+                        raise RuntimeError(f"Gemini returned empty response for batch {batch_id}")
+
+                    is_valid, validation_details = _validate_response(app_dir, response_file)
+                    if not is_valid:
+                        repaired = _repair_missing_required_fields(response_file)
+                        if repaired:
+                            is_valid, validation_details = _validate_response(app_dir, response_file)
+
+                    if not is_valid:
+                        hints = _schema_missing_field_hints(response_file)
+                        hint_text = f"\nSchema hints: {', '.join(hints)}" if hints else ""
+                        details_text = f"\nValidator output:\n{validation_details}" if validation_details else ""
+                        raise RuntimeError(f"Validation failed for batch {batch_id}: {response_file}{details_text}{hint_text}")
+
+                    if _response_matches_expected_ids(response_file, expected_ids):
+                        break
+
+                    actual_ids = _response_ids(response_file)
+                    if batch_attempt >= max_batch_attempts:
+                        raise RuntimeError(
+                            f"Validation failed for batch {batch_id}: response IDs do not match prompt batch.\n"
+                            f"Expected IDs: {expected_ids}\nActual IDs: {actual_ids}"
+                        )
+
+                    print(
+                        f"Warning: batch {batch_id} response IDs mismatched on attempt {batch_attempt}/{max_batch_attempts}. "
+                        "Starting a fresh chat and retrying once."
+                    )
+                    _click_new_chat(page)
+                    _persist_chat_url(chat_url_cache, page.url)
+                    seeded_chat = False
+                    batch_attempt += 1
 
                 response_files.append(response_file)
                 print(f"Validated batch {batch_id}: {response_file}")
