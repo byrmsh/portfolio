@@ -77,6 +77,7 @@ LYRICIST_LYRICS_MAX_CHARS = max(1000, env.int("LYRICIST_LYRICS_MAX_CHARS", defau
 
 CURSOR_KEY = RedisKeys.stat("ytmusic", "cursor")
 PENDING_ZSET_KEY = getattr(RedisKeys, "INDEX_LYRICS_ANALYSIS_PENDING", "index:ytmusic:analysis:pending")
+WORKER_HEARTBEAT_KEY = RedisKeys.stat("ytmusic", "worker")
 
 _VOCAB_REQUIRED_FIELDS = {"id", "term", "exampleDe", "literalEn", "meaningEn", "exampleEn"}
 
@@ -1110,6 +1111,35 @@ def _mode_enabled(mode: str, value: str) -> bool:
     return value == "all" or value == mode
 
 
+def _write_worker_heartbeat(
+    r, *, mode: str, sync_processed: int, analyzed_processed: int
+) -> None:
+    now_iso = _iso_now()
+    payload: dict[str, Any] = {}
+
+    raw = r.get(WORKER_HEARTBEAT_KEY)
+    if raw:
+        try:
+            decoded = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else str(raw)
+            loaded = json.loads(decoded)
+            if isinstance(loaded, dict):
+                payload = loaded
+        except Exception:
+            payload = {}
+
+    payload["lastRunAt"] = now_iso
+    payload["lastSuccessAt"] = now_iso
+    payload["mode"] = mode
+    payload["syncProcessed"] = int(sync_processed)
+    payload["analyzedProcessed"] = int(analyzed_processed)
+    if _mode_enabled("sync", mode):
+        payload["lastSyncAt"] = now_iso
+    if _mode_enabled("analyze", mode):
+        payload["lastAnalyzeAt"] = now_iso
+
+    r.set(WORKER_HEARTBEAT_KEY, json.dumps(payload))
+
+
 def main() -> None:
     _ensure_flashcard_schema()
     mode = LYRICIST_MODE if LYRICIST_MODE in {"sync", "analyze", "all"} else "all"
@@ -1129,12 +1159,18 @@ def main() -> None:
         return
 
     r = redis_client()
+    sync_processed = 0
+    analyzed_processed = 0
 
     if _mode_enabled("sync", mode):
-        _run_sync(r)
+        sync_processed = _run_sync(r)
 
     if _mode_enabled("analyze", mode):
-        _run_analyze(r)
+        analyzed_processed = _run_analyze(r)
+
+    _write_worker_heartbeat(
+        r, mode=mode, sync_processed=sync_processed, analyzed_processed=analyzed_processed
+    )
 
 
 if __name__ == "__main__":

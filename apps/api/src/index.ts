@@ -172,6 +172,23 @@ app.get('/api/status', async (c) => {
     }
   };
 
+  const readLyricistHeartbeat = async (): Promise<{
+    lastRunAt: string | null;
+    lastSuccessAt: string | null;
+  }> => {
+    try {
+      const raw = await redis.get(redisKeys.stat('ytmusic', 'worker'));
+      if (!raw) return { lastRunAt: null, lastSuccessAt: null };
+      const parsed = JSON.parse(raw) as { lastRunAt?: unknown; lastSuccessAt?: unknown };
+      return {
+        lastRunAt: parseIsoOrNull(parsed.lastRunAt),
+        lastSuccessAt: parseIsoOrNull(parsed.lastSuccessAt),
+      };
+    } catch {
+      return { lastRunAt: null, lastSuccessAt: null };
+    }
+  };
+
   const probeRedis = async (): Promise<number | null> => {
     const start = Date.now();
     try {
@@ -182,10 +199,11 @@ app.get('/api/status', async (c) => {
     }
   };
 
-  const [githubUpdatedAt, ankiUpdatedAt, dragonflyLatency] = await Promise.all([
+  const [githubUpdatedAt, ankiUpdatedAt, dragonflyLatency, lyricistHeartbeat] = await Promise.all([
     readActivityUpdatedAt('github'),
     readActivityUpdatedAt('anki'),
     probeRedis(),
+    readLyricistHeartbeat(),
   ]);
 
   const collectorRunsRaw = [githubUpdatedAt, ankiUpdatedAt].filter((value): value is string =>
@@ -197,6 +215,8 @@ app.get('/api/status', async (c) => {
     statusFromAge(githubUpdatedAt),
     statusFromAge(ankiUpdatedAt),
   ]);
+  const lyricistLastUpdatedAt = lyricistHeartbeat.lastSuccessAt ?? lyricistHeartbeat.lastRunAt;
+  const lyricistStatus = statusFromAge(lyricistLastUpdatedAt);
   const dragonflyStatus: ServiceStatus = dragonflyLatency === null ? 'degraded' : 'healthy';
   const collectorLastUpdatedAt =
     [githubUpdatedAt, ankiUpdatedAt]
@@ -230,11 +250,24 @@ app.get('/api/status', async (c) => {
         message: collectorRunsRaw > 0 ? 'Collector tasks reported' : 'Collector has no reports yet',
         meta: collectorMeta,
       },
+      lyricist: {
+        status: lyricistStatus,
+        runs: lyricistHeartbeat.lastRunAt ? 1 : 0,
+        message: lyricistLastUpdatedAt
+          ? 'Lyricist worker heartbeat reported'
+          : 'Lyricist has no heartbeat yet',
+        meta: `Last run ${agoLabel(lyricistHeartbeat.lastRunAt)} • Last success ${agoLabel(lyricistHeartbeat.lastSuccessAt)}`,
+      },
       data: {
         checkedAt,
         uptimeSeconds: Math.floor(process.uptime()),
         collector: {
           lastUpdatedAt: collectorLastUpdatedAt,
+        },
+        lyricist: {
+          lastRunAt: lyricistHeartbeat.lastRunAt,
+          lastSuccessAt: lyricistHeartbeat.lastSuccessAt,
+          lastUpdatedAt: lyricistLastUpdatedAt,
         },
       },
       meta: {

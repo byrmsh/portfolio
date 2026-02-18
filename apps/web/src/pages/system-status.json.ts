@@ -29,6 +29,11 @@ type ApiStatusPayload = {
     collector?: {
       lastUpdatedAt?: string | null;
     };
+    lyricist?: {
+      lastRunAt?: string | null;
+      lastSuccessAt?: string | null;
+      lastUpdatedAt?: string | null;
+    };
   };
 };
 
@@ -227,7 +232,12 @@ export const GET: APIRoute = async ({ request }) => {
       .sort((a, b) => a.getTime() - b.getTime())
       .at(-1) ??
     null;
-  const lyricistUpdatedAt = parseIsoDate(lyricistLastSavedAt);
+  const lyricistHeartbeatUpdatedAt =
+    apiStatus?.data?.lyricist?.lastSuccessAt ??
+    apiStatus?.data?.lyricist?.lastRunAt ??
+    apiStatus?.data?.lyricist?.lastUpdatedAt ??
+    null;
+  const lyricistUpdatedAt = parseIsoDate(lyricistHeartbeatUpdatedAt ?? lyricistLastSavedAt);
 
   const workerFreshnessMs = 24 * 60 * 60 * 1000;
   const githubCheckStatus = statusFromFreshness(githubUpdatedAt, workerFreshnessMs);
