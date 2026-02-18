@@ -15,7 +15,10 @@ const projectsHref = localizedPath(locale, '/projects');
 const featured = (await getCollection('projects'))
   .filter((p) => !p.data.draft)
   .sort(
-    (a, b) => Number(b.data.featured) - Number(a.data.featured) || a.data.order - b.data.order,
+    (a, b) =>
+      Number(b.data.featured) - Number(a.data.featured) ||
+      b.data.year - a.data.year ||
+      a.data.order - b.data.order,
   )[0];
 ---
 
@@ -33,7 +36,7 @@ const featured = (await getCollection('projects'))
         <p class="mt-1.5 text-xs text-[var(--text-body)] line-clamp-2">{featured.data.summary}</p>
         <div class="mt-2.5 flex flex-wrap gap-1.5">
           {featured.data.stack.slice(0, 3).map((item) => (
-            <span class="text-xxs border border-[var(--border-subtle)] px-1.5 py-0.5 rounded text-[var(--text-subtle)]">
+            <span class="inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-2.5 py-1 text-xs font-sans text-[var(--text-body)]">
               {item}
             </span>
           ))}

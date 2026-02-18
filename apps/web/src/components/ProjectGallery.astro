@@ -22,7 +22,7 @@ function format(template: string, vars: Record<string, string | number>): string
 {
   deduped.length ? (
     <div data-project-gallery class="project-gallery">
-      <div class="relative h-56 sm:h-64 rounded-lg overflow-hidden border border-[var(--border-muted)] bg-[var(--surface-2)]">
+      <div class="relative h-72 sm:h-80 lg:h-[34rem] rounded-lg overflow-hidden border border-[var(--border-muted)] bg-[var(--surface-2)]">
         {deduped.map((image, index) => (
           <img
             src={image}
@@ -58,18 +58,46 @@ function format(template: string, vars: Record<string, string | number>): string
 
         <button
           type="button"
-          class="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full border border-white/35 bg-black/45 text-white hover:bg-black/55"
+          class="gallery-maximize"
           data-gallery-open
           aria-label={labels.maximize}
         >
           <svg aria-hidden="true" viewBox="0 0 24 24" class="h-4 w-4">
-            <path
-              d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"
+            <polyline
+              points="15 3 21 3 21 9"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.8"
+              stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
+            />
+            <polyline
+              points="9 21 3 21 3 15"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <line
+              x1="21"
+              y1="3"
+              x2="14"
+              y2="10"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <line
+              x1="3"
+              y1="21"
+              x2="10"
+              y2="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
             />
           </svg>
         </button>
@@ -93,21 +121,32 @@ function format(template: string, vars: Record<string, string | number>): string
 
       <dialog
         data-gallery-dialog
-        class="w-[min(96vw,1280px)] max-w-[1280px] bg-transparent p-0 m-auto backdrop:bg-black/88"
+        class="w-[min(96vw,1360px)] max-w-[1360px] bg-transparent p-0 m-auto backdrop:bg-black/88"
       >
-        <div class="relative h-[min(88vh,980px)] overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)]">
-          <button
-            type="button"
-            class="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full border border-white/35 bg-black/45 text-white hover:bg-black/55"
-            data-gallery-close
-            aria-label={labels.close}
-          >
-            <svg aria-hidden="true" viewBox="0 0 24 24" class="h-4 w-4">
-              <path
-                d="M6 6l12 12M18 6l-12 12"
+        <div class="relative h-[min(92vh,1024px)] overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)]">
+          <div class="gallery-modal-header">
+            <p class="gallery-modal-title">{title}</p>
+          </div>
+          <button type="button" class="gallery-close" data-gallery-close aria-label={labels.close}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5">
+              <line
+                x1="18"
+                y1="6"
+                x2="6"
+                y2="18"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="1.8"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <line
+                x1="6"
+                y1="6"
+                x2="18"
+                y2="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
                 stroke-linecap="round"
               />
             </svg>
@@ -236,3 +275,70 @@ function format(template: string, vars: Record<string, string | number>): string
     });
   }
 </script>
+
+<style>
+  .gallery-maximize {
+    position: absolute;
+    right: 0.75rem;
+    top: 0.75rem;
+    z-index: 10;
+    display: grid;
+    height: 2rem;
+    width: 2rem;
+    place-items: center;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, white 45%, transparent);
+    background: color-mix(in srgb, black 45%, transparent);
+    color: #fff;
+    transition:
+      background 0.2s,
+      border-color 0.2s;
+  }
+
+  .gallery-maximize:hover {
+    background: color-mix(in srgb, black 62%, transparent);
+    border-color: color-mix(in srgb, white 65%, transparent);
+  }
+
+  .gallery-modal-header {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .gallery-modal-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, white 75%, transparent);
+  }
+
+  .gallery-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 20;
+    display: flex;
+    padding: 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, white 45%, transparent);
+    background: transparent;
+    color: color-mix(in srgb, white 78%, transparent);
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      border-color 0.2s;
+  }
+
+  .gallery-close:hover {
+    background: color-mix(in srgb, black 25%, transparent);
+    color: #fff;
+    border-color: color-mix(in srgb, white 70%, transparent);
+  }
+</style>

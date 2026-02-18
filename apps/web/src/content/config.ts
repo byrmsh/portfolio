@@ -19,7 +19,7 @@ const projects = defineCollection({
     title: z.string(),
     description: z.string(),
     summary: z.string(),
-    status: z.enum(['Archive', 'In Progress', 'Concept']).default('Archive'),
+    year: z.number().int().min(1990).max(2100),
     stack: z.array(z.string()).min(1),
     heroImage: z.string(),
     galleryImages: z.array(z.string()).default([]),
