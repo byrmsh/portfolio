@@ -401,7 +401,7 @@ const rangeLabel =
     const tip = document.createElement('div');
     tip.setAttribute('data-tooltip', 'activity');
     tip.className =
-      'pointer-events-none fixed z-50 hidden rounded-md border border-[var(--border-subtle)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--text-primary)] shadow-lg';
+      'pointer-events-none fixed z-50 hidden whitespace-nowrap rounded-md border border-[var(--border-subtle)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--text-primary)] shadow-lg';
     document.body.appendChild(tip);
 
     const show = (el, x, y) => {
@@ -415,11 +415,30 @@ const rangeLabel =
       tip.textContent = dateStr
         ? formatTpl(tooltipWithDateTpl, { label: sourceLabel, date: dateStr, count, unit })
         : formatTpl(tooltipWithoutDateTpl, { label: sourceLabel, count, unit });
-      tip.style.left = `${Math.min(window.innerWidth - 10, x + 12)}px`;
-      tip.style.top = `${Math.min(window.innerHeight - 10, y + 12)}px`;
+
       tip.classList.remove('hidden');
+      tip.style.visibility = 'hidden';
+
+      const gap = 12;
+      const pad = 8;
+      const width = tip.offsetWidth;
+      const height = tip.offsetHeight;
+      let left = x + gap;
+      let top = y + gap;
+
+      if (left + width + pad > window.innerWidth) left = x - width - gap;
+      if (top + height + pad > window.innerHeight) top = y - height - gap;
+      if (left < pad) left = pad;
+      if (top < pad) top = pad;
+
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+      tip.style.visibility = 'visible';
     };
-    const hide = () => tip.classList.add('hidden');
+    const hide = () => {
+      tip.classList.add('hidden');
+      tip.style.visibility = 'hidden';
+    };
 
     const nodes = document.querySelectorAll('[data-tags] button[data-source]');
     for (const el of nodes) {
