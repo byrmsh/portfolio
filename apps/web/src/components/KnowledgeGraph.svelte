@@ -487,24 +487,27 @@
 
 </script>
 
-<div bind:this={wrapperEl} class="graph-wrapper">
-  <canvas bind:this={canvasEl} class="graph-canvas"></canvas>
+<div class="graph-wrapper">
+  <div class="graph-header">
+    <h3 class="graph-title">{uiLabels.title}</h3>
+    <button
+      class="maximize-btn"
+      onclick={openModal}
+      aria-label={uiLabels.fullscreen}
+      title={uiLabels.fullscreen}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 3 21 3 21 9"></polyline>
+        <polyline points="9 21 3 21 3 15"></polyline>
+        <line x1="21" y1="3" x2="14" y2="10"></line>
+        <line x1="3" y1="21" x2="10" y2="14"></line>
+      </svg>
+    </button>
+  </div>
 
-  <button
-    class="maximize-btn"
-    onclick={openModal}
-    aria-label={uiLabels.fullscreen}
-    title={uiLabels.fullscreen}
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="15 3 21 3 21 9"></polyline>
-      <polyline points="9 21 3 21 3 15"></polyline>
-      <line x1="21" y1="3" x2="14" y2="10"></line>
-      <line x1="3" y1="21" x2="10" y2="14"></line>
-    </svg>
-  </button>
-
-  <!-- Legend removed in minimized view -->
+  <div bind:this={wrapperEl} class="graph-canvas-wrap">
+    <canvas bind:this={canvasEl} class="graph-canvas"></canvas>
+  </div>
 </div>
 
 {#if isModalOpen}
@@ -537,7 +540,8 @@
 
 <style>
   .graph-wrapper {
-    position: relative;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     height: 100%;
     min-height: 280px;
@@ -548,6 +552,34 @@
     .graph-wrapper {
       min-height: 240px;
     }
+  }
+
+  .graph-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 3rem;
+    padding: 0.85rem 1.5rem 0.7rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-subtle);
+    backdrop-filter: blur(4px);
+  }
+
+  .graph-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .graph-canvas-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 0;
   }
 
   .graph-canvas {
@@ -561,28 +593,24 @@
     cursor: grabbing;
   }
 
-  /* Repositioned & Restyled Maximize Button */
   .maximize-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     background: transparent;
     border: none;
-    color: var(--text-hero-subtle);
-    opacity: 0.6;
+    color: var(--text-muted);
+    opacity: 0.7;
     cursor: pointer;
     transition: opacity 0.2s, color 0.2s;
-    z-index: 20;
+    padding: 0;
   }
 
   .maximize-btn:hover {
     opacity: 1;
-    color: var(--text-hero);
+    color: var(--text-primary);
   }
 
   .legend {

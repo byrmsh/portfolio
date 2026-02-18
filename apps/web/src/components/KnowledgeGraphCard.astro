@@ -1,5 +1,4 @@
 ---
-import WidgetHeader from './WidgetHeader.astro';
 import KnowledgeGraph from './KnowledgeGraph.svelte';
 import { buildGraphData } from '../lib/graph-data';
 import { getLocaleFromUrl } from '../i18n';
@@ -17,24 +16,14 @@ const graphData = await buildGraphData(locale);
 <section
   class="col-span-1 md:col-span-6 lg:col-span-4 min-h-[280px] lg:min-h-[240px] rounded-xl border border-[var(--border-hero)] bg-[var(--surface-hero)] text-[var(--text-hero)] relative overflow-hidden"
 >
-  <div class="absolute inset-0">
-    <KnowledgeGraph
-      client:visible
-      graphData={graphData}
-      labels={{
-        title: t('knowledgeGraph.title'),
-        stats: t('knowledgeGraph.stats'),
-        fullscreen: t('knowledgeGraph.fullscreen'),
-        exitFullscreen: t('knowledgeGraph.exitFullscreen'),
-      }}
-    />
-  </div>
-
-  <div class="relative z-10 p-6 pointer-events-none">
-    <WidgetHeader
-      title={t('knowledgeGraph.title')}
-      titleClass="text-[var(--text-hero-subtle)]"
-      class="items-start"
-    />
-  </div>
+  <KnowledgeGraph
+    client:visible
+    graphData={graphData}
+    labels={{
+      title: t('knowledgeGraph.title'),
+      stats: t('knowledgeGraph.stats'),
+      fullscreen: t('knowledgeGraph.fullscreen'),
+      exitFullscreen: t('knowledgeGraph.exitFullscreen'),
+    }}
+  />
 </section>
