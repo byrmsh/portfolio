@@ -4,6 +4,7 @@ import json
 import random
 import re
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -114,11 +115,28 @@ def _ytmusic_track_url(video_id: str) -> str:
     return f"https://music.youtube.com/watch?v={video_id}"
 
 
-def _genius_search_url(title: str, artist: str) -> str:
-    from urllib.parse import quote_plus
+def _slugify_genius_part(text: str) -> str:
+    folded = unicodedata.normalize("NFKD", text or "")
+    ascii_text = folded.encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")
+    slug = re.sub(r"-{2,}", "-", slug)
+    return slug or "unknown"
 
-    q = quote_plus(f"{title} {artist}")
-    return f"https://genius.com/search?q={q}"
+
+def _genius_lyrics_url(title: str, artist: str) -> str:
+    artist_slug = _slugify_genius_part(artist)
+    title_slug = _slugify_genius_part(title)
+    return f"https://genius.com/{artist_slug}-{title_slug}-lyrics"
+
+
+def _is_lrclib_url(value: str | None) -> bool:
+    if not value:
+        return False
+    try:
+        host = (urlparse(value).netloc or "").lower()
+    except Exception:
+        return False
+    return host == "lrclib.net" or host.endswith(".lrclib.net")
 
 
 def _strip_lrc_timestamps(text: str) -> str:
@@ -448,7 +466,7 @@ def _analysis_fallback(track: Track, reason: str) -> YtMusicAnalysis:
         album=track.album,
         albumArtUrl=track.album_art_url,
         trackUrl=_ytmusic_track_url(track.id),
-        lyricsUrl=_genius_search_url(track.title, track.artist),
+        lyricsUrl=_genius_lyrics_url(track.title, track.artist),
         background={
             "tldr": f"A track by {track.artist}. ({reason})",
             "notes": [],
@@ -579,10 +597,15 @@ def _normalize_analysis_payload(
     payload["trackUrl"] = track_url if track_url is not None else _ytmusic_track_url(track.id)
 
     lyrics_url = _blank_to_none(_normalize_url_like(payload.get("lyricsUrl")))
+    fallback_lyrics = _blank_to_none(_normalize_url_like(fallback_lyrics_url))
+    if isinstance(lyrics_url, str) and _is_lrclib_url(lyrics_url):
+        lyrics_url = None
+    if isinstance(fallback_lyrics, str) and _is_lrclib_url(fallback_lyrics):
+        fallback_lyrics = None
     payload["lyricsUrl"] = (
         lyrics_url
         if lyrics_url is not None
-        else (fallback_lyrics_url or _genius_search_url(track.title, track.artist))
+        else (fallback_lyrics or _genius_lyrics_url(track.title, track.artist))
     )
 
     vocab_raw = payload.get("vocabulary")
@@ -882,6 +905,31 @@ def _upsert_saved_note_and_index(r, track: Track) -> None:
     emit_event(r, "ytmusic_saved_updated", {"trackId": track.id, "key": stat_key})
 
 
+def _prune_removed_tracks(r, playlist_track_ids: set[str]) -> int:
+    raw_ids = r.zrange(RedisKeys.INDEX_LYRICS_RECENT, 0, -1)
+    if not raw_ids:
+        return 0
+
+    removed = 0
+    for rid in raw_ids:
+        track_id = rid.decode("utf-8") if isinstance(rid, (bytes, bytearray)) else str(rid)
+        if not track_id or track_id in playlist_track_ids:
+            continue
+
+        r.delete(
+            RedisKeys.stat("ytmusic", track_id),
+            RedisKeys.stat_field("ytmusic", track_id, "analysis"),
+            _analysis_attempts_key(track_id),
+        )
+        r.zrem(RedisKeys.INDEX_LYRICS_RECENT, track_id)
+        r.zrem(PENDING_ZSET_KEY, track_id)
+        removed += 1
+
+    if removed > 0:
+        logger.info("lyricist.sync.pruned_removed_tracks", count=removed)
+    return removed
+
+
 def _run_sync(r) -> int:
     if not YTMUSIC_PLAYLIST_ID:
         logger.info("lyricist.no_playlist_configured")
@@ -897,6 +945,8 @@ def _run_sync(r) -> int:
 
     logger.info("lyricist.sync.start", playlist_id=YTMUSIC_PLAYLIST_ID, last_seen=last_seen)
     tracks = _list_playlist_tracks(YTMUSIC_PLAYLIST_ID)
+    playlist_track_ids = {t.id for t in tracks}
+    removed_count = _prune_removed_tracks(r, playlist_track_ids)
     if not tracks:
         logger.info("lyricist.sync.empty", playlist_id=YTMUSIC_PLAYLIST_ID)
         return 0
@@ -908,7 +958,7 @@ def _run_sync(r) -> int:
         new_tracks.append(tr)
 
     if not new_tracks:
-        logger.info("lyricist.sync.noop", playlist_id=YTMUSIC_PLAYLIST_ID)
+        logger.info("lyricist.sync.noop", playlist_id=YTMUSIC_PLAYLIST_ID, removed=removed_count)
         return 0
 
     for tr in reversed(new_tracks):
@@ -916,7 +966,7 @@ def _run_sync(r) -> int:
         _upsert_saved_note_and_index(r, tr)
         _write_cursor(r, YTMUSIC_PLAYLIST_ID, tr.id)
 
-    logger.info("lyricist.sync.done", processed=len(new_tracks))
+    logger.info("lyricist.sync.done", processed=len(new_tracks), removed=removed_count)
     return len(new_tracks)
 
 
