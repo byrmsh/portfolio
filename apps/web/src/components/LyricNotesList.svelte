@@ -18,6 +18,7 @@
 
   type Labels = {
     all: string;
+    total: string;
     page: string;
     perPage: string;
     couldNotLoadPage: string;
@@ -44,6 +45,7 @@
 
   const format = (template: string, vars: Record<string, string | number>): string =>
     template.replaceAll(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? `{${key}}`));
+  const totalCount = () => data.total || data.items.length;
 
   function toRelativeHref(u: URL): string {
     const qs = u.searchParams.toString();
@@ -109,12 +111,10 @@
 
 <section class="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6" style="overflow-anchor: none;">
   <div class="flex items-baseline justify-between gap-6">
-    <h2 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{format(labels.all, { count: data.total || data.items.length })}</h2>
-    <div class="flex items-center gap-2 text-xxs font-mono text-[var(--text-subtle)]">
-      <span>{format(labels.page, { page: data.page, totalPages: Math.max(1, data.totalPages || 1) })}</span>
-      <span class="text-[var(--text-muted)]">·</span>
-      <span>{format(labels.perPage, { count: data.pageSize })}</span>
-    </div>
+    <h2 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{labels.all}</h2>
+    <span class="ml-auto whitespace-nowrap text-right text-xxs font-mono text-[var(--text-muted)]">
+      {format(labels.total, { count: totalCount() })}
+    </span>
   </div>
 
   {#if error}
@@ -144,10 +144,10 @@
     </div>
   {/if}
 
-  <div class="mt-5 flex items-center justify-between">
+  <div class="mt-6 flex items-center justify-between gap-3">
     {#if data.page > 1}
       <a
-        class="text-xxs font-mono rounded-full border border-[var(--border-subtle)] px-3 py-1 hover:bg-[var(--surface-2)]"
+        class="inline-flex min-w-20 items-center justify-center rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xxs font-mono text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-2)]"
         href={buildPageHref(data.page - 1)}
         aria-disabled={loading}
         on:click|preventDefault={() => loadPage(data.page - 1)}
@@ -155,12 +155,20 @@
         {loading ? labels.loading : labels.prev}
       </a>
     {:else}
-      <span></span>
+      <span
+        class="inline-flex min-w-20 items-center justify-center rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xxs font-mono text-[var(--text-muted)] opacity-60"
+      >
+        {labels.prev}
+      </span>
     {/if}
+
+    <span class="text-xxs font-mono text-[var(--text-subtle)]">
+      {format(labels.page, { page: data.page, totalPages: Math.max(1, data.totalPages || 1) })}
+    </span>
 
     {#if data.page < data.totalPages}
       <a
-        class="text-xxs font-mono rounded-full border border-[var(--border-subtle)] px-3 py-1 hover:bg-[var(--surface-2)]"
+        class="inline-flex min-w-20 items-center justify-center rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xxs font-mono text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-2)]"
         href={buildPageHref(data.page + 1)}
         aria-disabled={loading}
         on:click|preventDefault={() => loadPage(data.page + 1)}
@@ -168,7 +176,11 @@
         {loading ? labels.loading : labels.next}
       </a>
     {:else}
-      <span></span>
+      <span
+        class="inline-flex min-w-20 items-center justify-center rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xxs font-mono text-[var(--text-muted)] opacity-60"
+      >
+        {labels.next}
+      </span>
     {/if}
   </div>
 </section>

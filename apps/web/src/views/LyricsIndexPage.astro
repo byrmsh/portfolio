@@ -144,7 +144,8 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle
         locale={locale}
         basePath={localizedPath(locale, '/lyrics')}
         labels={{
-          all: t('lyrics.all', { count: '{count}' }),
+          all: t('lyrics.all'),
+          total: t('lyrics.total', { count: '{count}' }),
           page: t('lyrics.page', { page: '{page}', totalPages: '{totalPages}' }),
           perPage: t('lyrics.perPage', { count: '{count}' }),
           couldNotLoadPage: t('lyrics.couldNotLoadPage', { error: '{error}' }),

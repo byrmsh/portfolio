@@ -59,7 +59,7 @@ const enTranslations = {
     blog: 'Blog',
     contact: 'Contact',
     lyrics: 'Lyrics',
-    lyricNote: 'Lyric Note',
+    lyricNote: 'Lyric Breakdown',
     projects: 'Projects',
   },
   blog: {
@@ -81,7 +81,7 @@ const enTranslations = {
   },
   contact: {
     eyebrow: 'Contact',
-    title: 'Get in Touch',
+    title: 'Say Hello',
     description:
       'Open to new opportunities and technical discussions! PGP key available for encryption.',
     emailLabel: 'Email',
@@ -108,7 +108,7 @@ const enTranslations = {
   savedLyrics: {
     title: 'Saved Lyrics',
     noTracks: 'No saved tracks yet',
-    readLyricNote: 'READ NOTE',
+    readLyricNote: 'READ BREAKDOWN',
   },
   writing: {
     title: 'Writing',
@@ -167,16 +167,17 @@ const enTranslations = {
     latest: 'Latest',
     savedAt: 'Saved {date}',
     noTracks: 'No tracks processed yet.',
-    all: 'All ({count})',
+    all: 'All',
+    total: '{count} total',
     page: 'Page {page} / {totalPages}',
     perPage: '{count}/page',
     couldNotLoadPage: 'Could not load page: {error}',
     prev: 'PREV',
     next: 'NEXT',
-    backToAll: '← ALL NOTES',
+    backToAll: '← ALL LYRICS',
     loading: 'Loading…',
-    couldNotLoadNote: 'Could not load note',
-    noteLabel: 'Lyric Note',
+    couldNotLoadNote: 'Could not load lyric breakdown',
+    noteLabel: 'Lyric Breakdown',
     openTrack: 'OPEN TRACK',
     readLyrics: 'READ LYRICS',
     updatedAt: 'Updated {date}',
