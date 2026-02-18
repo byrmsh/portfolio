@@ -14,16 +14,16 @@
   }
   const { graphData, labels }: Props = $props();
 
-  const uiLabels = {
+  const uiLabels = $derived({
     title: labels?.title ?? 'Knowledge Graph',
     stats: labels?.stats ?? '{nodes} nodes · {links} links',
     fullscreen: labels?.fullscreen ?? 'Fullscreen',
     exitFullscreen: labels?.exitFullscreen ?? 'Exit fullscreen',
-  };
+  });
 
-  const statsLabel = uiLabels.stats
+  const statsLabel = $derived(uiLabels.stats
     .replace('{nodes}', String(graphData.nodes.length))
-    .replace('{links}', String(graphData.links.length));
+    .replace('{links}', String(graphData.links.length)));
 
   // ─── State ────────────────────────────────────────────────────────────────
   let canvasEl: HTMLCanvasElement | undefined = $state();
