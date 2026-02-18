@@ -3,6 +3,15 @@ name: build-images
 on:
   push:
     branches: [main]
+    paths:
+      - .github/workflows/build-images.yml
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - apps/**
+      - packages/schema/**
+      - packages/schema-py/**
+      - packages/common-py/**
   workflow_dispatch: {}
 
 permissions:
