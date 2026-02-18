@@ -14,6 +14,11 @@ interface Props {
 
 const { title, locale, description, canonicalPath, ogType = 'website', ogImagePath } = Astro.props;
 const siteOrigin = `https://${SITE.domain}`;
+const localeToLangTag: Record<SupportedLocale, string> = {
+  eng: 'en',
+  dev: 'en-x-dev',
+};
+const htmlLang = localeToLangTag[locale];
 const resolvedDescription =
   description ??
   'Personal site for software projects, writing, lyrics notes, and live system updates.';
@@ -24,7 +29,7 @@ const canonical = new URL(
 ).toString();
 const ogImage = new URL(resolvedOgImagePath, siteOrigin).toString();
 const alternateLinks = SUPPORTED_LOCALES.map((l) => ({
-  locale: l,
+  hreflang: localeToLangTag[l],
   href: new URL(localizedPath(l, Astro.url.pathname), siteOrigin).toString(),
 }));
 const xDefaultHref = new URL(
@@ -35,7 +40,7 @@ const faviconVersion = '20260217';
 ---
 
 <!doctype html>
-<html lang={locale} class="scroll-smooth">
+<html lang={htmlLang} class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -72,7 +77,7 @@ const faviconVersion = '20260217';
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={resolvedDescription} />
     <meta name="twitter:image" content={ogImage} />
-    {alternateLinks.map((alt) => <link rel="alternate" hreflang={alt.locale} href={alt.href} />)}
+    {alternateLinks.map((alt) => <link rel="alternate" hreflang={alt.hreflang} href={alt.href} />)}
     <link rel="alternate" hreflang="x-default" href={xDefaultHref} />
     <link rel="icon" type="image/svg+xml" href={`/favicon.svg?v=${faviconVersion}`} />
     <link
