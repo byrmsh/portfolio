@@ -106,8 +106,8 @@
     const ratio = dpr();
     canvas.width = rect.width * ratio;
     canvas.height = rect.height * ratio;
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
   }
 
   function draw() {
@@ -467,9 +467,22 @@
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isModalOpen) closeModal();
     };
+
+    const handleViewportResize = () => {
+      const activeCanvas = isModalOpen ? modalCanvasEl : canvasEl;
+      const activeWrapper = isModalOpen ? modalWrapperEl : wrapperEl;
+      if (!activeCanvas || !activeWrapper) return;
+      resizeCanvas(activeCanvas, activeWrapper);
+      updateCenter(activeWrapper);
+      tuneForViewport(activeWrapper);
+      simulation?.alpha(0.1).restart();
+    };
+
+    window.addEventListener('resize', handleViewportResize);
     window.addEventListener('keydown', handleKeydown);
 
     return () => {
+      window.removeEventListener('resize', handleViewportResize);
       window.removeEventListener('keydown', handleKeydown);
       observer.disconnect();
       themeObserver.disconnect();
@@ -580,6 +593,7 @@
     position: relative;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
 
   .graph-canvas {
