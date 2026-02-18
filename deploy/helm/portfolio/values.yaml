@@ -98,7 +98,7 @@ collectorCronJobs:
       secretRef: collector-secrets
     - name: lyricist-sync-cronjob
       component: collector
-      schedule: '*/20 * * * *'
+      schedule: '0 */4 * * *'
       suspend: true
       image:
         repository: portfolio-lyricist
@@ -113,7 +113,7 @@ collectorCronJobs:
       secretRef: lyricist-secrets
     - name: lyricist-analysis-cronjob
       component: collector
-      schedule: '*/30 * * * *'
+      schedule: '10 */4 * * *'
       suspend: true
       image:
         repository: portfolio-lyricist

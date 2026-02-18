@@ -17,6 +17,10 @@ The chart runs lyricist in two jobs:
 - `lyricist-analysis-cronjob`: pending analysis processing
 
 Both jobs read shared secrets from `lyricist-secrets`; mode is set per job in values via env.
+Default cadence in this repo is every 4 hours:
+
+- sync at minute `0`
+- analyze at minute `10`
 
 ## Web SSR Origins (Avoid Hairpin)
 
