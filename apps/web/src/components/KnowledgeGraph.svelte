@@ -559,8 +559,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    min-height: 3rem;
-    padding: 0.85rem 1.5rem 0.7rem;
+    min-height: 3.5rem;
+    padding: 1.5rem 1.5rem 0.7rem;
     background: var(--surface);
     border-bottom: 1px solid var(--border-subtle);
     backdrop-filter: blur(4px);
