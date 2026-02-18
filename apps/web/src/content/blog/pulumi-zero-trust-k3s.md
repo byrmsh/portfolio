@@ -3,6 +3,11 @@ title: 'Pulumi K3s Guide'
 description: 'Guide for running a Zero-Trust Kubernetes node on Hetzner with Cloudflare Tunnel and Pulumi with no open inbound ports'
 pubDate: '11 Jan 2026'
 heroImage: '../../assets/blog-placeholder-3.jpg'
+tags:
+  - Pulumi
+  - Cloudflared
+  - Zero Trust
+  - K3s
 ---
 
 ### Introduction
