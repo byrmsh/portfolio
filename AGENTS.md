@@ -79,7 +79,8 @@ kubectl create secret generic db-credentials \
 
 ## 6.5. Build Check Discipline
 
-- Before finalizing changes, run `prek run`.
+- Do not run `prek run` right before commit by default; `git commit` already runs pre-commit hooks in this repo.
+- Run `prek run --all-files` only when you need an explicit manual validation pass without committing (or when requested).
 - If `.pre-commit-config.yaml` changes, run `prek validate-config`.
 - After refactors or UI changes, run the relevant build(s) for affected app(s).
 - Example build check: `pnpm -C apps/web build`.
