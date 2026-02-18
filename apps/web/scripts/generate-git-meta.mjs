@@ -5,6 +5,7 @@ import path from 'node:path';
 const RECENT_LIMIT = 3;
 const OUTPUT_PATH = 'apps/web/dist/git-meta.json';
 const BLOG_CONTENT_DIR = 'apps/web/src/content/blog';
+const PROJECTS_CONTENT_DIR = 'apps/web/src/content/projects';
 const LOG_FORMAT = '%H%x1f%h%x1f%aN%x1f%aI%x1f%s';
 
 function normalizeGitHubRepoUrl(remote) {
@@ -76,7 +77,7 @@ function collectMarkdownFiles(rootDir) {
   return out;
 }
 
-function blogPathFilters(filePath) {
+function contentPathFilters(filePath) {
   const base = filePath.replace(/\.(md|mdx)$/i, '');
   return Array.from(new Set([filePath, base, `${base}.md`, `${base}.mdx`]));
 }
@@ -94,14 +95,16 @@ try {
   const repoUrl = normalizeGitHubRepoUrl(remote);
   const pathMetadata = {};
 
-  for (const filePath of collectMarkdownFiles(BLOG_CONTENT_DIR)) {
-    const filters = blogPathFilters(filePath);
-    const slice = {
-      commits: getRecentCommits(filters),
-      totalChanges: getTotalCommitCount(filters),
-    };
-    for (const filter of filters) {
-      pathMetadata[filter] = slice;
+  for (const contentDir of [BLOG_CONTENT_DIR, PROJECTS_CONTENT_DIR]) {
+    for (const filePath of collectMarkdownFiles(contentDir)) {
+      const filters = contentPathFilters(filePath);
+      const slice = {
+        commits: getRecentCommits(filters),
+        totalChanges: getTotalCommitCount(filters),
+      };
+      for (const filter of filters) {
+        pathMetadata[filter] = slice;
+      }
     }
   }
 
