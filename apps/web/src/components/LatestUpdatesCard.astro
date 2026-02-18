@@ -238,18 +238,15 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
 
   {
     commits.length > 0 ? (
-      <div class="space-y-6 md:space-y-1.5">
+      <div class="space-y-4 md:space-y-1.5">
         {commits.map((commit) => {
           const parsed = parseConventionalSubject(commit.subject);
           return (
-            <article class="border-b border-[var(--border-subtle)] px-2 py-1.5 transition-colors hover:bg-[var(--surface-2)] last:border-0 md:border-b-0">
+            <article class="py-1.5 transition-colors hover:bg-[var(--surface-2)] md:px-2">
               <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div class="min-w-0 flex-1">
-                  <p class="mb-2 text-sm font-medium font-sans text-[var(--text-body)] leading-snug break-words md:mb-0">
-                    {parsed.description}
-                  </p>
                   <div class="md:hidden">
-                    <div class="mb-3 flex flex-wrap gap-2">
+                    <div class="mb-1.5 flex flex-wrap gap-2">
                       <span
                         class:list={[
                           'inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap',
@@ -269,11 +266,13 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                         </span>
                       ) : null}
                     </div>
-                    <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-                      <span class="text-right text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                        {t('gitCommits.hash')}
-                      </span>
-                      <span class="inline-flex min-w-0 items-center gap-1.5 text-left text-xs font-mono text-[var(--text-primary)]">
+                  </div>
+                  <p class="mb-2 text-sm font-medium font-sans text-[var(--text-body)] leading-snug break-words md:mb-0">
+                    {parsed.description}
+                  </p>
+                  <div class="md:hidden">
+                    <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs font-mono text-[var(--text-primary)]">
+                      <span class="inline-flex min-w-0 items-center gap-1.5">
                         <code title={commit.hash}>{commit.shortHash}</code>
                         {repoUrl ? (
                           <a
@@ -288,23 +287,16 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                           </a>
                         ) : null}
                       </span>
-
-                      <span class="text-right text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                        {t('gitCommits.date')}
+                      <span aria-hidden="true" class="text-[var(--text-muted)]">
+                        •
                       </span>
-                      <time
-                        class="text-left text-xs font-mono text-[var(--text-primary)]"
-                        datetime={commit.authoredAt}
-                      >
+                      <time datetime={commit.authoredAt}>
                         {dateFormatter.format(new Date(commit.authoredAt))}
                       </time>
-
-                      <span class="text-right text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                        {t('gitCommits.author')}
+                      <span aria-hidden="true" class="text-[var(--text-muted)]">
+                        •
                       </span>
-                      <span class="text-left text-xs font-mono text-[var(--text-primary)] break-words">
-                        {commit.author}
-                      </span>
+                      <span class="break-words">{commit.author}</span>
                     </div>
                   </div>
                   <div class="mt-1 hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs md:flex">
