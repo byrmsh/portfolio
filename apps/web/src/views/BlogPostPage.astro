@@ -59,6 +59,17 @@ const postCommitPathFilters = Array.from(
           }
         </div>
         <p class="mt-3 text-sm text-[var(--text-body)]">{post.data.description}</p>
+        {
+          post.data.tags.length > 0 && (
+            <div class="mt-3 flex flex-wrap gap-2">
+              {post.data.tags.map((tag) => (
+                <span class="inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2.5 py-1 text-xs font-sans text-[var(--text-body)]">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )
+        }
       </header>
 
       <article
