@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { Redis } from 'ioredis';
 
 import {
@@ -20,6 +21,24 @@ import {
 import { parseJobBoardJob, projectJobBoardJobToDetail } from './jobs/job-board.js';
 
 const app = new Hono();
+const localDevOrigins = new Set([
+  'http://localhost:4321',
+  'http://127.0.0.1:4321',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+]);
+const configuredWebOrigins = new Set(
+  [
+    process.env.WEB_ORIGIN,
+    process.env.PUBLIC_WEB_ORIGIN,
+    process.env.CORS_ORIGIN,
+    process.env.CORS_ORIGINS,
+  ]
+    .flatMap((value) => String(value ?? '').split(','))
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
+const allowedCorsOrigins = new Set([...localDevOrigins, ...configuredWebOrigins]);
 
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379/0');
 
@@ -113,6 +132,16 @@ async function readActivitySeries(source: ActivitySource): Promise<ActivitySerie
 app.get('/', (c) => {
   return c.text('Hello Hono!');
 });
+
+app.use(
+  '/api/*',
+  cors({
+    origin: (origin) => {
+      if (!origin) return undefined;
+      return allowedCorsOrigins.has(origin) ? origin : undefined;
+    },
+  }),
+);
 
 app.get('/health', (c) => {
   return c.json({ data: { status: 'ok' }, meta: { ts: new Date().toISOString() } });
