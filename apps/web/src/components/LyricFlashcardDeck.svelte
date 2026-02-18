@@ -306,7 +306,9 @@
   });
 </script>
 
-<section class="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6 pb-12">
+<section
+  class="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6 pb-12 [overflow-anchor:none]"
+>
   <div class="flex items-baseline justify-between gap-4">
     <h2 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{labels.title}</h2>
     <div class="text-xxs font-mono text-[var(--text-subtle)]">
@@ -353,7 +355,7 @@
           on:pointermove={onPointerMove}
           on:pointerup={onPointerUp}
           on:pointercancel={onPointerCancel}
-          style={`transform: translateX(${dragX}px) rotate(${rotate}deg); touch-action: none;`}
+          style={`transform: translateX(${dragX}px) rotate(${rotate}deg); touch-action: pan-y;`}
           aria-label={labels.flipHint}
         >
           <div
