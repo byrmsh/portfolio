@@ -122,7 +122,7 @@
   {:else if !data.items.length}
     <p class="mt-3 text-sm text-[var(--text-body)]">{labels.noTracks}</p>
   {:else}
-    <div class="mt-4 grid gap-3">
+    <div class="mt-4 grid gap-3 lg:grid-cols-2">
       {#each data.items as t (t.id)}
         <a href={buildItemHref(t.id)} class="flex items-center gap-4 rounded-lg border border-[var(--border-subtle)] p-3 hover:bg-[var(--surface-2)]">
           <div class="w-12 h-12 rounded-lg bg-[var(--surface-inverse)] overflow-hidden shrink-0">
