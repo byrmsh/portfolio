@@ -179,6 +179,13 @@ Production recommendation:
 - Set `ARGOCD_HEALTH_URL` in chart values for deterministic behavior across environments.
 - Keep this setting source-of-truth in GitOps values (`homelab/k8s/portfolio/values-prod.yaml`).
 
+### Knowledge Graph Widget
+
+- Homepage component: `apps/web/src/components/KnowledgeGraphCard.astro` + `KnowledgeGraph.svelte`.
+- Data source: built at render time from `astro:content` collections (`blog`, `projects`) via `apps/web/src/lib/graph-data.ts`.
+- The graph canvas now fills the full card area; the title/maximize controls are overlaid.
+- Fullscreen/modal view uses the same surface token as the card (`var(--surface-hero)`) to keep dark-mode backgrounds consistent.
+
 ## Docker Compose (Optional)
 
 ```bash

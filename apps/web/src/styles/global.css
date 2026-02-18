@@ -44,13 +44,13 @@
   --header-glass-bg: rgba(245, 245, 244, 0.82);
   --grid-line-color: rgba(0, 0, 0, 0.02);
   --radial-accent-color: rgba(16, 185, 129, 0.05);
-  --surface-hero: #171717;
-  --text-hero: #f5f5f5;
-  --text-hero-muted: #bdbdbd;
-  --text-hero-subtle: #9a9a9a;
-  --border-hero: #404040;
-  --hero-node-color: rgba(255, 255, 255, 0.78);
-  --hero-line-color: rgba(255, 255, 255, 0.35);
+  --surface-hero: #fafaf9;
+  --text-hero: #171717;
+  --text-hero-muted: #525252;
+  --text-hero-subtle: #737373;
+  --border-hero: #d4d4d4;
+  --hero-node-color: rgba(0, 0, 0, 0.6);
+  --hero-line-color: rgba(0, 0, 0, 0.2);
   color-scheme: light;
 
   /* Backward-compatible aliases (temporary during migration). */
@@ -91,11 +91,11 @@ html[data-theme='dark'] {
   --header-glass-bg: rgba(18, 18, 18, 0.82);
   --grid-line-color: rgba(255, 255, 255, 0.025);
   --radial-accent-color: rgba(16, 185, 129, 0.06);
-  --surface-hero: #1e222a;
+  --surface-hero: #171717;
   --text-hero: #f4f4f5;
   --text-hero-muted: #d0d0d7;
   --text-hero-subtle: #afb0bb;
-  --border-hero: rgba(16, 185, 129, 0.38);
+  --border-hero: #404040;
   --hero-node-color: rgba(255, 255, 255, 0.6);
   --hero-line-color: rgba(255, 255, 255, 0.22);
   color-scheme: dark;

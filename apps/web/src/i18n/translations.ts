@@ -117,8 +117,9 @@ const enTranslations = {
   knowledgeGraph: {
     title: 'Knowledge Graph',
     source: 'OBSIDIAN',
-    nodes: '{count} Nodes',
-    description: 'Interlinked notes on DevOps, Philosophy, and Music.',
+    stats: '{nodes} nodes · {links} links',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit fullscreen',
   },
   projectsWidget: {
     title: 'Projects',

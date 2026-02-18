@@ -17,7 +17,9 @@
     "@lucide/astro": "^0.563.0",
     "@portfolio/schema": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
+    "@types/d3": "^7.4.3",
     "astro": "^5.0.0",
+    "d3": "^7.9.0",
     "ky": "^1.14.3",
     "svelte": "^5.0.0",
     "tailwindcss": "^4.1.18"
