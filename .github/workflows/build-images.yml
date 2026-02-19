@@ -13,6 +13,8 @@ on:
       - packages/schema-py/**
       - packages/common-py/**
   pull_request:
+    # 'labeled' allows adding the preview label to an already-open PR
+    # and immediately triggering a push build for the ArgoCD preview env
     types: [opened, synchronize, reopened, labeled]
     paths:
       - .github/workflows/build-images.yml
