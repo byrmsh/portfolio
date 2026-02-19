@@ -21,6 +21,10 @@ spec:
           labels:
             app: {{ include "portfolio.appLabel" $ }}
             component: {{ $job.component }}
+          {{- if $.Values.global.previewHeadSha }}
+          annotations:
+            preview.bysh.dev/head-sha: {{ $.Values.global.previewHeadSha | quote }}
+          {{- end }}
         spec:
           restartPolicy: OnFailure
           containers:

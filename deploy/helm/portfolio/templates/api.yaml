@@ -17,6 +17,10 @@ spec:
       labels:
         app: {{ include "portfolio.appLabel" . }}
         component: api
+      {{- if .Values.global.previewHeadSha }}
+      annotations:
+        preview.bysh.dev/head-sha: {{ .Values.global.previewHeadSha | quote }}
+      {{- end }}
     spec:
       containers:
         - name: api

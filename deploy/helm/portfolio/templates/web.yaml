@@ -17,6 +17,10 @@ spec:
       labels:
         app: {{ include "portfolio.appLabel" . }}
         component: web
+      {{- if .Values.global.previewHeadSha }}
+      annotations:
+        preview.bysh.dev/head-sha: {{ .Values.global.previewHeadSha | quote }}
+      {{- end }}
     spec:
       containers:
         - name: web

@@ -1,6 +1,5 @@
 ---
 import {
-  DEFAULT_DATA,
   detailFor,
   dotClass,
   formatCheckedValue,
@@ -44,7 +43,7 @@ const servicePills = {
   argocd: ['Kubernetes'],
 } as const;
 
-async function loadInitialStatus(): Promise<NormalizedPayload> {
+async function loadInitialStatus(): Promise<NormalizedPayload | null> {
   try {
     const response = await fetch(endpoint, {
       method: 'GET',
@@ -55,7 +54,7 @@ async function loadInitialStatus(): Promise<NormalizedPayload> {
     return normalizePayload((await response.json()) as unknown);
   } catch (e) {
     console.error('SSR Fetch Failed:', e);
-    return { data: DEFAULT_DATA, checkedAt: null };
+    return null;
   }
 }
 
@@ -65,7 +64,7 @@ const initial = await loadInitialStatus();
 <section
   data-system-health
   data-client-endpoint="/system-status.json"
-  data-initial-checked-at={initial.checkedAt ?? ''}
+  data-initial-checked-at={initial?.checkedAt ?? ''}
   data-label-checked-prefix={t('health.checkedPrefix')}
   data-not-available={strings.notAvailable}
   data-run-singular={strings.runSingular}
@@ -82,20 +81,26 @@ const initial = await loadInitialStatus();
     <span
       data-last-check
       class="ml-auto whitespace-nowrap text-right text-[11px] font-mono tabular-nums uppercase tracking-wide text-[var(--text-muted)]"
-      >{`${t('health.checkedPrefix')}: ${formatCheckedValue(initial.checkedAt)}`}</span
+      >{`${t('health.checkedPrefix')}: ${formatCheckedValue(initial?.checkedAt ?? null)}`}</span
     >
   </WidgetHeader>
 
   <div class="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-6">
     {
       serviceOrder.map((key) => {
-        const node = initial.data[key];
-        const metric = metricFor(key, node, strings);
-        const detail = detailFor(key, node, strings);
+        const node = initial?.data[key] ?? null;
+        const metric = node ? metricFor(key, node, strings) : '';
+        const detail = node ? detailFor(key, node, strings) : '';
         return (
           <article data-service-row={key} class="service-cell min-w-0">
             <h3 class="mb-1 flex items-center gap-1.5 text-[11px] font-mono tracking-wide text-[var(--text-subtle)]">
-              <span data-service-dot class:list={['h-2 w-2 rounded-full', dotClass(node.status)]} />
+              <span
+                data-service-dot
+                class:list={[
+                  'h-2 w-2 rounded-full',
+                  node ? dotClass(node.status) : 'bg-[var(--border-subtle)]',
+                ]}
+              />
               <span class="truncate">{serviceNames[key]}</span>
             </h3>
             <div class="mb-2 mt-1 flex flex-wrap gap-1">
@@ -105,19 +110,26 @@ const initial = await loadInitialStatus();
                 </span>
               ))}
             </div>
-            <p class:list={['mb-1', metricClass(metric)]} data-service-metric>
+            <p
+              class:list={[
+                node
+                  ? metricClass(metric)
+                  : 'mb-1 min-h-[2.25rem] flex items-end text-3xl font-mono font-medium text-[var(--text-muted)]',
+              ]}
+              data-service-metric
+            >
               {metric}
             </p>
             <p
               class="text-[11px] font-mono uppercase tracking-wide text-[var(--text-muted)]"
               data-service-label
             >
-              {labelFor(key, strings)}
+              {node ? labelFor(key, strings) : ''}
             </p>
             <p
               class:list={[
                 'text-[11px] font-sans text-[var(--text-subtle)]',
-                { hidden: detail.length === 0 },
+                { hidden: detail.length === 0 || !node },
               ]}
               data-service-detail
             >
