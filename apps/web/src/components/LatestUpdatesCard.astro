@@ -180,6 +180,14 @@ function parseConventionalSubject(subject: string): ParsedCommit {
 function normalizeSubjectForDisplay(subject: string): string {
   let normalized = subject.trim().replace(/\b([0-9a-f]{40})\b/gi, (hash) => hash.slice(0, 7));
 
+  const mergeRemoteTrackingMatch = /^Merge remote-tracking branch '([^']+)' into (.+)$/i.exec(
+    normalized,
+  );
+  if (mergeRemoteTrackingMatch) {
+    const [, sourceBranch, targetBranch] = mergeRemoteTrackingMatch;
+    return `Merge ${sourceBranch.trim()} into ${targetBranch.trim()}`;
+  }
+
   const mergeWithRemoteMatch = /^Merge branch '([^']+)' of \S+ into (.+)$/i.exec(normalized);
   if (mergeWithRemoteMatch) {
     const [, sourceBranch, targetBranch] = mergeWithRemoteMatch;
