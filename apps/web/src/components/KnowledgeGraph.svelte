@@ -67,10 +67,9 @@
   let transform = { x: 0, y: 0, k: 1 };
   let mainTransform = { x: 0, y: 0, k: 1 };
   let modalTransform = { x: 0, y: 0, k: 1 };
-  let hasMainInteracted = false;
   let animFrame: number | null = null;
   let ro: ResizeObserver | null = null;
-  let cleanupMainInteractions: (() => void) | null = null;
+  let cleanupMainHoverInteractions: (() => void) | null = null;
   let cleanupModalInteractions: (() => void) | null = null;
   let d3: any = null;
 
@@ -424,6 +423,26 @@
     };
   }
 
+  function attachHoverOnlyInteractions(canvas: HTMLCanvasElement) {
+    const onMouseMove = (e: MouseEvent) => {
+      const { x, y } = canvasCoords(e, canvas);
+      const node = getNodeAtPoint(x, y);
+      hoveredNodeId = node?.id ?? null;
+    };
+
+    const onMouseLeave = () => {
+      hoveredNodeId = null;
+    };
+
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseleave', onMouseLeave);
+
+    return () => {
+      canvas.removeEventListener('mousemove', onMouseMove);
+      canvas.removeEventListener('mouseleave', onMouseLeave);
+    };
+  }
+
   async function openModal() {
     mainTransform = { ...transform };
     isModalOpen = true;
@@ -452,11 +471,6 @@
       if (canvasEl && wrapperEl) {
         transform = { ...mainTransform };
         resizeCanvas(canvasEl, wrapperEl);
-        cleanupMainInteractions?.();
-        cleanupMainInteractions = attachInteractions(canvasEl, (next, userInitiated) => {
-          if (userInitiated) hasMainInteracted = true;
-          mainTransform = { ...next };
-        }) ?? null;
         updateCenter(wrapperEl);
         tuneForViewport(wrapperEl);
         simulation.alpha(0.3).restart();
@@ -488,11 +502,8 @@
         initSimulation().then(() => {
           if (canvasEl && wrapperEl) {
             resizeCanvas(canvasEl, wrapperEl);
-            cleanupMainInteractions?.();
-            cleanupMainInteractions = attachInteractions(canvasEl, (next, userInitiated) => {
-              if (userInitiated) hasMainInteracted = true;
-              mainTransform = { ...next };
-            }) ?? null;
+            cleanupMainHoverInteractions?.();
+            cleanupMainHoverInteractions = attachHoverOnlyInteractions(canvasEl);
             updateCenter(wrapperEl);
             tuneForViewport(wrapperEl);
             settleLayout();
@@ -507,16 +518,7 @@
             if (wrapperEl) {
               updateCenter(wrapperEl);
               tuneForViewport(wrapperEl);
-              if (!hasMainInteracted) {
-                applyMainDefaultZoom(wrapperEl);
-                if (canvasEl) {
-                  cleanupMainInteractions?.();
-                  cleanupMainInteractions = attachInteractions(canvasEl, (next, userInitiated) => {
-                    if (userInitiated) hasMainInteracted = true;
-                    mainTransform = { ...next };
-                  }) ?? null;
-                }
-              }
+              applyMainDefaultZoom(wrapperEl);
             }
             simulation?.alpha(0.1).restart();
           }
@@ -538,13 +540,8 @@
       resizeCanvas(activeCanvas, activeWrapper);
       updateCenter(activeWrapper);
       tuneForViewport(activeWrapper);
-      if (!isModalOpen && !hasMainInteracted && canvasEl && wrapperEl) {
+      if (!isModalOpen && wrapperEl) {
         applyMainDefaultZoom(wrapperEl);
-        cleanupMainInteractions?.();
-        cleanupMainInteractions = attachInteractions(canvasEl, (next, userInitiated) => {
-          if (userInitiated) hasMainInteracted = true;
-          mainTransform = { ...next };
-        }) ?? null;
       }
       simulation?.alpha(0.1).restart();
     };
@@ -564,7 +561,7 @@
     if (typeof window === 'undefined') return;
     if (animFrame !== null) cancelAnimationFrame(animFrame);
     simulation?.stop();
-    cleanupMainInteractions?.();
+    cleanupMainHoverInteractions?.();
     cleanupModalInteractions?.();
     ro?.disconnect();
   });
@@ -671,10 +668,14 @@
     display: block;
     width: 100%;
     height: 100%;
+    cursor: default;
+  }
+
+  .modal-content .graph-canvas {
     cursor: grab;
   }
 
-  .graph-canvas:active {
+  .modal-content .graph-canvas:active {
     cursor: grabbing;
   }
 
