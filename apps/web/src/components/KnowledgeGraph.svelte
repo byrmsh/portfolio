@@ -48,6 +48,7 @@
     blog: '#c084fc',
     tag: '#737373',
   };
+  const PROJECTS_HUB_ID = 'hub:projects';
 
   let labelColors: Record<string, string> = {
     hub: '#f5f5f5',
@@ -64,6 +65,9 @@
   let simLinks: SimLink[] = [];
   let simulation: any = null;
   let transform = { x: 0, y: 0, k: 1 };
+  let mainTransform = { x: 0, y: 0, k: 1 };
+  let modalTransform = { x: 0, y: 0, k: 1 };
+  let hasMainInteracted = false;
   let animFrame: number | null = null;
   let ro: ResizeObserver | null = null;
   let cleanupMainInteractions: (() => void) | null = null;
@@ -236,6 +240,33 @@
     simulation.alpha(alpha).restart();
   }
 
+  function buildCenteredTransform(wrapper: HTMLDivElement, k: number) {
+    const { width, height } = wrapper.getBoundingClientRect();
+    const projectsNode = simNodes.find((n) => n.id === PROJECTS_HUB_ID || n.label === 'Projects');
+    if (projectsNode?.x == null || projectsNode?.y == null) {
+      return {
+        x: (width * (1 - k)) / 2,
+        y: (height * (1 - k)) / 2,
+        k,
+      };
+    }
+
+    return {
+      x: (width / 2) - (projectsNode.x * k),
+      y: (height / 2) - (projectsNode.y * k),
+      k,
+    };
+  }
+
+  function applyMainDefaultZoom(wrapper: HTMLDivElement) {
+    const { width, height } = wrapper.getBoundingClientRect();
+    const compact = Math.min(width, height) < 520;
+    const k = compact ? 0.5 : 0.58;
+    const next = buildCenteredTransform(wrapper, k);
+    mainTransform = next;
+    if (!isModalOpen) transform = { ...next };
+  }
+
   // ─── Interaction ──────────────────────────────────────────────────────────
   function getNodeAtPoint(px: number, py: number): SimNode | null {
     const sx = (px - transform.x) / transform.k;
@@ -285,7 +316,10 @@
       .alphaDecay(0.022);
   }
 
-  function attachInteractions(canvas: HTMLCanvasElement) {
+  function attachInteractions(
+    canvas: HTMLCanvasElement,
+    onTransformChange?: (next: { x: number; y: number; k: number }, userInitiated: boolean) => void,
+  ) {
     if (!d3 || !simulation) return;
 
     let draggedNode: SimNode | null = null;
@@ -299,9 +333,15 @@
       return !event.button;
     }).on('zoom', (event: any) => {
       transform = { x: event.transform.x, y: event.transform.y, k: event.transform.k };
+      onTransformChange?.(transform, Boolean(event.sourceEvent));
     });
 
-    d3.select(canvas).call(zoomBehavior);
+    const selection = d3.select(canvas);
+    selection.call(zoomBehavior);
+    selection.call(
+      zoomBehavior.transform,
+      d3.zoomIdentity.translate(transform.x, transform.y).scale(transform.k),
+    );
 
     const onMouseMove = (e: MouseEvent) => {
       if (draggedNode) {
@@ -385,13 +425,17 @@
   }
 
   async function openModal() {
+    mainTransform = { ...transform };
     isModalOpen = true;
     hoveredNodeId = null;
+    transform = { ...modalTransform };
     await svelteTick();
     if (modalCanvasEl && modalWrapperEl) {
       resizeCanvas(modalCanvasEl, modalWrapperEl);
       cleanupModalInteractions?.();
-      cleanupModalInteractions = attachInteractions(modalCanvasEl) ?? null;
+      cleanupModalInteractions = attachInteractions(modalCanvasEl, (next) => {
+        modalTransform = { ...next };
+      }) ?? null;
       updateCenter(modalWrapperEl);
       tuneForViewport(modalWrapperEl);
       simulation.alpha(0.3).restart();
@@ -399,15 +443,20 @@
   }
 
   function closeModal() {
+    modalTransform = { ...transform };
     isModalOpen = false;
     hoveredNodeId = null;
     cleanupModalInteractions?.();
     cleanupModalInteractions = null;
     svelteTick().then(() => {
       if (canvasEl && wrapperEl) {
+        transform = { ...mainTransform };
         resizeCanvas(canvasEl, wrapperEl);
         cleanupMainInteractions?.();
-        cleanupMainInteractions = attachInteractions(canvasEl) ?? null;
+        cleanupMainInteractions = attachInteractions(canvasEl, (next, userInitiated) => {
+          if (userInitiated) hasMainInteracted = true;
+          mainTransform = { ...next };
+        }) ?? null;
         updateCenter(wrapperEl);
         tuneForViewport(wrapperEl);
         simulation.alpha(0.3).restart();
@@ -440,10 +489,14 @@
           if (canvasEl && wrapperEl) {
             resizeCanvas(canvasEl, wrapperEl);
             cleanupMainInteractions?.();
-            cleanupMainInteractions = attachInteractions(canvasEl) ?? null;
+            cleanupMainInteractions = attachInteractions(canvasEl, (next, userInitiated) => {
+              if (userInitiated) hasMainInteracted = true;
+              mainTransform = { ...next };
+            }) ?? null;
             updateCenter(wrapperEl);
             tuneForViewport(wrapperEl);
             settleLayout();
+            applyMainDefaultZoom(wrapperEl);
             renderLoop();
           }
         });
@@ -454,6 +507,16 @@
             if (wrapperEl) {
               updateCenter(wrapperEl);
               tuneForViewport(wrapperEl);
+              if (!hasMainInteracted) {
+                applyMainDefaultZoom(wrapperEl);
+                if (canvasEl) {
+                  cleanupMainInteractions?.();
+                  cleanupMainInteractions = attachInteractions(canvasEl, (next, userInitiated) => {
+                    if (userInitiated) hasMainInteracted = true;
+                    mainTransform = { ...next };
+                  }) ?? null;
+                }
+              }
             }
             simulation?.alpha(0.1).restart();
           }
@@ -475,6 +538,14 @@
       resizeCanvas(activeCanvas, activeWrapper);
       updateCenter(activeWrapper);
       tuneForViewport(activeWrapper);
+      if (!isModalOpen && !hasMainInteracted && canvasEl && wrapperEl) {
+        applyMainDefaultZoom(wrapperEl);
+        cleanupMainInteractions?.();
+        cleanupMainInteractions = attachInteractions(canvasEl, (next, userInitiated) => {
+          if (userInitiated) hasMainInteracted = true;
+          mainTransform = { ...next };
+        }) ?? null;
+      }
       simulation?.alpha(0.1).restart();
     };
 
