@@ -952,17 +952,19 @@ def _run_sync(r) -> int:
         logger.info("lyricist.sync.empty", playlist_id=YTMUSIC_PLAYLIST_ID)
         return 0
 
+    # Playlist ordering from upstream is not stable across environments.
+    # Detect new tracks by Redis presence instead of relying on cursor position.
     new_tracks: list[Track] = []
     for tr in tracks:
-        if last_seen and tr.id == last_seen:
-            break
+        if r.exists(RedisKeys.stat("ytmusic", tr.id)):
+            continue
         new_tracks.append(tr)
 
     if not new_tracks:
         logger.info("lyricist.sync.noop", playlist_id=YTMUSIC_PLAYLIST_ID, removed=removed_count)
         return 0
 
-    for tr in reversed(new_tracks):
+    for tr in new_tracks:
         logger.info("lyricist.track.sync", track_id=tr.id, title=tr.title, artist=tr.artist)
         _upsert_saved_note_and_index(r, tr)
         _write_cursor(r, YTMUSIC_PLAYLIST_ID, tr.id)
