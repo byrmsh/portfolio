@@ -2,6 +2,9 @@ global:
   appLabel: portfolio
   # Default image tag for all app workloads. Individual `*.image.tag` values can override this.
   imageTag: dev
+  # Optional rollout token for preview environments. When set, workloads include it as a
+  # pod template annotation so new commits trigger rollouts even with stable image tags.
+  previewHeadSha: ''
   # Default image pull policy for app workloads. Individual `*.image.pullPolicy` values can override this.
   imagePullPolicy: IfNotPresent
 
