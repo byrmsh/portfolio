@@ -216,15 +216,15 @@
           const s = l.source as SimNode;
           const t = l.target as SimNode;
           if (compact) {
-            return (s.type === 'hub' || t.type === 'hub') ? 60 : (s.type === 'tag' || t.type === 'tag') ? 48 : 56;
+            return (s.type === 'hub' || t.type === 'hub') ? 68 : (s.type === 'tag' || t.type === 'tag') ? 52 : 62;
           }
-          return (s.type === 'hub' || t.type === 'hub') ? 74 : (s.type === 'tag' || t.type === 'tag') ? 54 : 66;
+          return (s.type === 'hub' || t.type === 'hub') ? 86 : (s.type === 'tag' || t.type === 'tag') ? 60 : 74;
         })
-        .strength(compact ? 0.62 : 0.58);
+        .strength(compact ? 0.57 : 0.55);
     }
 
-    chargeForce?.strength(compact ? -185 : -155);
-    collisionForce?.radius((d: any) => getRadius((d as SimNode).type) + (compact ? 13 : 11));
+    chargeForce?.strength(compact ? -235 : -210);
+    collisionForce?.radius((d: any) => getRadius((d as SimNode).type) + (compact ? 15 : 13));
     simulation.force('x', d3.forceX(width / 2).strength(compact ? 0.03 : 0.02));
     simulation.force('y', d3.forceY(height / 2).strength(compact ? 0.03 : 0.02));
   }
@@ -278,10 +278,10 @@
       .force('link', d3.forceLink(simLinks).id((d: any) => d.id).distance((l: any) => {
         const s = l.source as SimNode;
         const t = l.target as SimNode;
-        return (s.type === 'hub' || t.type === 'hub') ? 95 : (s.type === 'tag' || t.type === 'tag') ? 65 : 85;
-      }).strength(0.6))
-      .force('charge', d3.forceManyBody().strength(-200))
-      .force('collision', d3.forceCollide().radius((d: any) => getRadius((d as SimNode).type) + 16))
+        return (s.type === 'hub' || t.type === 'hub') ? 105 : (s.type === 'tag' || t.type === 'tag') ? 70 : 92;
+      }).strength(0.56))
+      .force('charge', d3.forceManyBody().strength(-255))
+      .force('collision', d3.forceCollide().radius((d: any) => getRadius((d as SimNode).type) + 18))
       .alphaDecay(0.022);
   }
 
