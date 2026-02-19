@@ -157,12 +157,13 @@ function getRepoUrlFromOrigin(): string | null {
 }
 
 function parseConventionalSubject(subject: string): ParsedCommit {
-  const match = /^([a-z]+)(\(([^)]+)\))?(!)?:\s*(.+)$/i.exec(subject.trim());
+  const normalizedSubject = normalizeSubjectForDisplay(subject);
+  const match = /^([a-z]+)(\(([^)]+)\))?(!)?:\s*(.+)$/i.exec(normalizedSubject.trim());
   if (!match) {
     return {
       type: 'update',
       scope: null,
-      description: capitalizeMessage(subject.trim()),
+      description: capitalizeMessage(normalizedSubject.trim()),
       breaking: false,
     };
   }
@@ -174,6 +175,24 @@ function parseConventionalSubject(subject: string): ParsedCommit {
     description: capitalizeMessage(String(rawDescription).trim()),
     breaking: bang === '!',
   };
+}
+
+function normalizeSubjectForDisplay(subject: string): string {
+  let normalized = subject.trim().replace(/\b([0-9a-f]{40})\b/gi, (hash) => hash.slice(0, 7));
+
+  const mergeWithRemoteMatch = /^Merge branch '([^']+)' of \S+ into (.+)$/i.exec(normalized);
+  if (mergeWithRemoteMatch) {
+    const [, sourceBranch, targetBranch] = mergeWithRemoteMatch;
+    return `Merge ${sourceBranch.trim()} into ${targetBranch.trim()}`;
+  }
+
+  const mergeBranchMatch = /^Merge branch '([^']+)' into (.+)$/i.exec(normalized);
+  if (mergeBranchMatch) {
+    const [, sourceBranch, targetBranch] = mergeBranchMatch;
+    return `Merge ${sourceBranch.trim()} into ${targetBranch.trim()}`;
+  }
+
+  return normalized;
 }
 
 function capitalizeMessage(value: string): string {
