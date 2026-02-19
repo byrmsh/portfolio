@@ -8,9 +8,9 @@ stack:
   - Kubernetes
   - Argo CD
   - Pulumi
-heroImage: /projects/homelab/SS1.png
+heroImage: /projects/homelab/SS1.webp
 galleryImages:
-  - /projects/homelab/SS1.png
+  - /projects/homelab/SS1.webp
 order: 2
 ---
 

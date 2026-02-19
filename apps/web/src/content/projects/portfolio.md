@@ -8,9 +8,9 @@ stack:
   - TypeScript
   - Kubernetes
   - Helm
-heroImage: /projects/website/SS1.png
+heroImage: /projects/website/SS1.webp
 galleryImages:
-  - /projects/website/SS1.png
+  - /projects/website/SS1.webp
 featured: true
 order: 1
 ---

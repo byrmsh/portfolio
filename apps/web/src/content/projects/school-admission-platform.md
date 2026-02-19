@@ -8,12 +8,12 @@ stack:
   - NestJS
   - MongoDB
   - Firebase
-heroImage: /projects/school-admission/SS1.png
+heroImage: /projects/school-admission/SS1.webp
 galleryImages:
-  - /projects/school-admission/SS1.png
-  - /projects/school-admission/SS2.png
-  - /projects/school-admission/SS3.png
-  - /projects/school-admission/SS4.png
+  - /projects/school-admission/SS1.webp
+  - /projects/school-admission/SS2.webp
+  - /projects/school-admission/SS3.webp
+  - /projects/school-admission/SS4.webp
 order: 7
 ---
 
