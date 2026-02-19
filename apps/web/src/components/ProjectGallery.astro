@@ -325,20 +325,18 @@ function format(template: string, vars: Record<string, string | number>): string
     z-index: 20;
     display: flex;
     padding: 0.5rem;
-    border-radius: 9999px;
-    border: 1px solid color-mix(in srgb, white 45%, transparent);
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--border-hero) 65%, transparent);
     background: transparent;
-    color: color-mix(in srgb, white 78%, transparent);
+    color: var(--text-hero-subtle);
     cursor: pointer;
     transition:
       background 0.2s,
-      color 0.2s,
-      border-color 0.2s;
+      color 0.2s;
   }
 
   .gallery-close:hover {
-    background: color-mix(in srgb, black 25%, transparent);
-    color: #fff;
-    border-color: color-mix(in srgb, white 70%, transparent);
+    background: color-mix(in srgb, var(--surface-hero) 88%, transparent);
+    color: var(--text-hero);
   }
 </style>
