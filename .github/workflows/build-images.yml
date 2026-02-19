@@ -105,8 +105,8 @@ jobs:
             lyricist="true"
           fi
 
-          # Preview environments pin multiple workloads to the same PR tag.
-          # Build all images so every required tag exists for that PR.
+          # Preview environments pin multiple workloads to a shared PR-specific tag.
+          # Build all images so every required tag exists for that PR commit.
           if [[ "${{ github.event_name }}" == "pull_request" && "${{ contains(github.event.pull_request.labels.*.name, 'preview') }}" == "true" ]]; then
             shared="true"
             api="true"
@@ -166,9 +166,10 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
-            type=sha,format=long,prefix=,enable=${{ github.event_name != 'pull_request' }}
+            type=sha,format=long,prefix=
+            type=raw,value=main-${{ github.sha }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ github.sha }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=pr,enable=${{ github.event_name == 'pull_request' }}
           # Add suffix to avoid overwriting the other platform
           flavor: |
             suffix=-amd64
@@ -209,9 +210,10 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
-            type=sha,format=long,prefix=,enable=${{ github.event_name != 'pull_request' }}
+            type=sha,format=long,prefix=
+            type=raw,value=main-${{ github.sha }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ github.sha }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=pr,enable=${{ github.event_name == 'pull_request' }}
           # Add suffix to avoid overwriting the other platform
           flavor: |
             suffix=-arm64
@@ -248,14 +250,17 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
-            type=sha,format=long,prefix=,enable=${{ github.event_name != 'pull_request' }}
+            type=sha,format=long,prefix=
+            type=raw,value=main-${{ github.sha }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}-${{ github.sha }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=pr,enable=${{ github.event_name == 'pull_request' }}
 
       - name: Create manifest list and push
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            base_tag="pr-${{ github.event.pull_request.number }}"
+            base_tag="pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            base_tag="main-${{ github.sha }}"
           else
             base_tag="${{ github.sha }}"
           fi
