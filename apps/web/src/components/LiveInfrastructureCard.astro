@@ -112,8 +112,9 @@ const initial = await loadInitialStatus();
             </div>
             <p
               class:list={[
-                'mb-1 min-h-[2.25rem] flex items-end text-3xl font-mono font-medium uppercase tracking-wide text-[var(--text-muted)]',
-                node ? metricClass(metric) : null,
+                node
+                  ? metricClass(metric)
+                  : 'mb-1 min-h-[2.25rem] flex items-end text-3xl font-mono font-medium text-[var(--text-muted)]',
               ]}
               data-service-metric
             >
