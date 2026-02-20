@@ -143,7 +143,9 @@ jobs:
 
   build-amd64:
     needs: changes
-    if: ${{ needs.changes.outputs.count != '0' }}
+    # Disabled: change `false` back to the condition below to re-enable amd64 builds
+    # if: ${{ needs.changes.outputs.count != '0' }}
+    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -248,7 +250,7 @@ jobs:
           cache-to: type=gha,scope=${{ matrix.name }}-arm64,mode=max
 
   merge:
-    needs: [changes, build-amd64, build-arm64]
+    needs: [changes, build-arm64]
     if: ${{ needs.changes.outputs.count != '0' && needs.changes.outputs.should_push == 'true' }}
     runs-on: ubuntu-latest
     strategy:
@@ -285,5 +287,5 @@ jobs:
 
           docker buildx imagetools create \
             $(echo "${{ steps.meta.outputs.tags }}" | awk '{print "-t " $1}') \
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${base_tag}-amd64 \
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${base_tag}-arm64
+            # ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${base_tag}-amd64  # re-add (and add \ to line above) when amd64 is re-enabled
