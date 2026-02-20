@@ -6,39 +6,34 @@ This project uses a dedicated social preview image for link embeds (Open Graph /
 
 - `apps/web/public/og-image.jpg` (`1200x630`)
 
-## Prerequisites
+## Design
 
-- ImageMagick (`magick`)
-- `fontconfig` (`fc-match`) for font lookup
+Terminal-window card: macOS-style chrome, `~ whois bayram.sh` → name/title, then
+`~ git log --all --oneline -2` → the two most recent commits (hash highlighted in blue).
 
-## Regenerate
+## How it gets regenerated
 
-Run from repo root:
+**In CI** (`build-images.yml`): both `build-amd64` and `build-arm64` jobs run
+`apps/web/scripts/gen-og-image.py` with the live `git log` output before the
+`docker/build-push-action` step (only for the `web` matrix target). The freshly
+generated image is then baked into the Docker image via the normal `COPY . .`
+in the Dockerfile.
+
+**Locally / manually**:
 
 ```bash
-set -euo pipefail
+# From repo root — prerequisites: Python 3, Pillow, IBM Plex fonts
+pip install pillow
+# apt install fonts-ibm-plex   (Debian/Ubuntu)
 
-SANS_FONT="$(fc-match -f '%{file}\n' 'Fira Sans:style=Bold' || true)"
-MONO_FONT="$(fc-match -f '%{file}\n' 'JetBrains Mono:style=Bold' || true)"
-
-if [ -z "${SANS_FONT}" ] || [ -z "${MONO_FONT}" ]; then
-  echo "Could not resolve required fonts via fc-match" >&2
-  exit 1
-fi
-
-magick -size 1200x630 xc:'#0a1224' \
-  \( -size 1200x630 radial-gradient:'#1d4ed8-#0a1224' \) -compose screen -composite \
-  -fill '#22d3ee33' -draw 'circle 980,120 980,340' \
-  -fill '#38bdf833' -draw 'circle 200,560 200,760' \
-  -stroke '#38bdf8' -strokewidth 3 -fill none -draw 'roundrectangle 82,84 1120,546 26,26' \
-  -strokewidth 0 \
-  -fill '#e2e8f0' -font "${SANS_FONT}" -pointsize 58 -gravity northwest -annotate +86+130 'Bayram Sahin' \
-  -fill '#f8fafc' -font "${SANS_FONT}" -pointsize 84 -gravity northwest -annotate +86+225 'Full-Stack Developer' \
-  -fill '#f8fafc' -font "${SANS_FONT}" -pointsize 84 -gravity northwest -annotate +86+318 '& DevOps Practitioner' \
-  -fill '#94a3b8' -font "${MONO_FONT}" -pointsize 36 -gravity northwest -annotate +86+430 'Projects | Writing | Lyrics | Systems' \
-  -quality 88 \
-  apps/web/public/og-image.jpg
+python3 apps/web/scripts/gen-og-image.py \
+  "$(git log --all --oneline -2 | head -1)" \
+  "$(git log --all --oneline -2 | tail -1)"
 ```
+
+The script (`apps/web/scripts/gen-og-image.py`) also accepts the log lines via
+the `GIT_LOG_LINES` environment variable (newline-separated) or falls back to
+built-in placeholder text when called with no arguments.
 
 ## Layout wiring
 
