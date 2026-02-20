@@ -51,6 +51,10 @@
   --border-hero: #d4d4d4;
   --hero-node-color: rgba(0, 0, 0, 0.6);
   --hero-line-color: rgba(0, 0, 0, 0.2);
+  --flashcard-swipe-known-bg: rgba(167, 243, 208, 0.8);
+  --flashcard-swipe-review-bg: rgba(254, 205, 211, 0.8);
+  --flashcard-swipe-known-text: #064e3b;
+  --flashcard-swipe-review-text: #881337;
   color-scheme: light;
 
   /* Backward-compatible aliases (temporary during migration). */
@@ -98,6 +102,10 @@ html[data-theme='dark'] {
   --border-hero: #404040;
   --hero-node-color: rgba(255, 255, 255, 0.6);
   --hero-line-color: rgba(255, 255, 255, 0.22);
+  --flashcard-swipe-known-bg: rgba(6, 78, 59, 0.7);
+  --flashcard-swipe-review-bg: rgba(136, 19, 55, 0.7);
+  --flashcard-swipe-known-text: #ecfdf5;
+  --flashcard-swipe-review-text: #fff1f2;
   color-scheme: dark;
 
   /* Backward-compatible aliases (temporary during migration). */

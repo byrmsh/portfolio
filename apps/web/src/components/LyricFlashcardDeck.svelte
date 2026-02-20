@@ -359,23 +359,23 @@
           aria-label={labels.flipHint}
         >
           <div
-            class="pointer-events-none absolute inset-0 rounded-2xl bg-emerald-200 transition-opacity duration-150"
+            class="pointer-events-none absolute inset-0 rounded-2xl bg-[var(--flashcard-swipe-known-bg)] transition-opacity duration-150"
             style={`opacity:${overlayRight};`}
           ></div>
           <div
-            class="pointer-events-none absolute inset-0 rounded-2xl bg-rose-200 transition-opacity duration-150"
+            class="pointer-events-none absolute inset-0 rounded-2xl bg-[var(--flashcard-swipe-review-bg)] transition-opacity duration-150"
             style={`opacity:${overlayLeft};`}
           ></div>
 
           {#if isFlipped}
             <div
-              class="pointer-events-none absolute inset-y-0 right-4 z-20 flex items-center text-xxs font-bold uppercase tracking-wider text-emerald-900 transition-opacity duration-150"
+              class="pointer-events-none absolute inset-y-0 right-4 z-20 flex items-center text-xxs font-bold uppercase tracking-wider text-[var(--flashcard-swipe-known-text)] transition-opacity duration-150"
               style={`opacity:${overlayRight};`}
             >
               {labels.knownHint}
             </div>
             <div
-              class="pointer-events-none absolute inset-y-0 left-4 z-20 flex items-center text-xxs font-bold uppercase tracking-wider text-rose-900 transition-opacity duration-150"
+              class="pointer-events-none absolute inset-y-0 left-4 z-20 flex items-center text-xxs font-bold uppercase tracking-wider text-[var(--flashcard-swipe-review-text)] transition-opacity duration-150"
               style={`opacity:${overlayLeft};`}
             >
               {labels.reviewHint}
@@ -385,7 +385,9 @@
           {#if !isFlipped}
             <div class="relative z-10 flex h-full flex-col">
               <div class="flex items-start justify-between gap-4">
-                <div class="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">{top.term}</div>
+                <div class="text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">
+                  {top.term}
+                </div>
                 {#if top.cefr}
                   <div
                     class="rounded-full border border-[var(--border-strong)] px-2 py-1 text-xxs font-mono text-[var(--text-body)]"
@@ -394,8 +396,12 @@
                   </div>
                 {/if}
               </div>
-              <p class="mt-5 text-base leading-relaxed text-[var(--text-primary)]">{top.exampleDe}</p>
-              <div class="mt-auto text-xxs font-mono text-[var(--text-subtle)]">{labels.flipHint}</div>
+              <p class="mt-5 text-base leading-relaxed text-[var(--text-primary)]">
+                {top.exampleDe}
+              </p>
+              <div class="mt-auto text-xxs font-mono text-[var(--text-subtle)]">
+                {labels.flipHint}
+              </div>
             </div>
           {:else}
             <div class="relative z-10 flex h-full flex-col">
@@ -411,7 +417,9 @@
                   </div>
                 {/if}
               </div>
-              <p class="mt-5 text-base leading-relaxed text-[var(--text-primary)]">{top.exampleEn}</p>
+              <p class="mt-5 text-base leading-relaxed text-[var(--text-primary)]">
+                {top.exampleEn}
+              </p>
               {#if visibleMemoryHint(top)}
                 <div class="mt-4 space-y-1 text-sm text-[var(--text-body)]">
                   {#if visibleMemoryHint(top)}
@@ -419,7 +427,9 @@
                   {/if}
                 </div>
               {/if}
-              <div class="mt-auto text-xxs font-mono text-[var(--text-subtle)]">{labels.rateHint}</div>
+              <div class="mt-auto text-xxs font-mono text-[var(--text-subtle)]">
+                {labels.rateHint}
+              </div>
             </div>
           {/if}
         </button>
@@ -428,10 +438,12 @@
   </div>
 
   <div class="hidden items-center justify-center gap-2 text-xxs text-[var(--text-subtle)] sm:flex">
-    <kbd class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
+    <kbd
+      class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >←</kbd
     >
-    <kbd class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
+    <kbd
+      class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >2</kbd
     >
     <span class="font-sans">{labels.reviewHint}</span>
@@ -439,7 +451,8 @@
       class="ml-2 rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >→</kbd
     >
-    <kbd class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
+    <kbd
+      class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >4</kbd
     >
     <span class="font-sans">{labels.knownHint}</span>
@@ -447,7 +460,8 @@
       class="ml-2 rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >Space</kbd
     >
-    <kbd class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
+    <kbd
+      class="rounded border border-[var(--border-strong)] px-1.5 py-0.5 font-mono text-[10px] leading-none"
       >Enter</kbd
     >
     <span class="font-sans">{labels.tapHint}</span>
