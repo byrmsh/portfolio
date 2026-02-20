@@ -13,7 +13,16 @@ interface Props {
 }
 
 const { title, locale, description, canonicalPath, ogType = 'website', ogImagePath } = Astro.props;
-const siteOrigin = `https://${SITE.domain}`;
+const canonicalOrigin = `https://${SITE.domain}`;
+const forwardedHost = Astro.request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+const forwardedProto = Astro.request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+const requestProtocol =
+  forwardedProto ??
+  (Astro.url.protocol === 'https:' ? 'https' : Astro.url.protocol === 'http:' ? 'http' : 'https');
+const requestHost = forwardedHost ?? Astro.url.host;
+const requestOrigin = `${requestProtocol}://${requestHost}`;
+const isPreviewOrigin = requestOrigin !== canonicalOrigin;
+const robots = isPreviewOrigin ? 'noindex,nofollow' : 'index,follow';
 const localeToLangTag: Record<SupportedLocale, string> = {
   eng: 'en',
   dev: 'en-x-dev',
@@ -25,16 +34,20 @@ const resolvedDescription =
 const resolvedOgImagePath = ogImagePath ?? '/og-image.jpg';
 const canonical = new URL(
   canonicalPath ?? `${Astro.url.pathname}${Astro.url.search}`,
-  siteOrigin,
+  canonicalOrigin,
 ).toString();
-const ogImage = new URL(resolvedOgImagePath, siteOrigin).toString();
+const ogUrl = new URL(
+  canonicalPath ?? `${Astro.url.pathname}${Astro.url.search}`,
+  requestOrigin,
+).toString();
+const ogImage = new URL(resolvedOgImagePath, requestOrigin).toString();
 const alternateLinks = SUPPORTED_LOCALES.map((l) => ({
   hreflang: localeToLangTag[l],
-  href: new URL(localizedPath(l, Astro.url.pathname), siteOrigin).toString(),
+  href: new URL(localizedPath(l, Astro.url.pathname), canonicalOrigin).toString(),
 }));
 const xDefaultHref = new URL(
   localizedPath(DEFAULT_LOCALE, Astro.url.pathname),
-  siteOrigin,
+  canonicalOrigin,
 ).toString();
 const faviconVersion = '20260217';
 ---
@@ -62,13 +75,13 @@ const faviconVersion = '20260217';
     </script>
     <title>{title}</title>
     <meta name="description" content={resolvedDescription} />
-    <meta name="robots" content="index,follow" />
+    <meta name="robots" content={robots} />
     <link rel="canonical" href={canonical} />
     <meta property="og:site_name" content={SITE.name} />
     <meta property="og:type" content={ogType} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={resolvedDescription} />
-    <meta property="og:url" content={canonical} />
+    <meta property="og:url" content={ogUrl} />
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
