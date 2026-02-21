@@ -163,8 +163,7 @@ const links = [
 
     const setExpanded = (expanded: boolean) => {
       toggle.setAttribute('aria-expanded', expanded.toString());
-      shell.classList.toggle('max-h-14', !expanded);
-      shell.classList.toggle('max-h-40', expanded);
+      shell.style.maxHeight = expanded ? '10rem' : '';
       menu.classList.toggle('opacity-0', !expanded);
       menu.classList.toggle('opacity-100', expanded);
       openIcon.classList.toggle('hidden', expanded);
