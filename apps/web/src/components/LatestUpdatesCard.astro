@@ -249,7 +249,7 @@ const totalChanges = scopedMetadata
 const repoUrl = metadata?.repoUrl ?? getRepoUrlFromOrigin();
 const dateFormatter = new Intl.DateTimeFormat(locale, {
   month: 'short',
-  day: 'numeric',
+  day: '2-digit',
   year: 'numeric',
 });
 ---
@@ -264,136 +264,112 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
   </WidgetHeader>
 
   {
-    commits.length > 0 ? (
-      <div class="space-y-4 md:space-y-1.5">
+    commits.length === 0 ? (
+      <p class="text-sm text-[var(--text-subtle)]">{t('gitCommits.empty')}</p>
+    ) : (
+      /* PARENT GRID:
+      Mobile: 5 Columns (Hash, Bullet, Author, Bullet, Date).
+      Desktop: 4 Columns (Hash, Author, Date, Badges).
+    */
+      <div class="grid grid-cols-[auto_auto_auto_auto_1fr] gap-x-1.5 gap-y-4 md:grid-cols-[auto_auto_1fr_auto] md:gap-x-4 md:gap-y-0">
         {commits.map((commit) => {
           const parsed = parseConventionalSubject(commit.subject);
           return (
-            <article class="py-1.5 transition-colors hover:bg-[var(--surface-2)] md:px-2">
-              <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                <div class="min-w-0 flex-1">
-                  <div class="md:hidden">
-                    <div class="mb-1.5 flex flex-wrap gap-2">
-                      <span
-                        class:list={[
-                          'inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap',
-                          commitTypeClass(parsed.type),
-                        ]}
-                      >
-                        {labelForType(parsed.type)}
-                      </span>
-                      {parsed.scope ? (
-                        <span class="inline-flex shrink-0 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-body)] whitespace-nowrap">
-                          {parsed.scope}
-                        </span>
-                      ) : null}
-                      {parsed.breaking ? (
-                        <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
-                          {t('gitCommits.breaking')}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <p class="mb-2 text-sm font-medium font-sans text-[var(--text-body)] leading-snug break-words md:mb-0">
-                    {parsed.description}
-                  </p>
-                  <div class="md:hidden">
-                    <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs font-mono text-[var(--text-primary)]">
-                      <span class="inline-flex min-w-0 items-center gap-1.5">
-                        <code title={commit.hash}>{commit.shortHash}</code>
-                        {repoUrl ? (
-                          <a
-                            href={`${repoUrl}/commit/${commit.hash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex shrink-0 text-[var(--text-muted)] transition-colors hover:text-[var(--text-body)]"
-                            aria-label={t('gitCommits.openCommit', { hash: commit.shortHash })}
-                            title={t('gitCommits.openCommit', { hash: commit.shortHash })}
-                          >
-                            <ArrowUpRight class="w-3.5 h-3.5" />
-                          </a>
-                        ) : null}
-                      </span>
-                      <span aria-hidden="true" class="text-[var(--text-muted)]">
-                        •
-                      </span>
-                      <time datetime={commit.authoredAt}>
-                        {dateFormatter.format(new Date(commit.authoredAt))}
-                      </time>
-                      <span aria-hidden="true" class="text-[var(--text-muted)]">
-                        •
-                      </span>
-                      <span class="break-words">{commit.author}</span>
-                    </div>
-                  </div>
-                  <div class="mt-1 hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs md:flex">
-                    <span class="inline-flex items-center gap-1.5">
-                      <span class="font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
-                        {t('gitCommits.hash')}:
-                      </span>
-                      <code
-                        class="font-mono text-[11px] text-[var(--text-body)]"
-                        title={commit.hash}
-                      >
-                        {commit.shortHash}
-                      </code>
-                      {repoUrl ? (
-                        <a
-                          href={`${repoUrl}/commit/${commit.hash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="inline-flex text-[var(--text-muted)] hover:text-[var(--text-body)] transition-colors"
-                          aria-label={t('gitCommits.openCommit', { hash: commit.shortHash })}
-                          title={t('gitCommits.openCommit', { hash: commit.shortHash })}
-                        >
-                          <ArrowUpRight class="w-3.5 h-3.5" />
-                        </a>
-                      ) : null}
-                    </span>
-                    <span class="inline-flex items-center gap-1.5">
-                      <span class="font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
-                        {t('gitCommits.author')}:
-                      </span>
-                      <span class="text-[var(--text-body)]">{commit.author}</span>
-                    </span>
-                    <span class="inline-flex items-center gap-1.5">
-                      <span class="font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
-                        {t('gitCommits.date')}:
-                      </span>
-                      <time class="text-[var(--text-body)]" datetime={commit.authoredAt}>
-                        {dateFormatter.format(new Date(commit.authoredAt))}
-                      </time>
-                    </span>
-                  </div>
-                </div>
-
-                <div class="hidden shrink-0 flex-wrap items-center justify-end gap-1.5 md:flex">
-                  <span
-                    class:list={[
-                      'inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap',
-                      commitTypeClass(parsed.type),
-                    ]}
-                  >
-                    {labelForType(parsed.type)}
+            <article class="col-span-full grid grid-cols-subgrid items-baseline gap-y-2 py-1.5 transition-colors hover:bg-[var(--surface-2)] md:gap-y-1 md:px-2">
+              {/* BADGES */}
+              <div class="col-span-full row-start-1 flex flex-wrap items-center gap-1.5 md:col-span-1 md:col-start-4 md:justify-end">
+                <span
+                  class:list={[
+                    'inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap',
+                    commitTypeClass(parsed.type),
+                  ]}
+                >
+                  {labelForType(parsed.type)}
+                </span>
+                {parsed.scope && (
+                  <span class="inline-flex shrink-0 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-body)] whitespace-nowrap">
+                    {parsed.scope}
                   </span>
-                  {parsed.scope ? (
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-body)] whitespace-nowrap">
-                      {parsed.scope}
-                    </span>
-                  ) : null}
-                  {parsed.breaking ? (
-                    <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
-                      {t('gitCommits.breaking')}
-                    </span>
-                  ) : null}
-                </div>
+                )}
+                {parsed.breaking && (
+                  <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
+                    {t('gitCommits.breaking')}
+                  </span>
+                )}
+              </div>
+
+              {/* DESCRIPTION */}
+              <p class="col-span-full row-start-2 mb-0 break-words font-sans text-sm font-medium leading-snug text-[var(--text-body)] md:col-span-3 md:col-start-1 md:row-start-1 md:mb-0">
+                {parsed.description}
+              </p>
+
+              {/* METADATA: HASH */}
+              <div class="col-start-1 row-start-3 flex items-baseline gap-1.5 md:col-start-1 md:row-start-2">
+                <span class="hidden font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)] md:inline">
+                  {t('gitCommits.hash')}:
+                </span>
+                <code
+                  class="text-xs font-mono text-[var(--text-primary)] md:text-[11px] md:text-[var(--text-body)]"
+                  title={commit.hash}
+                >
+                  {commit.shortHash}
+                </code>
+                {repoUrl && (
+                  <a
+                    href={`${repoUrl}/commit/${commit.hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="self-center inline-flex text-[var(--text-muted)] transition-colors hover:text-[var(--text-body)]"
+                    aria-label={t('gitCommits.openCommit', { hash: commit.shortHash })}
+                    title={t('gitCommits.openCommit', { hash: commit.shortHash })}
+                  >
+                    <ArrowUpRight class="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+
+              {/* MOBILE BULLET 1 */}
+              <span
+                class="col-start-2 row-start-3 px-0.5 text-xs text-[var(--text-muted)] md:hidden"
+                aria-hidden="true"
+              >
+                •
+              </span>
+
+              {/* METADATA: AUTHOR */}
+              <div class="col-start-3 row-start-3 flex items-baseline gap-1.5 min-w-0 md:col-start-2 md:row-start-2">
+                <span class="hidden font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)] md:inline">
+                  {t('gitCommits.author')}:
+                </span>
+                <span class="truncate text-xs font-mono text-[var(--text-primary)] md:overflow-visible md:font-sans md:text-[var(--text-body)]">
+                  {commit.author}
+                </span>
+              </div>
+
+              {/* MOBILE BULLET 2 */}
+              <span
+                class="col-start-4 row-start-3 px-0.5 text-xs text-[var(--text-muted)] md:hidden"
+                aria-hidden="true"
+              >
+                •
+              </span>
+
+              {/* METADATA: DATE */}
+              <div class="col-start-5 row-start-3 flex items-baseline gap-1.5 md:col-start-3 md:row-start-2">
+                <span class="hidden font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)] md:inline">
+                  {t('gitCommits.date')}:
+                </span>
+                <time
+                  class="whitespace-nowrap text-xs font-mono text-[var(--text-primary)] md:font-sans md:text-[var(--text-body)]"
+                  datetime={commit.authoredAt}
+                >
+                  {dateFormatter.format(new Date(commit.authoredAt))}
+                </time>
               </div>
             </article>
           );
         })}
       </div>
-    ) : (
-      <p class="text-sm text-[var(--text-subtle)]">{t('gitCommits.empty')}</p>
     )
   }
 </section>
