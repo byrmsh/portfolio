@@ -169,7 +169,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             type=sha,format=long,prefix=
-            type=raw,value=main-${{ github.sha }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=raw,value=main-${{ github.sha }},enable=${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
           # Add suffix to avoid overwriting the other platform
@@ -222,7 +222,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             type=sha,format=long,prefix=
-            type=raw,value=main-${{ github.sha }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=raw,value=main-${{ github.sha }},enable=${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
           # Add suffix to avoid overwriting the other platform
@@ -271,7 +271,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             type=sha,format=long,prefix=
-            type=raw,value=main-${{ github.sha }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=raw,value=main-${{ github.sha }},enable=${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
             type=raw,value=pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
@@ -279,7 +279,7 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             base_tag="pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}"
-          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+          elif [[ "${{ github.ref }}" == "refs/heads/main" && ( "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" ) ]]; then
             base_tag="main-${{ github.sha }}"
           else
             base_tag="${{ github.sha }}"
