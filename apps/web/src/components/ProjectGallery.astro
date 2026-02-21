@@ -539,8 +539,7 @@ function format(template: string, vars: Record<string, string | number>): string
   [data-project-gallery] .gallery-maximize,
   [data-project-gallery] [data-gallery-prev],
   [data-project-gallery] [data-gallery-next],
-  [data-project-gallery] [data-gallery-thumbs],
-  [data-project-gallery] [data-gallery-dialog] {
+  [data-project-gallery] [data-gallery-thumbs] {
     display: none;
   }
 
@@ -557,7 +556,7 @@ function format(template: string, vars: Record<string, string | number>): string
     display: flex;
   }
 
-  html.js [data-project-gallery] [data-gallery-dialog] {
+  html.js [data-project-gallery] [data-gallery-dialog][open] {
     display: block;
   }
 
