@@ -119,40 +119,42 @@ function format(template: string, vars: Record<string, string | number>): string
         </div>
       ) : null}
 
-      <dialog
-        data-gallery-dialog
-        class="w-[min(96vw,1360px)] max-w-[1360px] bg-transparent p-0 m-auto backdrop:bg-black/88"
-      >
-        <div class="relative h-[min(92vh,1024px)] overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)]">
-          <div class="gallery-modal-header">
+      <dialog data-gallery-dialog class="gallery-dialog">
+        <div class="gallery-dialog-content">
+          <div class="gallery-modal-toolbar">
             <p class="gallery-modal-title">{title}</p>
+            <button
+              type="button"
+              class="gallery-close"
+              data-gallery-close
+              aria-label={labels.close}
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5">
+                <line
+                  x1="18"
+                  y1="6"
+                  x2="6"
+                  y2="18"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <line
+                  x1="6"
+                  y1="6"
+                  x2="18"
+                  y2="18"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
           </div>
-          <button type="button" class="gallery-close" data-gallery-close aria-label={labels.close}>
-            <svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5">
-              <line
-                x1="18"
-                y1="6"
-                x2="6"
-                y2="18"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <line
-                x1="6"
-                y1="6"
-                x2="18"
-                y2="18"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-          </button>
 
-          <div class="relative h-full w-full">
+          <div class="gallery-modal-stage" data-gallery-dialog-stage>
             {deduped.map((image, index) => (
               <img
                 src={image}
@@ -161,6 +163,7 @@ function format(template: string, vars: Record<string, string | number>): string
                 class={`absolute inset-0 h-full w-full object-contain transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 data-gallery-dialog-slide
                 data-gallery-index={index}
+                draggable="false"
               />
             ))}
 
@@ -168,7 +171,7 @@ function format(template: string, vars: Record<string, string | number>): string
               <>
                 <button
                   type="button"
-                  class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
+                  class="gallery-modal-nav gallery-modal-nav-prev"
                   aria-label={labels.prev}
                   data-gallery-dialog-prev
                 >
@@ -176,12 +179,24 @@ function format(template: string, vars: Record<string, string | number>): string
                 </button>
                 <button
                   type="button"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
+                  class="gallery-modal-nav gallery-modal-nav-next"
                   aria-label={labels.next}
                   data-gallery-dialog-next
                 >
                   ›
                 </button>
+
+                <div class="gallery-modal-dots">
+                  {deduped.map((_, dotIndex) => (
+                    <button
+                      type="button"
+                      class={`gallery-modal-dot ${dotIndex === 0 ? 'is-active' : ''}`}
+                      data-gallery-dialog-dot
+                      data-gallery-index={dotIndex}
+                      aria-label={format(labels.imageAlt, { index: dotIndex + 1, title })}
+                    />
+                  ))}
+                </div>
               </>
             ) : null}
           </div>
@@ -207,10 +222,87 @@ function format(template: string, vars: Record<string, string | number>): string
     );
     const dialogPrev = gallery.querySelector<HTMLButtonElement>('[data-gallery-dialog-prev]');
     const dialogNext = gallery.querySelector<HTMLButtonElement>('[data-gallery-dialog-next]');
+    const dialogStage = gallery.querySelector<HTMLDivElement>('[data-gallery-dialog-stage]');
+    const dialogDots = Array.from(
+      gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-dialog-dot]'),
+    );
 
     if (!slides.length) continue;
 
     let index = 0;
+    let dialogScale = 1;
+    let dialogOffsetX = 0;
+    let dialogOffsetY = 0;
+    const activePointers = new Map<number, { x: number; y: number }>();
+    let pinchStartDistance = 0;
+    let pinchStartScale = 1;
+    let panPointerId: number | null = null;
+    let lastPanX = 0;
+    let lastPanY = 0;
+    let swipePointerId: number | null = null;
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+    let swipeHandled = false;
+
+    const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+    const getActiveImageMetrics = () => {
+      if (!dialogStage) return null;
+      const stageRect = dialogStage.getBoundingClientRect();
+      const activeSlide = dialogSlides[index];
+      if (!activeSlide) return null;
+
+      const naturalWidth = activeSlide.naturalWidth;
+      const naturalHeight = activeSlide.naturalHeight;
+      if (!naturalWidth || !naturalHeight) {
+        return {
+          stageWidth: stageRect.width,
+          stageHeight: stageRect.height,
+          renderedWidth: stageRect.width,
+          renderedHeight: stageRect.height,
+        };
+      }
+
+      const fit = Math.min(stageRect.width / naturalWidth, stageRect.height / naturalHeight);
+      return {
+        stageWidth: stageRect.width,
+        stageHeight: stageRect.height,
+        renderedWidth: naturalWidth * fit,
+        renderedHeight: naturalHeight * fit,
+      };
+    };
+
+    const clampOffsets = () => {
+      const metrics = getActiveImageMetrics();
+      if (!metrics) return;
+      const maxX = Math.max(0, (metrics.renderedWidth * dialogScale - metrics.stageWidth) / 2);
+      const maxY = Math.max(0, (metrics.renderedHeight * dialogScale - metrics.stageHeight) / 2);
+      dialogOffsetX = clamp(dialogOffsetX, -maxX, maxX);
+      dialogOffsetY = clamp(dialogOffsetY, -maxY, maxY);
+    };
+
+    const applyDialogTransform = () => {
+      const activeSlide = dialogSlides[index];
+      if (!activeSlide) return;
+      activeSlide.style.transform = `translate3d(${dialogOffsetX}px, ${dialogOffsetY}px, 0) scale(${dialogScale})`;
+    };
+
+    const resetDialogTransform = () => {
+      dialogScale = 1;
+      dialogOffsetX = 0;
+      dialogOffsetY = 0;
+      activePointers.clear();
+      panPointerId = null;
+      swipePointerId = null;
+      swipeHandled = false;
+      pinchStartDistance = 0;
+      pinchStartScale = 1;
+      dialogSlides.forEach((slide) => {
+        slide.style.transform = '';
+      });
+      dialogStage?.classList.remove('is-grabbing');
+      applyDialogTransform();
+    };
 
     const setIndex = (nextIndex: number) => {
       const count = slides.length;
@@ -232,6 +324,12 @@ function format(template: string, vars: Record<string, string | number>): string
         slide.classList.toggle('opacity-0', i !== index);
         slide.classList.toggle('pointer-events-none', i !== index);
       });
+
+      dialogDots.forEach((dot, i) => {
+        dot.classList.toggle('is-active', i === index);
+      });
+
+      resetDialogTransform();
     };
 
     prev?.addEventListener('click', () => setIndex(index - 1));
@@ -243,9 +341,14 @@ function format(template: string, vars: Record<string, string | number>): string
       thumb.addEventListener('click', () => setIndex(i));
     });
 
+    dialogDots.forEach((dot, i) => {
+      dot.addEventListener('click', () => setIndex(i));
+    });
+
     open?.addEventListener('click', () => {
       if (dialog && typeof dialog.showModal === 'function') {
         dialog.showModal();
+        resetDialogTransform();
       }
     });
 
@@ -257,6 +360,142 @@ function format(template: string, vars: Record<string, string | number>): string
       const target = event.target;
       if (target === dialog && typeof dialog.close === 'function') dialog.close();
     });
+
+    dialogStage?.addEventListener('pointerdown', (event) => {
+      if (!dialog?.open) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('button')) return;
+      dialogStage.setPointerCapture(event.pointerId);
+      dialogStage.classList.add('is-grabbing');
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (activePointers.size === 1) {
+        panPointerId = event.pointerId;
+        lastPanX = event.clientX;
+        lastPanY = event.clientY;
+        swipePointerId = event.pointerId;
+        swipeStartX = event.clientX;
+        swipeStartY = event.clientY;
+        swipeHandled = false;
+      }
+
+      if (activePointers.size === 2) {
+        const points = Array.from(activePointers.values());
+        pinchStartDistance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        pinchStartScale = dialogScale;
+        panPointerId = null;
+      }
+    });
+
+    dialogStage?.addEventListener('pointermove', (event) => {
+      if (!dialog?.open || !activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (activePointers.size === 2) {
+        event.preventDefault();
+        const points = Array.from(activePointers.values());
+        const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        if (pinchStartDistance > 0) {
+          dialogScale = clamp((distance / pinchStartDistance) * pinchStartScale, 1, 4);
+          clampOffsets();
+          applyDialogTransform();
+        }
+        return;
+      }
+
+      if (panPointerId === event.pointerId && dialogScale > 1) {
+        event.preventDefault();
+        dialogOffsetX += event.clientX - lastPanX;
+        dialogOffsetY += event.clientY - lastPanY;
+        lastPanX = event.clientX;
+        lastPanY = event.clientY;
+        clampOffsets();
+        applyDialogTransform();
+        return;
+      }
+
+      if (swipePointerId === event.pointerId && !swipeHandled && dialogScale <= 1) {
+        const dx = event.clientX - swipeStartX;
+        const dy = event.clientY - swipeStartY;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        const horizontalSwipe = absDx > 56 && absDx > absDy * 1.2;
+        if (horizontalSwipe) {
+          event.preventDefault();
+          swipeHandled = true;
+          setIndex(dx < 0 ? index + 1 : index - 1);
+        }
+      }
+    });
+
+    const releasePointer = (pointerId: number) => {
+      activePointers.delete(pointerId);
+      if (dialogStage?.hasPointerCapture(pointerId)) {
+        dialogStage.releasePointerCapture(pointerId);
+      }
+      if (activePointers.size === 1) {
+        const [remainingId, point] = Array.from(activePointers.entries())[0];
+        panPointerId = remainingId;
+        lastPanX = point.x;
+        lastPanY = point.y;
+      } else if (activePointers.size === 0) {
+        panPointerId = null;
+      }
+      if (swipePointerId === pointerId || activePointers.size !== 1) {
+        swipePointerId = null;
+        swipeHandled = false;
+      }
+      if (activePointers.size === 0) {
+        dialogStage?.classList.remove('is-grabbing');
+      }
+
+      if (dialogScale <= 1) {
+        dialogScale = 1;
+        dialogOffsetX = 0;
+        dialogOffsetY = 0;
+        applyDialogTransform();
+      }
+    };
+
+    dialogStage?.addEventListener('pointerup', (event) => {
+      releasePointer(event.pointerId);
+    });
+    dialogStage?.addEventListener('pointercancel', (event) => {
+      releasePointer(event.pointerId);
+    });
+
+    dialogStage?.addEventListener(
+      'wheel',
+      (event) => {
+        if (!dialog?.open) return;
+        event.preventDefault();
+        const metrics = getActiveImageMetrics();
+        if (!metrics) return;
+
+        const rect = dialogStage.getBoundingClientRect();
+        const cursorX = event.clientX - rect.left;
+        const cursorY = event.clientY - rect.top;
+        const centerX = metrics.stageWidth / 2;
+        const centerY = metrics.stageHeight / 2;
+        const prevScale = dialogScale;
+        const zoomFactor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+        dialogScale = clamp(dialogScale * zoomFactor, 1, 4);
+        const ratio = dialogScale / prevScale;
+
+        dialogOffsetX = dialogOffsetX * ratio + (1 - ratio) * (cursorX - centerX);
+        dialogOffsetY = dialogOffsetY * ratio + (1 - ratio) * (cursorY - centerY);
+
+        if (dialogScale <= 1) {
+          dialogScale = 1;
+          dialogOffsetX = 0;
+          dialogOffsetY = 0;
+        } else {
+          clampOffsets();
+        }
+        applyDialogTransform();
+      },
+      { passive: false },
+    );
 
     window.addEventListener('keydown', (event) => {
       const modalOpen = !!dialog?.open;
@@ -277,6 +516,33 @@ function format(template: string, vars: Record<string, string | number>): string
 </script>
 
 <style>
+  .gallery-dialog {
+    width: min(100svw, 1360px);
+    max-width: 100svw;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin: auto;
+  }
+
+  .gallery-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+  }
+
+  .gallery-dialog-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: min(88dvh, 1024px);
+    max-height: 88dvh;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    border: none;
+    background: var(--surface-hero);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
   .gallery-maximize {
     position: absolute;
     right: 0.75rem;
@@ -300,43 +566,174 @@ function format(template: string, vars: Record<string, string | number>): string
     border-color: color-mix(in srgb, white 65%, transparent);
   }
 
-  .gallery-modal-header {
-    position: absolute;
-    top: 1.5rem;
-    left: 1.5rem;
-    z-index: 20;
-    pointer-events: none;
+  .gallery-modal-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    padding: 1.5rem 1.5rem 0.7rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-subtle);
+    backdrop-filter: blur(4px);
+  }
+
+  .gallery-modal-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    touch-action: none;
+    overscroll-behavior: contain;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .gallery-modal-stage.is-grabbing {
+    cursor: grabbing;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .gallery-modal-stage,
+    .gallery-modal-stage.is-grabbing {
+      cursor: default;
+    }
   }
 
   .gallery-modal-title {
     margin: 0;
     font-size: 0.75rem;
     font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: 0.14em;
+    line-height: 1;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: color-mix(in srgb, white 75%, transparent);
+    color: var(--text-muted);
   }
 
   .gallery-close {
-    position: absolute;
-    top: 1.5rem;
-    right: 1.5rem;
-    z-index: 20;
     display: flex;
-    padding: 0.5rem;
-    border-radius: 50%;
-    border: 1px solid color-mix(in srgb, var(--border-hero) 65%, transparent);
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
     background: transparent;
-    color: var(--text-hero-subtle);
+    border: none;
+    padding: 0;
+    color: var(--text-muted);
+    opacity: 0.7;
     cursor: pointer;
     transition:
-      background 0.2s,
+      opacity 0.2s,
       color 0.2s;
   }
 
   .gallery-close:hover {
-    background: color-mix(in srgb, var(--surface-hero) 88%, transparent);
+    opacity: 1;
+    color: var(--text-primary);
+  }
+
+  .gallery-modal-dots {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+    z-index: 20;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.28rem 0.4rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, var(--border-hero) 70%, transparent);
+    background: color-mix(in srgb, var(--surface-hero) 84%, transparent);
+    backdrop-filter: blur(4px);
+    margin-inline: auto;
+    width: max-content;
+  }
+
+  .gallery-modal-dot {
+    width: 1.5rem;
+    height: 1.5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 9999px;
+    border: none;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    transition:
+      transform 0.2s,
+      background 0.2s;
+  }
+
+  .gallery-modal-dot::before {
+    content: '';
+    width: 0.56rem;
+    height: 0.56rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--text-hero-subtle) 75%, transparent);
+    transition:
+      transform 0.2s,
+      background 0.2s;
+  }
+
+  .gallery-modal-dot:hover {
+    transform: scale(1.12);
+    background: color-mix(in srgb, var(--surface-hero) 35%, transparent);
+  }
+
+  .gallery-modal-dot.is-active {
+    background: color-mix(in srgb, var(--surface-hero) 35%, transparent);
+    transform: scale(1.18);
+  }
+
+  .gallery-modal-dot:hover::before {
+    background: var(--text-hero);
+  }
+
+  .gallery-modal-dot.is-active::before {
+    background: var(--text-hero);
+    transform: scale(1.18);
+  }
+
+  .gallery-modal-stage img {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .gallery-modal-nav {
+    position: absolute;
+    top: 47%;
+    z-index: 20;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, var(--border-hero) 70%, transparent);
+    background: color-mix(in srgb, var(--surface-hero) 84%, transparent);
     color: var(--text-hero);
+    backdrop-filter: blur(4px);
+    transform: translateY(-50%);
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      border-color 0.2s,
+      color 0.2s;
+  }
+
+  .gallery-modal-nav:hover {
+    background: color-mix(in srgb, var(--surface-hero) 92%, transparent);
+    border-color: color-mix(in srgb, var(--border-hero) 90%, transparent);
+    color: var(--text-hero);
+  }
+
+  .gallery-modal-nav-prev {
+    left: 0.75rem;
+  }
+
+  .gallery-modal-nav-next {
+    right: 0.75rem;
   }
 </style>
