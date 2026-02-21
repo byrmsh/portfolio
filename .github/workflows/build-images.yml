@@ -3,28 +3,10 @@ name: build-images
 on:
   push:
     branches: [main]
-    paths:
-      - .github/workflows/build-images.yml
-      - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - apps/**
-      - packages/schema/**
-      - packages/schema-py/**
-      - packages/common-py/**
   pull_request:
     # 'labeled' allows adding the preview label to an already-open PR
     # and immediately triggering a push build for the ArgoCD preview env
     types: [opened, synchronize, reopened, labeled]
-    paths:
-      - .github/workflows/build-images.yml
-      - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - apps/**
-      - packages/schema/**
-      - packages/schema-py/**
-      - packages/common-py/**
   workflow_dispatch: {}
 
 permissions:
@@ -97,6 +79,17 @@ jobs:
           lyricist="${{ steps.filter.outputs.lyricist }}"
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            shared="true"
+            api="true"
+            web="true"
+            collector="true"
+            ankiworker="true"
+            lyricist="true"
+          fi
+
+          # Force-pushes may only rewrite commit metadata and bypass event-level path
+          # detection; build all so every image/tag exists for the new head SHA.
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.event.forced }}" == "true" ]]; then
             shared="true"
             api="true"
             web="true"
