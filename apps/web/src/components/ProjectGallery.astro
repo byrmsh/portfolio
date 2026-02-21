@@ -8,6 +8,7 @@ interface Props {
     maximize: string;
     close: string;
     imageAlt: string;
+    noScript: string;
   };
 }
 
@@ -21,7 +22,10 @@ function format(template: string, vars: Record<string, string | number>): string
 
 {
   deduped.length ? (
-    <div data-project-gallery class="project-gallery">
+    <div
+      data-project-gallery
+      class={`project-gallery ${deduped.length > 1 ? 'project-gallery--multi' : ''}`}
+    >
       <div class="relative h-72 sm:h-80 lg:h-[34rem] rounded-lg overflow-hidden border border-[var(--border-muted)] bg-[var(--surface-2)]">
         {deduped.map((image, index) => (
           <img
@@ -202,6 +206,22 @@ function format(template: string, vars: Record<string, string | number>): string
           </div>
         </div>
       </dialog>
+    </div>
+  ) : null
+}
+
+{
+  deduped.length > 1 ? (
+    <div class="gallery-noscript-fallback space-y-3">
+      <p class="text-xs font-mono text-[var(--text-muted)]">{labels.noScript}</p>
+      {deduped.map((image, index) => (
+        <img
+          src={image}
+          alt={format(labels.imageAlt, { index: index + 1, title })}
+          loading={index === 0 ? 'eager' : 'lazy'}
+          class="w-full rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] object-cover"
+        />
+      ))}
     </div>
   ) : null
 }
@@ -516,6 +536,43 @@ function format(template: string, vars: Record<string, string | number>): string
 </script>
 
 <style>
+  [data-project-gallery] .gallery-maximize,
+  [data-project-gallery] [data-gallery-prev],
+  [data-project-gallery] [data-gallery-next],
+  [data-project-gallery] [data-gallery-thumbs],
+  [data-project-gallery] [data-gallery-dialog] {
+    display: none;
+  }
+
+  html.js [data-project-gallery] .gallery-maximize {
+    display: grid;
+  }
+
+  html.js [data-project-gallery] [data-gallery-prev],
+  html.js [data-project-gallery] [data-gallery-next] {
+    display: block;
+  }
+
+  html.js [data-project-gallery] [data-gallery-thumbs] {
+    display: flex;
+  }
+
+  html.js [data-project-gallery] [data-gallery-dialog] {
+    display: block;
+  }
+
+  .gallery-noscript-fallback {
+    display: block;
+  }
+
+  html.js .gallery-noscript-fallback {
+    display: none;
+  }
+
+  html:not(.js) .project-gallery--multi {
+    display: none;
+  }
+
   .gallery-dialog {
     width: min(100svw, 1360px);
     max-width: 100svw;

@@ -16,14 +16,54 @@ const graphData = await buildGraphData(locale);
 <section
   class="col-span-1 md:col-span-6 lg:col-span-4 min-h-[280px] lg:min-h-[240px] rounded-xl border border-[var(--border-hero)] bg-[var(--surface-hero)] text-[var(--text-hero)] relative overflow-hidden"
 >
-  <KnowledgeGraph
-    client:visible
-    graphData={graphData}
-    labels={{
-      title: t('knowledgeGraph.title'),
-      stats: t('knowledgeGraph.stats'),
-      fullscreen: t('knowledgeGraph.fullscreen'),
-      exitFullscreen: t('knowledgeGraph.exitFullscreen'),
-    }}
-  />
+  <div class="knowledge-graph-interactive">
+    <KnowledgeGraph
+      client:visible
+      graphData={graphData}
+      labels={{
+        title: t('knowledgeGraph.title'),
+        stats: t('knowledgeGraph.stats'),
+        fullscreen: t('knowledgeGraph.fullscreen'),
+        exitFullscreen: t('knowledgeGraph.exitFullscreen'),
+      }}
+    />
+  </div>
+  <noscript>
+    <style>
+      .knowledge-graph-interactive {
+        display: none;
+      }
+    </style>
+    <div class="absolute inset-0 flex h-full flex-col">
+      <div
+        class="flex items-center justify-between gap-3 min-h-14 px-6 pt-6 pb-3 bg-[var(--surface)] border-b border-[var(--border-subtle)]"
+      >
+        <h3 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">
+          {t('knowledgeGraph.title')}
+        </h3>
+      </div>
+      <div class="flex flex-1 items-center justify-center p-6">
+        <div
+          class="w-full max-w-md rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
+        >
+          <div class="flex items-start gap-3">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              class="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-subtle)]"
+            >
+              <path
+                d="M12 3 2.5 20h19L12 3Zm0 5v6m0 3h.01"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"></path>
+            </svg>
+            <p class="text-sm text-[var(--text-body)]">{t('knowledgeGraph.noScript')}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </noscript>
 </section>

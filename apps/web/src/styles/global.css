@@ -124,6 +124,58 @@ html[data-theme='dark'] {
   --glass-header-bg: var(--header-glass-bg);
 }
 
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --page-bg: #09090b;
+    --surface: #18181b;
+    --surface-2: #1f1f23;
+    --surface-3: #27272d;
+    --surface-hover: #2d2d34;
+    --surface-inverse: #0f0f0f;
+    --surface-inverse-text: #f5f5f5;
+    --text-inverse-muted: #c3c3ca;
+    --text-inverse-subtle: #a4a4ad;
+    --text-primary: #f5f5f5;
+    --text-body: #dfdfe3;
+    --text-subtle: #c3c3ca;
+    --text-muted: #aaaab3;
+    --border-muted: #2a2a31;
+    --border-subtle: #383842;
+    --border-strong: #4b4b58;
+    --border-inverse: #656572;
+    --ring-subtle: #737373;
+    --header-glass-bg: rgba(18, 18, 18, 0.82);
+    --grid-line-color: rgba(255, 255, 255, 0.025);
+    --radial-accent-color: rgba(16, 185, 129, 0.06);
+    --surface-hero: #171717;
+    --text-hero: #f4f4f5;
+    --text-hero-muted: #d0d0d7;
+    --text-hero-subtle: #afb0bb;
+    --border-hero: #404040;
+    --hero-node-color: rgba(255, 255, 255, 0.6);
+    --hero-line-color: rgba(255, 255, 255, 0.22);
+    --flashcard-swipe-known-bg: rgba(6, 78, 59, 0.7);
+    --flashcard-swipe-review-bg: rgba(136, 19, 55, 0.7);
+    --flashcard-swipe-known-text: #ecfdf5;
+    --flashcard-swipe-review-text: #fff1f2;
+    color-scheme: dark;
+
+    --surface-app: var(--page-bg);
+    --surface-card: var(--surface);
+    --surface-muted: var(--surface-2);
+    --surface-elevated: var(--surface-3);
+    --surface-strong: var(--surface-inverse);
+    --surface-strong-text: var(--surface-inverse-text);
+    --text-secondary: var(--text-body);
+    --text-tertiary: var(--text-subtle);
+    --text-strong-muted: var(--text-inverse-muted);
+    --text-strong-subtle: var(--text-inverse-subtle);
+    --border-soft: var(--border-muted);
+    --border-contrast: var(--border-inverse);
+    --glass-header-bg: var(--header-glass-bg);
+  }
+}
+
 /* Custom Utility for text-xxs */
 @utility text-xxs {
   font-size: 0.65rem;

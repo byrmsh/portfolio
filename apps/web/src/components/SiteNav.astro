@@ -69,7 +69,7 @@ const links = [
 >
   <div
     id="mobile-nav-shell"
-    class="max-w-5xl mx-auto px-4 sm:px-6 overflow-hidden max-h-14 transition-[max-height] duration-300 ease-out"
+    class="max-w-5xl mx-auto px-4 sm:px-6 overflow-hidden transition-[max-height] duration-300 ease-out"
   >
     <div class="h-14 flex items-center justify-between gap-4">
       <a
@@ -118,7 +118,7 @@ const links = [
         </button>
       </div>
     </div>
-    <div id="mobile-menu" class="sm:hidden pb-3 opacity-0 transition-opacity duration-200 ease-out">
+    <div id="mobile-menu" class="sm:hidden pb-3 transition-opacity duration-200 ease-out">
       <div
         class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium text-[var(--text-body)]"
       >
@@ -171,6 +171,8 @@ const links = [
       closeIcon.classList.toggle('hidden', !expanded);
     };
 
+    setExpanded(false);
+
     toggle.addEventListener('click', () => {
       const expanded = toggle.getAttribute('aria-expanded') === 'true';
       setExpanded(!expanded);
@@ -198,3 +200,33 @@ const links = [
     }
   }
 </script>
+
+<noscript>
+  <style>
+    #mobile-menu-toggle {
+      display: none;
+    }
+  </style>
+</noscript>
+
+<style>
+  html.js #mobile-nav-shell {
+    max-height: 3.5rem;
+  }
+
+  html.js #mobile-menu {
+    opacity: 0;
+  }
+
+  html.js #mobile-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (min-width: 640px) {
+    html.js #mobile-menu-toggle {
+      display: none;
+    }
+  }
+</style>

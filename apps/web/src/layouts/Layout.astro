@@ -60,6 +60,7 @@ const faviconVersion = '20260217';
     <script is:inline>
       (() => {
         const root = document.documentElement;
+        root.classList.add('js');
         const media = window.matchMedia('(prefers-color-scheme: dark)');
         const applyTheme = () => {
           root.dataset.theme = media.matches ? 'dark' : 'light';

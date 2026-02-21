@@ -120,6 +120,7 @@ const enTranslations = {
     stats: '{nodes} nodes · {links} links',
     fullscreen: 'Fullscreen',
     exitFullscreen: 'Exit fullscreen',
+    noScript: 'Enable JavaScript to load the interactive graph.',
   },
   projectsWidget: {
     title: 'Projects',
@@ -195,6 +196,7 @@ const enTranslations = {
     flashcardsCompletedSub: 'You cleared this track. Reset progress any time to practice again.',
     flashcardsRemaining: '{count} cards left',
     flashcardsReset: 'Reset progress',
+    flashcardsNoScript: 'Enable JavaScript to use the flashcard deck.',
     literal: 'Literal:',
     meaning: 'Meaning:',
     notFound: 'Not found',
@@ -210,6 +212,8 @@ const enTranslations = {
     galleryNext: 'Next image',
     galleryMaximize: 'Maximize',
     galleryImageAlt: '{title} image {index}',
+    galleryNoScript:
+      'JavaScript is disabled, so all project images are listed in place of the gallery.',
   },
 };
 
