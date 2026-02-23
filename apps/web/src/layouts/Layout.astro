@@ -21,7 +21,12 @@ const requestProtocol =
   (Astro.url.protocol === 'https:' ? 'https' : Astro.url.protocol === 'http:' ? 'http' : 'https');
 const requestHost = forwardedHost ?? Astro.url.host;
 const requestOrigin = `${requestProtocol}://${requestHost}`;
-const isPreviewOrigin = requestOrigin !== canonicalOrigin;
+function normalizeHost(host: string): string {
+  return host.replace(/:\d+$/, '').toLowerCase();
+}
+const canonicalHost = normalizeHost(new URL(canonicalOrigin).host);
+const requestHostNormalized = normalizeHost(requestHost);
+const isPreviewOrigin = requestHostNormalized !== canonicalHost;
 const robots = isPreviewOrigin ? 'noindex,nofollow' : 'index,follow';
 const localeToLangTag: Record<SupportedLocale, string> = {
   eng: 'en',
@@ -123,9 +128,28 @@ const faviconVersion = '20260217';
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      id="web-fonts"
       rel="stylesheet"
+      media="print"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
     />
+    <script is:inline>
+      (() => {
+        const fonts = document.getElementById('web-fonts');
+        if (!(fonts instanceof HTMLLinkElement)) return;
+        const activate = () => {
+          fonts.media = 'all';
+        };
+        if (fonts.sheet) activate();
+        else fonts.addEventListener('load', activate, { once: true });
+      })();
+    </script>
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      />
+    </noscript>
   </head>
   <body class="text-[var(--text-primary)] antialiased min-h-screen pb-6">
     <slot />

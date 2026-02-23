@@ -70,11 +70,12 @@ const apiOrigin =
   import.meta.env.API_ORIGIN ??
   import.meta.env.PUBLIC_API_ORIGIN ??
   'http://localhost:3000';
+const activityEndpoint = '/api/activity-monitor';
 
 let activity: ActivityMonitorData | null = null;
 try {
   const json = await ky
-    .get(`${apiOrigin}/api/activity-monitor`, {
+    .get(`${apiOrigin}${activityEndpoint}`, {
       headers: { accept: 'application/json' },
       throwHttpErrors: false,
     })
@@ -127,7 +128,7 @@ const rangeLabel =
 <section
   data-activity-monitor
   data-locale={locale}
-  data-api-origin={apiOrigin}
+  data-endpoint={activityEndpoint}
   data-range-template={t('activity.rangeLabel', { start: '{start}', end: '{end}' })}
   data-tooltip-with-date={t('activity.tooltipWithDate')}
   data-tooltip-without-date={t('activity.tooltipWithoutDate')}
@@ -220,7 +221,7 @@ const rangeLabel =
     const root = document.querySelector('[data-activity-monitor]');
     if (!root) return;
 
-    const apiOrigin = root.getAttribute('data-api-origin') || '';
+    const endpoint = root.getAttribute('data-endpoint') || '/api/activity-monitor';
     const locale = root.getAttribute('data-locale') || 'en';
 
     const ramps = {
@@ -310,8 +311,7 @@ const rangeLabel =
     }
 
     async function refresh() {
-      const url = `${apiOrigin}/api/activity-monitor`;
-      const res = await fetch(url, { headers: { accept: 'application/json' } });
+      const res = await fetch(endpoint, { headers: { accept: 'application/json' } });
       if (!res.ok) return;
       const json = await res.json();
       const data = json && json.data ? json.data : null;
@@ -398,11 +398,47 @@ const rangeLabel =
     tpl.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? `{${key}}`));
 
   const bindTooltip = () => {
+    if (!section) return;
     const tip = document.createElement('div');
     tip.setAttribute('data-tooltip', 'activity');
     tip.className =
       'pointer-events-none fixed z-50 hidden whitespace-nowrap rounded-md border border-[var(--border-subtle)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--text-primary)] shadow-lg';
+    tip.style.transform = 'translate3d(0, 0, 0)';
     document.body.appendChild(tip);
+
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+    let tipWidth = 0;
+    let tipHeight = 0;
+    let rafId = 0;
+
+    const measureTip = () => {
+      const rect = tip.getBoundingClientRect();
+      tipWidth = rect.width;
+      tipHeight = rect.height;
+    };
+
+    const positionTip = () => {
+      rafId = 0;
+      if (tip.classList.contains('hidden')) return;
+      const gap = 12;
+      const pad = 8;
+      let left = lastPointerX + gap;
+      let top = lastPointerY + gap;
+
+      if (left + tipWidth + pad > window.innerWidth) left = lastPointerX - tipWidth - gap;
+      if (top + tipHeight + pad > window.innerHeight) top = lastPointerY - tipHeight - gap;
+      if (left < pad) left = pad;
+      if (top < pad) top = pad;
+
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    };
+
+    const schedulePosition = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(positionTip);
+    };
 
     const show = (el, x, y) => {
       const sourceLabel = el.dataset.sourceLabel ?? el.dataset.source ?? '';
@@ -417,33 +453,30 @@ const rangeLabel =
         : formatTpl(tooltipWithoutDateTpl, { label: sourceLabel, count, unit });
 
       tip.classList.remove('hidden');
-      tip.style.visibility = 'hidden';
-
-      const gap = 12;
-      const pad = 8;
-      const width = tip.offsetWidth;
-      const height = tip.offsetHeight;
-      let left = x + gap;
-      let top = y + gap;
-
-      if (left + width + pad > window.innerWidth) left = x - width - gap;
-      if (top + height + pad > window.innerHeight) top = y - height - gap;
-      if (left < pad) left = pad;
-      if (top < pad) top = pad;
-
-      tip.style.left = `${left}px`;
-      tip.style.top = `${top}px`;
       tip.style.visibility = 'visible';
+      lastPointerX = x;
+      lastPointerY = y;
+      measureTip();
+      schedulePosition();
     };
     const hide = () => {
       tip.classList.add('hidden');
       tip.style.visibility = 'hidden';
+      if (rafId) {
+        window.cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+    };
+    const move = (x, y) => {
+      lastPointerX = x;
+      lastPointerY = y;
+      schedulePosition();
     };
 
     const nodes = document.querySelectorAll('[data-tags] button[data-source]');
     for (const el of nodes) {
       el.addEventListener('mouseenter', (e) => show(el, e.clientX, e.clientY));
-      el.addEventListener('mousemove', (e) => show(el, e.clientX, e.clientY));
+      el.addEventListener('mousemove', (e) => move(e.clientX, e.clientY));
       el.addEventListener('mouseleave', hide);
 
       el.addEventListener('focus', () => {
