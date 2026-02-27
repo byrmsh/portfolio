@@ -124,6 +124,18 @@ Production GitOps ownership is split:
 
 For Cloudflare Tunnel integration, this repo provides a ClusterIP service and the tunnel target is configured in the homelab repo.
 
+### PR testing environments
+
+Pull requests can be deployed to isolated preview environments for testing.
+
+- Trigger: add the `preview` label to a pull request.
+- Per-PR resources: Argo app + namespace `portfolio-pr-<number>`.
+- URLs: `pr-<number>.bayram.sh` (web) and `api-pr-<number>.bayram.sh` (api).
+- Image tags expected by previews: `pr-<number>-<head_sha>`.
+- Cleanup: remove the `preview` label or close the PR to prune the environment.
+
+This repository provides the Helm chart/workloads used by previews. Private `homelab` repo manages preview provisioning, edge/tunnel routing, and preview secret bootstrap.
+
 ## Secrets
 
 Secrets are not stored in YAML. Create Kubernetes secrets with commands such as:
