@@ -1,4 +1,5 @@
 ---
+import { readFileSync } from 'node:fs';
 import { SITE } from '../config/site';
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../i18n';
 import { localizedPath } from '../i18n';
@@ -9,6 +10,19 @@ interface Props {
 }
 
 const { t, locale } = Astro.props;
+const GIT_METADATA_FILE = process.env.GIT_METADATA_FILE ?? './apps/web/dist/git-meta.json';
+
+function getRepoUrlFromMetadata(): string | null {
+  try {
+    const raw = readFileSync(GIT_METADATA_FILE, 'utf8');
+    const parsed = JSON.parse(raw) as { repoUrl?: unknown };
+    return typeof parsed.repoUrl === 'string' ? parsed.repoUrl : null;
+  } catch {
+    return null;
+  }
+}
+
+const sourceUrl = getRepoUrlFromMetadata() ?? '#';
 ---
 
 <footer class="border-t border-[var(--border-subtle)] py-8 mt-4">
@@ -43,8 +57,9 @@ const { t, locale } = Astro.props;
       </select>
     </div>
     <div class="flex items-center gap-6">
-      <a href="#" class="hover:text-[var(--text-primary)] transition-colors">{t('footer.source')}</a
-      >
+      <a href={sourceUrl} class="hover:text-[var(--text-primary)] transition-colors">
+        {t('footer.source')}
+      </a>
       <a
         href={localizedPath(locale, '/rss.xml')}
         class="hover:text-[var(--text-primary)] transition-colors"
