@@ -55,6 +55,7 @@ const format = (template: string, vars: Record<string, string | number>): string
               <a
                 class="text-xxs font-mono rounded-full border border-[var(--border-subtle)] px-3 py-1 hover:bg-[var(--surface-2)]"
                 href={analysis.trackUrl}
+                target="_blank"
               >
                 {labels.openTrack}
               </a>
@@ -63,6 +64,7 @@ const format = (template: string, vars: Record<string, string | number>): string
               <a
                 class="text-xxs font-mono rounded-full border border-[var(--border-subtle)] px-3 py-1 hover:bg-[var(--surface-2)]"
                 href={analysis.lyricsUrl}
+                target="_blank"
               >
                 {labels.readLyrics}
               </a>

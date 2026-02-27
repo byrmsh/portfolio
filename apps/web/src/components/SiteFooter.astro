@@ -57,7 +57,11 @@ const sourceUrl = getRepoUrlFromMetadata() ?? '#';
       </select>
     </div>
     <div class="flex items-center gap-6">
-      <a href={sourceUrl} class="hover:text-[var(--text-primary)] transition-colors">
+      <a
+        href={sourceUrl}
+        target="_blank"
+        class="hover:text-[var(--text-primary)] transition-colors"
+      >
         {t('footer.source')}
       </a>
       <a
