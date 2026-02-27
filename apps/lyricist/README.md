@@ -59,7 +59,7 @@ The shell workflow (`./scripts/manual-analysis-clipboard.sh`) is still available
 For full offline/manual analysis, download LRCLIB's official DB dump(s):
 
 ```bash
-cd /home/mesh/Projects/Bash/portfolio
+cd <repo-root>
 ./apps/lyricist/scripts/fetch_lrclib_dumps.sh
 ```
 
