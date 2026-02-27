@@ -104,6 +104,12 @@ pnpm -C apps/api build
 pnpm -C apps/web build
 ```
 
+Run pre-commit hooks manually when needed:
+
+```bash
+prek run --all-files
+```
+
 ## Deployment notes
 
 This repo is Helm-first for workloads:
