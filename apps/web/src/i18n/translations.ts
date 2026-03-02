@@ -88,8 +88,9 @@ const enTranslations = {
     gpgLabel: 'PGP Public Key',
   },
   hero: {
-    subtitle: 'Full-Stack Developer & DevOps Practitioner.',
-    description: 'Building software and writing about what I learn along the way.',
+    pronunciation: '/bajˈɾam ʃaˈhin/',
+    pronunciationSimple: 'bye-RAHM sha-HEEN',
+    subtitle: 'Full-Stack Developer & DevOps Practitioner',
   },
   activity: {
     title: 'Activity Monitor',

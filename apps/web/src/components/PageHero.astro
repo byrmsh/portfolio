@@ -10,11 +10,16 @@ const { t } = Astro.props;
 
 <header class="flex flex-col gap-6">
   <div>
-    <h1 class="text-4xl font-semibold tracking-tight mb-3">{SITE.name}</h1>
-    <p class="max-w-2xl text-[var(--text-body)] text-lg">
-      {t('hero.subtitle')}
-      <br />
-      {t('hero.description')}
+    <p
+      class="group mb-2 flex w-fit cursor-help select-none text-sm text-[var(--text-muted)] font-mono tracking-wide"
+      aria-label="Pronunciation"
+    >
+      <span class="group-hover:hidden group-focus-within:hidden">{t('hero.pronunciation')}</span>
+      <span class="hidden group-hover:inline group-focus-within:inline">
+        {t('hero.pronunciationSimple')}
+      </span>
     </p>
+    <h1 class="text-4xl font-semibold tracking-tight mb-3">{SITE.name}</h1>
+    <p class="max-w-2xl text-[var(--text-body)] text-lg">{t('hero.subtitle')}</p>
   </div>
 </header>
