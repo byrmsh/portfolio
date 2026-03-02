@@ -13,6 +13,8 @@ export type SystemHealthStrings = {
   notAvailable: string;
   runSingular: string;
   runPlural: string;
+  uptimeLabel: string;
+  availabilityLabel: string;
   latencyLabel: string;
   recencyLabel: string;
 };
@@ -228,21 +230,25 @@ function sourceFromPayload(payload: unknown): Partial<Record<ServiceKey, Partial
       status: asStatus(byId.web?.status),
       latency: asCount(byId.web?.latencyMs),
       message: asText(byId.web?.detail, ''),
+      meta: asText(byId.web?.metric, ''),
     },
     api: {
       status: asStatus(byId.api?.status),
       latency: asCount(byId.api?.latencyMs),
       message: asText(byId.api?.detail, ''),
+      meta: asText(byId.api?.metric, ''),
     },
     argocd: {
       status: asStatus(byId.argocd?.status),
       latency: asCount(byId.argocd?.latencyMs),
       message: asText(byId.argocd?.detail, ''),
+      meta: asText(byId.argocd?.metric, ''),
     },
     dragonfly: {
       status: asStatus(byId.db?.status),
       latency: asCount(byId.db?.latencyMs),
       message: asText(byId.db?.detail, ''),
+      meta: asText(byId.db?.metric, ''),
     },
     collector: {
       status: asStatus(byId.collector?.status),
@@ -292,7 +298,10 @@ export function normalizePayload(payload: unknown): NormalizedPayload {
 }
 
 export function dotClass(status: ServiceStatus): string {
-  return status === 'healthy' ? 'bg-emerald-500' : 'bg-rose-500';
+  if (status === 'healthy') return 'bg-emerald-500';
+  if (status === 'partial') return 'bg-amber-500';
+  if (status === 'unknown') return 'bg-[var(--border-subtle)]';
+  return 'bg-rose-500';
 }
 
 export function metricFor(key: ServiceKey, node: StatusNode, strings: SystemHealthStrings): string {
@@ -304,6 +313,8 @@ export function metricFor(key: ServiceKey, node: StatusNode, strings: SystemHeal
     if (runs <= 0) return strings.notAvailable;
     return `${runs} ${runs === 1 ? strings.runSingular : strings.runPlural}`;
   }
+  const availability = asText(node.meta, '');
+  if (availability.length > 0) return availability;
   const latency = asCount(node.latency);
   return latency > 0 ? `${latency}ms` : strings.notAvailable;
 }
@@ -317,7 +328,7 @@ export function metricClass(value: string): string {
 
 export function labelFor(key: ServiceKey, strings: SystemHealthStrings): string {
   if (key === 'collector' || key === 'lyricist') return strings.recencyLabel;
-  return strings.latencyLabel;
+  return strings.uptimeLabel;
 }
 
 export function detailFor(

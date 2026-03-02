@@ -130,6 +130,8 @@ const enTranslations = {
   },
   health: {
     title: 'Live Infrastructure',
+    uptimeLabel: 'UPTIME',
+    availabilityLabel: 'AVAILABILITY',
     latencyLabel: 'LATENCY',
     recencyLabel: 'RECENCY',
     notAvailable: 'n/a',

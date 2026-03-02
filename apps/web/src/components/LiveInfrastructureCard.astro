@@ -31,6 +31,8 @@ const strings = {
   notAvailable: t('health.notAvailable'),
   runSingular: t('health.runs.one'),
   runPlural: t('health.runs.other'),
+  uptimeLabel: t('health.uptimeLabel'),
+  availabilityLabel: t('health.availabilityLabel'),
   latencyLabel: t('health.latencyLabel'),
   recencyLabel: t('health.recencyLabel'),
 } satisfies SystemHealthStrings;
@@ -69,6 +71,8 @@ const initial = await loadInitialStatus();
   data-not-available={strings.notAvailable}
   data-run-singular={strings.runSingular}
   data-run-plural={strings.runPlural}
+  data-label-uptime={strings.uptimeLabel}
+  data-label-availability={strings.availabilityLabel}
   data-label-latency={strings.latencyLabel}
   data-label-recency={strings.recencyLabel}
   class="col-span-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6 md:col-span-6 lg:col-span-12"
@@ -166,6 +170,8 @@ const initial = await loadInitialStatus();
     notAvailable: root.dataset.notAvailable ?? '',
     runSingular: root.dataset.runSingular ?? '',
     runPlural: root.dataset.runPlural ?? '',
+    uptimeLabel: root.dataset.labelUptime ?? '',
+    availabilityLabel: root.dataset.labelAvailability ?? '',
     latencyLabel: root.dataset.labelLatency ?? '',
     recencyLabel: root.dataset.labelRecency ?? '',
   };

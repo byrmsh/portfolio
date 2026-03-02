@@ -35,8 +35,8 @@ spec:
               value: {{ .Values.web.env.webOrigin | quote }}
             - name: API_ORIGIN
               value: {{ .Values.web.env.apiOrigin | quote }}
-            - name: ARGOCD_HEALTH_URL
-              value: {{ .Values.web.env.argocdHealthUrl | quote }}
+            - name: PROMETHEUS_URL
+              value: {{ .Values.web.env.prometheusUrl | quote }}
           ports:
             - name: http
               containerPort: 8080
