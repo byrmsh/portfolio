@@ -77,6 +77,18 @@ If you use a non-default kube context:
 K8S_CONTEXT=your-context pnpm dev
 ```
 
+### Local dev with homelab Prometheus
+
+When you want local `pnpm dev` to use live homelab metrics for `/system-status.json`, run:
+
+```bash
+# terminal 1
+kubectl --context homelab -n monitoring port-forward svc/grafana-stack-kube-prometh-prometheus 19090:9090
+
+# terminal 2
+PROMETHEUS_URL=http://127.0.0.1:19090 pnpm dev
+```
+
 ### Optional: run Dragonfly locally
 
 ```bash
@@ -148,4 +160,4 @@ kubectl create secret generic collector-secrets \
 
 ## TODO
 
-- Switch the Live Infrastructure widget to use Grafana as its source of truth (instead of app-side probing).
+- Add a small Grafana drilldown widget for per-source collector details (GitHub vs Anki freshness).
