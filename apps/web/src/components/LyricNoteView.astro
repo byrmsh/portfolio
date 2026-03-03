@@ -31,6 +31,17 @@ const { locale, labels, analysis, error } = Astro.props;
 
 const format = (template: string, vars: Record<string, string | number>): string =>
   template.replaceAll(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? `{${key}}`));
+
+function toIntlLocale(localeCode: string): string {
+  if (localeCode === 'eng') return 'en';
+  if (localeCode === 'dev') return 'en-x-dev';
+  return localeCode;
+}
+
+const updatedAtFormatter = new Intl.DateTimeFormat(toIntlLocale(locale), {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
 ---
 
 {
@@ -72,7 +83,7 @@ const format = (template: string, vars: Record<string, string | number>): string
           </div>
           <div class="mt-2 text-xxs font-mono text-[var(--text-muted)]">
             {format(labels.updatedAt, {
-              date: new Date(analysis.updatedAt).toLocaleString(locale),
+              date: updatedAtFormatter.format(new Date(analysis.updatedAt)),
             })}
           </div>
         </div>
