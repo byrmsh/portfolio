@@ -58,22 +58,42 @@ try {
   lyricistLastSuccessAt = null;
 }
 
-function recencyFromIso(value: string | null): string {
+function formatSyncedAt(value: string | null, locale: SupportedLocale): string {
   if (!value) return '--';
   const ts = Date.parse(value);
   if (Number.isNaN(ts)) return '--';
-  const ageMs = Math.max(0, Date.now() - ts);
-  const minutes = Math.floor(ageMs / 60000);
-  if (minutes < 60) return `${Math.max(1, minutes)}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.floor(hours / 24)}d`;
+
+  const localeMap: Record<SupportedLocale, string> = {
+    eng: 'en-US',
+    dev: 'en-US',
+  };
+  const displayLocale = localeMap[locale];
+  const syncedAt = new Date(ts);
+  const now = new Date();
+  const isToday =
+    syncedAt.getFullYear() === now.getFullYear() &&
+    syncedAt.getMonth() === now.getMonth() &&
+    syncedAt.getDate() === now.getDate();
+
+  if (isToday) {
+    return new Intl.DateTimeFormat(displayLocale, {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(syncedAt);
+  }
+
+  return new Intl.DateTimeFormat(displayLocale, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(syncedAt);
 }
 
 const noteHref = saved?.id
   ? localizedPath(locale, `/playlist/${encodeURIComponent(saved.id)}`)
   : null;
-const syncedValue = recencyFromIso(lyricistLastSuccessAt);
+const syncedValue = formatSyncedAt(lyricistLastSuccessAt, locale);
 ---
 
 <section
