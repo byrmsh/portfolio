@@ -894,7 +894,7 @@ def _upsert_saved_note_and_index(r, track: Track) -> None:
         source="ytmusic",
         title=track.title,
         artist=track.artist,
-        noteUrl=f"{web_origin}/lyrics/note?id={track.id}",
+        noteUrl=f"{web_origin}/playlist/note?id={track.id}",
         albumArtUrl=track.album_art_url,
         savedAt=saved_at,
     )

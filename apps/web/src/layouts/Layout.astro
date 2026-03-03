@@ -35,7 +35,7 @@ const localeToLangTag: Record<SupportedLocale, string> = {
 const htmlLang = localeToLangTag[locale];
 const resolvedDescription =
   description ??
-  'Personal site for software projects, writing, lyrics notes, and live system updates.';
+  'Personal site for software projects, writing, playlist notes, and live system updates.';
 const resolvedOgImagePath = ogImagePath ?? '/og-image.jpg';
 const canonical = new URL(
   canonicalPath ?? `${Astro.url.pathname}${Astro.url.search}`,

@@ -81,7 +81,7 @@ try {
 }
 
 const latestHref = latest?.id
-  ? localizedPath(locale, `/lyrics/${encodeURIComponent(latest.id)}`)
+  ? localizedPath(locale, `/playlist/${encodeURIComponent(latest.id)}`)
   : null;
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
 ---
@@ -90,7 +90,7 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle
   title={`${SITE.name} | ${t('meta.lyrics')}`}
   locale={locale}
   description={t('lyrics.description')}
-  canonicalPath={localizedPath(locale, '/lyrics')}
+  canonicalPath={localizedPath(locale, '/playlist')}
 >
   <SiteNav locale={locale} t={t} />
 
@@ -142,7 +142,7 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle
       <LyricNotesList
         initial={savedPage}
         locale={locale}
-        basePath={localizedPath(locale, '/lyrics')}
+        basePath={localizedPath(locale, '/playlist')}
         labels={{
           all: t('lyrics.all'),
           total: t('lyrics.total', { count: '{count}' }),

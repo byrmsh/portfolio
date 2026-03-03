@@ -1,5 +1,8 @@
 ---
-import LyricsIndexPage from '../../views/LyricsIndexPage.astro';
----
+import { getLocaleFromUrl, localizedPath } from '../../i18n';
 
-<LyricsIndexPage url={Astro.url} />
+const locale = getLocaleFromUrl(Astro.url);
+const response = Astro.redirect(localizedPath(locale, '/playlist'));
+void response;
+return response;
+---

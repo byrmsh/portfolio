@@ -55,14 +55,14 @@ const seoDescription = analysis
   title={`${SITE.name} | ${analysis?.title ?? t('meta.lyricNote')}`}
   locale={locale}
   description={seoDescription}
-  canonicalPath={localizedPath(locale, `/lyrics/${encodeURIComponent(id)}`)}
+  canonicalPath={localizedPath(locale, `/playlist/${encodeURIComponent(id)}`)}
 >
   <SiteNav locale={locale} t={t} />
 
   <main class="pt-28 px-4 sm:px-6 overflow-x-hidden [overflow-x:clip]">
     <div class="max-w-3xl mx-auto flex flex-col gap-8">
       <a
-        href={localizedPath(locale, '/lyrics')}
+        href={localizedPath(locale, '/playlist')}
         class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-body)]"
       >
         {t('lyrics.backToAll')}

@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import { getLocaleFromUrl, localizedPath } from '../../i18n';
+import LyricNotePage from '../../views/LyricNotePage.astro';
 
 const { id } = Astro.params;
 const locale = getLocaleFromUrl(Astro.url);
@@ -10,8 +11,6 @@ if (!id) {
   void response;
   return response;
 }
-
-const response = Astro.redirect(localizedPath(locale, `/playlist/${encodeURIComponent(id)}`));
-void response;
-return response;
 ---
+
+<LyricNotePage id={id} url={Astro.url} />

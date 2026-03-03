@@ -46,7 +46,7 @@ export const serviceTech: Record<ServiceKey, string> = {
   web: 'Portfolio frontend (Astro)',
   api: 'Portfolio backend API (Hono)',
   collector: 'Personal data collectors',
-  lyricist: 'Lyrics analysis worker',
+  lyricist: 'Playlist analysis worker',
   dragonfly: 'Redis-compatible KV store',
   argocd: 'GitOps control plane',
 };

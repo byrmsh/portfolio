@@ -34,7 +34,7 @@ def main() -> None:
         except Exception:
             continue
 
-        new_url = f"{web_origin}/lyrics/note?id={track_id}"
+        new_url = f"{web_origin}/playlist/note?id={track_id}"
         if note.noteUrl == new_url:
             continue
 

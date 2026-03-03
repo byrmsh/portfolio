@@ -58,8 +58,8 @@ const enTranslations = {
     systemsConsole: 'Systems Console',
     blog: 'Blog',
     contact: 'Contact',
-    lyrics: 'Lyrics',
-    lyricNote: 'Lyric Breakdown',
+    lyrics: 'Playlist',
+    lyricNote: 'Playlist Breakdown',
     projects: 'Projects',
   },
   blog: {
@@ -73,7 +73,7 @@ const enTranslations = {
   nav: {
     home: 'Home',
     blog: 'Blog',
-    lyrics: 'Lyrics',
+    lyrics: 'Playlist',
     projects: 'Projects',
     contact: 'Contact',
     openMenu: 'Open menu',
@@ -107,7 +107,7 @@ const enTranslations = {
     tooltipWithoutDate: '{label}: ({count} {unit})',
   },
   savedLyrics: {
-    title: 'Saved Lyrics',
+    title: 'Playlist',
     noTracks: 'No saved tracks yet',
     readLyricNote: 'READ BREAKDOWN',
   },
@@ -165,8 +165,8 @@ const enTranslations = {
     rss: 'RSS',
   },
   lyrics: {
-    eyebrow: 'Lyrics',
-    title: 'Saved Lyrics',
+    eyebrow: 'Playlist',
+    title: 'Processed Lyrics',
     description:
       'I like dissecting German song lyrics for language learning; here is my playlist processed & served for fun.',
     latest: 'Latest',
@@ -179,10 +179,10 @@ const enTranslations = {
     couldNotLoadPage: 'Could not load page: {error}',
     prev: 'PREV',
     next: 'NEXT',
-    backToAll: '← ALL LYRICS',
+    backToAll: '← ALL TRACKS',
     loading: 'Loading…',
-    couldNotLoadNote: 'Could not load lyric breakdown',
-    noteLabel: 'Lyric Breakdown',
+    couldNotLoadNote: 'Could not load playlist breakdown',
+    noteLabel: 'Playlist Breakdown',
     openTrack: 'OPEN TRACK',
     readLyrics: 'READ LYRICS',
     updatedAt: 'Updated {date}',
