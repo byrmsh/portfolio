@@ -109,6 +109,7 @@ const enTranslations = {
   savedLyrics: {
     title: 'Playlist',
     noTracks: 'No saved tracks yet',
+    synced: 'SYNCED',
     readLyricNote: 'READ BREAKDOWN',
   },
   writing: {
