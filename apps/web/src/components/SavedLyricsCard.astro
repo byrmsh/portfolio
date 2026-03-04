@@ -132,11 +132,11 @@ const syncedValue = formatSyncedAt(lyricistLastSuccessAt);
           )
         }
       </div>
-      <div class="flex flex-col justify-center">
-        <div class="text-sm font-semibold text-[var(--text-primary)] line-clamp-1">
+      <div class="min-w-0 flex flex-1 flex-col justify-center">
+        <div class="truncate text-sm font-semibold text-[var(--text-primary)]">
           {saved?.title ?? t('playlist.no_tracks')}
         </div>
-        <div class="text-xs text-[var(--text-subtle)] mt-1">{saved?.artist ?? ''}</div>
+        <div class="mt-1 truncate text-xs text-[var(--text-subtle)]">{saved?.artist ?? ''}</div>
         {
           noteHref ? (
             <a
