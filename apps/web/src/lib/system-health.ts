@@ -10,7 +10,6 @@ export type StatusNode = {
 };
 
 export type SystemHealthStrings = {
-  notAvailable: string;
   runSingular: string;
   runPlural: string;
   uptimeLabel: string;
@@ -305,18 +304,19 @@ export function dotClass(status: ServiceStatus): string {
 }
 
 export function metricFor(key: ServiceKey, node: StatusNode, strings: SystemHealthStrings): string {
-  if (key === 'collector') return collectorMetric(asText(node.meta, '')) ?? strings.notAvailable;
+  const notAvailable = 'N/A';
+  if (key === 'collector') return collectorMetric(asText(node.meta, '')) ?? notAvailable;
   if (key === 'lyricist') {
     const freshness = asText(node.meta, '');
     if (freshness) return freshness;
     const runs = asCount(node.runs);
-    if (runs <= 0) return strings.notAvailable;
+    if (runs <= 0) return notAvailable;
     return `${runs} ${runs === 1 ? strings.runSingular : strings.runPlural}`;
   }
   const availability = asText(node.meta, '');
   if (availability.length > 0) return availability;
   const latency = asCount(node.latency);
-  return latency > 0 ? `${latency}ms` : strings.notAvailable;
+  return latency > 0 ? `${latency}ms` : notAvailable;
 }
 
 export function metricClass(value: string): string {

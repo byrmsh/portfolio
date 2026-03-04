@@ -28,7 +28,6 @@ const endpoint = import.meta.env.SSR
   ? `${webOrigin.replace(/\/$/, '')}/system-status.json`
   : '/system-status.json';
 const strings = {
-  notAvailable: t('health.notAvailable'),
   runSingular: t('health.runs.one'),
   runPlural: t('health.runs.other'),
   uptimeLabel: t('health.uptimeLabel'),
@@ -67,8 +66,7 @@ const initial = await loadInitialStatus();
   data-system-health
   data-client-endpoint="/system-status.json"
   data-initial-checked-at={initial?.checkedAt ?? ''}
-  data-label-checked-prefix={t('health.checkedPrefix')}
-  data-not-available={strings.notAvailable}
+  data-label-checked-template={t('health.checkedAt', { value: '{value}' })}
   data-run-singular={strings.runSingular}
   data-run-plural={strings.runPlural}
   data-label-uptime={strings.uptimeLabel}
@@ -84,8 +82,8 @@ const initial = await loadInitialStatus();
   >
     <span
       data-last-check
-      class="ml-auto whitespace-nowrap text-right text-[11px] font-mono tabular-nums uppercase tracking-wide text-[var(--text-muted)]"
-      >{`${t('health.checkedPrefix')}: ${formatCheckedValue(initial?.checkedAt ?? null)}`}</span
+      class="ml-auto whitespace-nowrap text-xxs font-mono tabular-nums text-[var(--text-muted)]"
+      >{t('health.checkedAt', { value: formatCheckedValue(initial?.checkedAt ?? null) })}</span
     >
   </WidgetHeader>
 
@@ -165,9 +163,8 @@ const initial = await loadInitialStatus();
   if (!root) throw new Error('System health root not found');
 
   const endpoint = root.dataset.clientEndpoint ?? '/system-status.json';
-  const checkedPrefix = root.dataset.labelCheckedPrefix ?? 'CHECKED';
+  const checkedTemplate = root.dataset.labelCheckedTemplate ?? 'CHECKED: {value}';
   const strings = {
-    notAvailable: root.dataset.notAvailable ?? '',
     runSingular: root.dataset.runSingular ?? '',
     runPlural: root.dataset.runPlural ?? '',
     uptimeLabel: root.dataset.labelUptime ?? '',
@@ -183,7 +180,8 @@ const initial = await loadInitialStatus();
   const setCheckedAt = (iso: string | null) => {
     const el = root.querySelector<HTMLElement>('[data-last-check]');
     if (!el) return;
-    el.textContent = `${checkedPrefix}: ${formatCheckedValue(iso, browserTimeZone)}`;
+    const checkedValue = formatCheckedValue(iso, browserTimeZone);
+    el.textContent = checkedTemplate.replace('{value}', checkedValue);
   };
 
   const setServiceState = (key: ServiceKey, node: StatusNode) => {

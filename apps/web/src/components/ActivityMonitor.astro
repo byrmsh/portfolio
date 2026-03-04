@@ -130,12 +130,15 @@ const rangeLabel =
   data-locale={locale}
   data-endpoint={activityEndpoint}
   data-range-template={t('activity.rangeLabel', { start: '{start}', end: '{end}' })}
+  data-streak-template={t('activity.streakDays', { count: '{count}' })}
   data-tooltip-with-date={t('activity.tooltipWithDate')}
   data-tooltip-without-date={t('activity.tooltipWithoutDate')}
   class="col-span-1 md:col-span-6 lg:col-span-8 min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6"
 >
   <WidgetHeader title={t('activity.title')} class="mb-4">
-    <div class="text-xxs font-mono text-[var(--text-muted)]" data-range>{rangeLabel}</div>
+    <div class="text-xxs font-mono text-[var(--text-muted)] whitespace-nowrap" data-range>
+      {rangeLabel}
+    </div>
   </WidgetHeader>
 
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-6 lg:gap-x-8 lg:gap-y-0 min-w-0">
@@ -179,10 +182,15 @@ const rangeLabel =
       <div class="flex items-center gap-2 mb-3">
         <BrainCircuit class="w-4 h-4 text-[var(--text-primary)]" />
         <span class="text-sm font-semibold">{t('activity.ankiLabel')}</span>
-        <span class="text-xs text-[var(--text-muted)] ml-auto">
-          {t('activity.streak')}: <span data-streak="anki"
-            >{typeof activity?.anki?.streak === 'number' ? activity.anki.streak : 0}</span
-          >
+        <span
+          class="text-xxs font-mono text-[var(--text-muted)] ml-auto whitespace-nowrap"
+          data-streak-label="anki"
+        >
+          {
+            t('activity.streakDays', {
+              count: typeof activity?.anki?.streak === 'number' ? activity.anki.streak : 0,
+            })
+          }
         </span>
       </div>
 
@@ -267,6 +275,7 @@ const rangeLabel =
 
     const rangeEl = root.querySelector('[data-range]');
     const rangeTemplate = root.getAttribute('data-range-template') || '{start} to {end}';
+    const streakTemplate = root.getAttribute('data-streak-template') || 'Streak: {count}';
 
     function setRangeLabel(githubCells, ankiCells) {
       const rangeStart =
@@ -321,9 +330,9 @@ const rangeLabel =
       const ankiCells = applySeries('anki', data.anki || { cells: [], streak: 0 });
       setRangeLabel(githubCells, ankiCells);
 
-      const streakEl = root.querySelector('[data-streak=\"anki\"]');
+      const streakEl = root.querySelector('[data-streak-label=\"anki\"]');
       if (streakEl && typeof data.anki?.streak === 'number') {
-        streakEl.textContent = String(data.anki.streak);
+        streakEl.textContent = streakTemplate.replaceAll('{count}', String(data.anki.streak));
       }
     }
 
