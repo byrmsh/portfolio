@@ -88,14 +88,14 @@ try {
         json.data?.github ??
         ({
           source: 'github',
-          label: t('activity.githubLabel'),
+          label: t('activity.github_label'),
           cells: [],
         } satisfies ActivitySeries),
       anki:
         json.data?.anki ??
         ({
           source: 'anki',
-          label: t('activity.ankiLabel'),
+          label: t('activity.anki_label'),
           cells: [],
         } satisfies ActivitySeries),
     };
@@ -118,21 +118,21 @@ const rangeEnd =
 
 const rangeLabel =
   rangeStart && rangeEnd
-    ? t('activity.rangeLabel', {
+    ? t('activity.range_label', {
         start: fmtRange.format(parseIsoDateUTC(rangeStart)),
         end: fmtRange.format(parseIsoDateUTC(rangeEnd)),
       })
-    : t('activity.last7Days');
+    : t('activity.last7_days');
 ---
 
 <section
   data-activity-monitor
   data-locale={locale}
   data-endpoint={activityEndpoint}
-  data-range-template={t('activity.rangeLabel', { start: '{start}', end: '{end}' })}
-  data-streak-template={t('activity.streakDays', { count: '{count}' })}
-  data-tooltip-with-date={t('activity.tooltipWithDate')}
-  data-tooltip-without-date={t('activity.tooltipWithoutDate')}
+  data-range-template={t('activity.range_label', { start: '{start}', end: '{end}' })}
+  data-streak-template={t('activity.streak_days', { count: '{count}' })}
+  data-tooltip-with-date={t('activity.tooltip_with_date')}
+  data-tooltip-without-date={t('activity.tooltip_without_date')}
   class="col-span-1 md:col-span-6 lg:col-span-8 min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6"
 >
   <WidgetHeader title={t('activity.title')} class="mb-4">
@@ -145,10 +145,10 @@ const rangeLabel =
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <Code class="w-4 h-4 text-[var(--text-primary)]" />
-        <span class="text-sm font-semibold">{t('activity.githubLabel')}</span>
+        <span class="text-sm font-semibold">{t('activity.github_label')}</span>
       </div>
 
-      <div class="activity-tags" data-tags="github" aria-label={t('activity.githubAria')}>
+      <div class="activity-tags" data-tags="github" aria-label={t('activity.github_aria')}>
         {
           githubCells.map((cell, i) => {
             const d = cell.date ? parseIsoDateUTC(cell.date) : null;
@@ -160,9 +160,9 @@ const rangeLabel =
                   'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-[var(--ring-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-subtle)]',
                   levelClass('github', cell.level),
                 ]}
-                aria-label={t('activity.githubDayAria', { day: i + 1 })}
+                aria-label={t('activity.github_day_aria', { day: i + 1 })}
                 data-source="github"
-                data-source-label={t('activity.githubLabel')}
+                data-source-label={t('activity.github_label')}
                 data-date={cell.date}
                 data-count={String(cell.count)}
                 data-level={String(cell.level)}
@@ -181,20 +181,20 @@ const rangeLabel =
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <BrainCircuit class="w-4 h-4 text-[var(--text-primary)]" />
-        <span class="text-sm font-semibold">{t('activity.ankiLabel')}</span>
+        <span class="text-sm font-semibold">{t('activity.anki_label')}</span>
         <span
           class="text-xxs font-mono text-[var(--text-muted)] ml-auto whitespace-nowrap"
           data-streak-label="anki"
         >
           {
-            t('activity.streakDays', {
+            t('activity.streak_days', {
               count: typeof activity?.anki?.streak === 'number' ? activity.anki.streak : 0,
             })
           }
         </span>
       </div>
 
-      <div class="activity-tags" data-tags="anki" aria-label={t('activity.ankiAria')}>
+      <div class="activity-tags" data-tags="anki" aria-label={t('activity.anki_aria')}>
         {
           ankiCells.map((cell, i) => {
             const d = cell.date ? parseIsoDateUTC(cell.date) : null;
@@ -206,9 +206,9 @@ const rangeLabel =
                   'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-[var(--ring-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-subtle)]',
                   levelClass('anki', cell.level),
                 ]}
-                aria-label={t('activity.ankiDayAria', { day: i + 1 })}
+                aria-label={t('activity.anki_day_aria', { day: i + 1 })}
                 data-source="anki"
-                data-source-label={t('activity.ankiLabel')}
+                data-source-label={t('activity.anki_label')}
                 data-date={cell.date}
                 data-count={String(cell.count)}
                 data-level={String(cell.level)}

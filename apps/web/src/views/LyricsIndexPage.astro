@@ -129,12 +129,12 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle
                 </div>
                 <div class="text-xs text-[var(--text-body)] mt-1 line-clamp-1">{latest.artist}</div>
                 <div class="text-xxs font-mono text-[var(--text-muted)] mt-2">
-                  {t('lyrics.savedAt', { date: dateFmt.format(new Date(latest.savedAt)) })}
+                  {t('lyrics.saved_at', { date: dateFmt.format(new Date(latest.savedAt)) })}
                 </div>
               </div>
             </a>
           ) : (
-            <p class="mt-3 text-sm text-[var(--text-body)]">{t('lyrics.noTracks')}</p>
+            <p class="mt-3 text-sm text-[var(--text-body)]">{t('lyrics.no_tracks')}</p>
           )
         }
       </section>
@@ -147,16 +147,16 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle
           all: t('lyrics.all'),
           total: t('lyrics.total', { count: '{count}' }),
           page: t('lyrics.page', { page: '{page}', totalPages: '{totalPages}' }),
-          perPage: t('lyrics.perPage', { count: '{count}' }),
-          couldNotLoadPage: t('lyrics.couldNotLoadPage', { error: '{error}' }),
-          httpError: t('common.httpError', { status: '{status}' }),
-          noTracks: t('lyrics.noTracks'),
-          savedAt: t('lyrics.savedAt', { date: '{date}' }),
+          perPage: t('lyrics.per_page', { count: '{count}' }),
+          couldNotLoadPage: t('lyrics.could_not_load_page', { error: '{error}' }),
+          httpError: t('common.http_error', { status: '{status}' }),
+          noTracks: t('lyrics.no_tracks'),
+          savedAt: t('lyrics.saved_at', { date: '{date}' }),
           prev: t('lyrics.prev'),
           next: t('lyrics.next'),
           loading: t('lyrics.loading'),
-          invalidResponse: t('lyrics.invalidResponse'),
-          failedToLoad: t('lyrics.failedToLoad'),
+          invalidResponse: t('lyrics.invalid_response'),
+          failedToLoad: t('lyrics.failed_to_load'),
         }}
       />
 

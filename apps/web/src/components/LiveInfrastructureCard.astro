@@ -30,10 +30,10 @@ const endpoint = import.meta.env.SSR
 const strings = {
   runSingular: t('health.runs.one'),
   runPlural: t('health.runs.other'),
-  uptimeLabel: t('health.uptimeLabel'),
-  availabilityLabel: t('health.availabilityLabel'),
-  latencyLabel: t('health.latencyLabel'),
-  recencyLabel: t('health.recencyLabel'),
+  uptimeLabel: t('health.uptime_label'),
+  availabilityLabel: t('health.availability_label'),
+  latencyLabel: t('health.latency_label'),
+  recencyLabel: t('health.recency_label'),
 } satisfies SystemHealthStrings;
 const servicePills = {
   web: ['Astro', 'Svelte'],
@@ -66,7 +66,7 @@ const initial = await loadInitialStatus();
   data-system-health
   data-client-endpoint="/system-status.json"
   data-initial-checked-at={initial?.checkedAt ?? ''}
-  data-label-checked-template={t('health.checkedAt', { value: '{value}' })}
+  data-label-checked-template={t('health.checked_at', { value: '{value}' })}
   data-run-singular={strings.runSingular}
   data-run-plural={strings.runPlural}
   data-label-uptime={strings.uptimeLabel}
@@ -83,7 +83,7 @@ const initial = await loadInitialStatus();
     <span
       data-last-check
       class="ml-auto whitespace-nowrap text-xxs font-mono tabular-nums text-[var(--text-muted)]"
-      >{t('health.checkedAt', { value: formatCheckedValue(initial?.checkedAt ?? null) })}</span
+      >{t('health.checked_at', { value: formatCheckedValue(initial?.checkedAt ?? null) })}</span
     >
   </WidgetHeader>
 

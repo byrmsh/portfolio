@@ -227,13 +227,13 @@ function commitTypeClass(type: string): string {
 
 function labelForType(type: string): string {
   const labels: Record<string, string> = {
-    feat: t('gitCommits.typeFeat'),
-    fix: t('gitCommits.typeFix'),
-    docs: t('gitCommits.typeDocs'),
-    chore: t('gitCommits.typeChore'),
-    refactor: t('gitCommits.typeRefactor'),
-    test: t('gitCommits.typeTest'),
-    perf: t('gitCommits.typePerf'),
+    feat: t('git_commits.type_feat'),
+    fix: t('git_commits.type_fix'),
+    docs: t('git_commits.type_docs'),
+    chore: t('git_commits.type_chore'),
+    refactor: t('git_commits.type_refactor'),
+    test: t('git_commits.type_test'),
+    perf: t('git_commits.type_perf'),
   };
   return labels[type] ?? type.toUpperCase();
 }
@@ -257,15 +257,15 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
 <section
   class="col-span-1 md:col-span-6 lg:col-span-12 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6"
 >
-  <WidgetHeader title={title ?? t('gitCommits.title')} class="mb-5">
+  <WidgetHeader title={title ?? t('git_commits.title')} class="mb-5">
     <span class="text-xxs font-mono text-[var(--text-muted)] whitespace-nowrap">
-      {t('gitCommits.totalChanges', { value: totalChanges })}
+      {t('git_commits.total_changes', { value: totalChanges })}
     </span>
   </WidgetHeader>
 
   {
     commits.length === 0 ? (
-      <p class="text-sm text-[var(--text-subtle)]">{t('gitCommits.empty')}</p>
+      <p class="text-sm text-[var(--text-subtle)]">{t('git_commits.empty')}</p>
     ) : (
       /* PARENT GRID:
       Mobile: 5 Columns (Hash, Bullet, Author, Bullet, Date).
@@ -293,7 +293,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                 )}
                 {parsed.breaking && (
                   <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
-                    {t('gitCommits.breaking')}
+                    {t('git_commits.breaking')}
                   </span>
                 )}
               </div>
@@ -306,7 +306,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
               {/* METADATA: HASH */}
               <div class="col-start-1 row-start-3 flex items-baseline gap-1.5 md:col-start-1 md:row-start-2">
                 <span class="hidden font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)] md:inline">
-                  {t('gitCommits.hash')}:
+                  {t('git_commits.hash')}:
                 </span>
                 <code
                   class="text-xs font-mono text-[var(--text-primary)] md:text-[11px] md:text-[var(--text-body)]"
@@ -320,8 +320,8 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                     target="_blank"
                     rel="noopener noreferrer"
                     class="self-center inline-flex text-[var(--text-muted)] transition-colors hover:text-[var(--text-body)]"
-                    aria-label={t('gitCommits.openCommit', { hash: commit.shortHash })}
-                    title={t('gitCommits.openCommit', { hash: commit.shortHash })}
+                    aria-label={t('git_commits.open_commit', { hash: commit.shortHash })}
+                    title={t('git_commits.open_commit', { hash: commit.shortHash })}
                   >
                     <ArrowUpRight class="w-3.5 h-3.5" />
                   </a>
@@ -339,7 +339,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
               {/* METADATA: AUTHOR */}
               <div class="col-start-3 row-start-3 flex items-baseline gap-1.5 min-w-0 md:col-start-2 md:row-start-2">
                 <span class="hidden font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)] md:inline">
-                  {t('gitCommits.author')}:
+                  {t('git_commits.author')}:
                 </span>
                 <span class="truncate text-xs font-mono text-[var(--text-primary)] md:overflow-visible md:font-sans md:text-[var(--text-body)]">
                   {commit.author}
@@ -357,7 +357,7 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
               {/* METADATA: DATE */}
               <div class="col-start-5 row-start-3 flex items-baseline gap-1.5 md:col-start-3 md:row-start-2">
                 <span class="hidden font-mono text-[11px] uppercase tracking-wide text-[var(--text-muted)] md:inline">
-                  {t('gitCommits.date')}:
+                  {t('git_commits.date')}:
                 </span>
                 <time
                   class="whitespace-nowrap text-xs font-mono text-[var(--text-primary)] md:font-sans md:text-[var(--text-body)]"

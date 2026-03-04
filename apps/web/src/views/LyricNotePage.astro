@@ -35,16 +35,16 @@ try {
   });
 
   if (res.status === 404) {
-    error = t('lyrics.notFound');
+    error = t('lyrics.not_found');
   } else if (!res.ok) {
-    error = t('common.httpError', { status: res.status });
+    error = t('common.http_error', { status: res.status });
   } else {
     const json = (await res.json()) as { data?: YtMusicAnalysis };
-    if (!json?.data?.id) error = t('lyrics.invalidResponse');
+    if (!json?.data?.id) error = t('lyrics.invalid_response');
     else analysis = json.data;
   }
 } catch (e) {
-  error = e instanceof Error ? e.message : t('lyrics.failedToLoad');
+  error = e instanceof Error ? e.message : t('lyrics.failed_to_load');
 }
 const seoDescription = analysis
   ? `${analysis.title} by ${analysis.artist}. ${analysis.background.tldr}`
@@ -52,7 +52,7 @@ const seoDescription = analysis
 ---
 
 <Layout
-  title={`${SITE.name} | ${analysis?.title ?? t('meta.lyricNote')}`}
+  title={`${SITE.name} | ${analysis?.title ?? t('meta.lyric_note')}`}
   locale={locale}
   description={seoDescription}
   canonicalPath={localizedPath(locale, `/playlist/${encodeURIComponent(id)}`)}
@@ -65,30 +65,30 @@ const seoDescription = analysis
         href={localizedPath(locale, '/playlist')}
         class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-body)]"
       >
-        {t('lyrics.backToAll')}
+        {t('lyrics.back_to_all')}
       </a>
       <LyricNoteView
         analysis={analysis}
         error={error}
         locale={locale}
         labels={{
-          couldNotLoadNote: t('lyrics.couldNotLoadNote'),
-          openTrack: t('lyrics.openTrack'),
-          readLyrics: t('lyrics.readLyrics'),
-          updatedAt: t('lyrics.updatedAt', { date: '{date}' }),
+          couldNotLoadNote: t('lyrics.could_not_load_note'),
+          openTrack: t('lyrics.open_track'),
+          readLyrics: t('lyrics.read_lyrics'),
+          updatedAt: t('lyrics.updated_at', { date: '{date}' }),
           background: t('lyrics.background'),
           flashcards: t('lyrics.flashcards'),
-          flipHint: t('lyrics.flashcardsFlipHint'),
-          tapHint: t('lyrics.flashcardsTapHint'),
-          rateHint: t('lyrics.flashcardsRateHint'),
-          knownHint: t('lyrics.flashcardsKnownHint'),
-          reviewHint: t('lyrics.flashcardsReviewHint'),
-          round: t('lyrics.flashcardsRound', { round: '{round}' }),
-          completed: t('lyrics.flashcardsCompleted'),
-          completedSub: t('lyrics.flashcardsCompletedSub'),
-          remaining: t('lyrics.flashcardsRemaining', { count: '{count}' }),
-          reset: t('lyrics.flashcardsReset'),
-          noScript: t('lyrics.flashcardsNoScript'),
+          flipHint: t('lyrics.flashcards_flip_hint'),
+          tapHint: t('lyrics.flashcards_tap_hint'),
+          rateHint: t('lyrics.flashcards_rate_hint'),
+          knownHint: t('lyrics.flashcards_known_hint'),
+          reviewHint: t('lyrics.flashcards_review_hint'),
+          round: t('lyrics.flashcards_round', { round: '{round}' }),
+          completed: t('lyrics.flashcards_completed'),
+          completedSub: t('lyrics.flashcards_completed_sub'),
+          remaining: t('lyrics.flashcards_remaining', { count: '{count}' }),
+          reset: t('lyrics.flashcards_reset'),
+          noScript: t('lyrics.flashcards_no_script'),
         }}
       />
       <SiteFooter t={t} locale={locale} />
