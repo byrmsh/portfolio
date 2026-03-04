@@ -339,7 +339,7 @@ export function detailFor(
   return '';
 }
 
-export function formatCheckedValue(checkedAt: string | null): string {
+export function formatCheckedValue(checkedAt: string | null, timeZone?: string): string {
   if (!checkedAt) return '--:--:--';
   const date = new Date(checkedAt);
   if (Number.isNaN(date.getTime())) return '--:--:--';
@@ -348,5 +348,6 @@ export function formatCheckedValue(checkedAt: string | null): string {
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
+    ...(timeZone ? { timeZone } : {}),
   }).format(date);
 }

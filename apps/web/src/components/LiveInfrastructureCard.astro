@@ -175,13 +175,15 @@ const initial = await loadInitialStatus();
     latencyLabel: root.dataset.labelLatency ?? '',
     recencyLabel: root.dataset.labelRecency ?? '',
   };
+  const browserTimeZone =
+    typeof Intl === 'object' ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined;
 
   let lastCheckedAt = asIso(root.dataset.initialCheckedAt ?? null);
 
   const setCheckedAt = (iso: string | null) => {
     const el = root.querySelector<HTMLElement>('[data-last-check]');
     if (!el) return;
-    el.textContent = `${checkedPrefix}: ${formatCheckedValue(iso)}`;
+    el.textContent = `${checkedPrefix}: ${formatCheckedValue(iso, browserTimeZone)}`;
   };
 
   const setServiceState = (key: ServiceKey, node: StatusNode) => {
@@ -232,6 +234,7 @@ const initial = await loadInitialStatus();
     }
   };
 
+  setCheckedAt(lastCheckedAt);
   if (!lastCheckedAt) refresh();
   window.setInterval(refresh, 30000);
 </script>
