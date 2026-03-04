@@ -106,11 +106,11 @@ const enTranslations = {
     tooltip_with_date: '{label}: {date} ({count} {unit})',
     tooltip_without_date: '{label}: ({count} {unit})',
   },
-  saved_lyrics: {
+  playlist: {
     title: 'Playlist',
     no_tracks: 'No saved tracks yet',
     synced_at: 'Synced: {value}',
-    read_lyric_note: 'READ BREAKDOWN',
+    lyrics_details: 'READ BREAKDOWN',
   },
   writing: {
     title: 'Writing',
@@ -144,7 +144,7 @@ const enTranslations = {
   git_commits: {
     title: 'Latest Updates',
     post_updates_title: 'Post Updates',
-    total_changes: 'Total changes: {value}',
+    total_changes: 'Total Changes: {value}',
     author: 'AUTHOR',
     date: 'DATE',
     hash: 'HASH',
