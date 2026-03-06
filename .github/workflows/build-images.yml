@@ -87,6 +87,13 @@ jobs:
             lyricist="true"
           fi
 
+          # The homepage "Latest Updates" widget is generated from git history during
+          # the web image build, so every push should refresh the web image even when
+          # the code change happened outside apps/web/.
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            web="true"
+          fi
+
           # Force-pushes may only rewrite commit metadata and bypass event-level path
           # detection; build all so every image/tag exists for the new head SHA.
           if [[ "${{ github.event_name }}" == "push" && "${{ github.event.forced }}" == "true" ]]; then
