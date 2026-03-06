@@ -6,7 +6,7 @@ Anki-specific collectors that write personal stats into Redis (DragonflyDB) for 
 
 Commands are defined in `apps/ankiworker/pyproject.toml`:
 
-- `ankiworker-activity` (Anki review activity, 16x7 daily grid + streak)
+- `ankiworker-activity` (Anki review activity, last 7 days grid + full-history streak)
 
 ## Local Development (uv)
 

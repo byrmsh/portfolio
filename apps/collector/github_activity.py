@@ -23,10 +23,10 @@ ContributionLevel = Literal[
 ]
 
 
-def _date_range_16_weeks(today: date) -> tuple[date, date]:
+def _date_range_7_days(today: date) -> tuple[date, date]:
     # For "last N days" UI we want data up through today (UTC), not end-of-week.
     end = today
-    start = end - timedelta(days=(16 * 7) - 1)
+    start = end - timedelta(days=6)
     return start, end
 
 
@@ -119,7 +119,7 @@ def build_series_from_payload(payload: dict[str, Any], *, start: date, end: date
 
 def main() -> None:
     today = datetime.now(tz=UTC).date()
-    start, end = _date_range_16_weeks(today)
+    start, end = _date_range_7_days(today)
 
     logger.info(
         "collector.github.start",

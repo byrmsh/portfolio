@@ -98,7 +98,7 @@ function buildEmptyActivitySeries(source: ActivitySource): ActivitySeries {
   // End at today (UTC) so the "last 7 days" UI doesn't lag behind.
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const start = new Date(end);
-  start.setUTCDate(end.getUTCDate() - (16 * 7 - 1));
+  start.setUTCDate(end.getUTCDate() - 6);
 
   const cells: ActivitySeries['cells'] = [];
   const cur = new Date(start);

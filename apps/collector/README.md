@@ -6,7 +6,7 @@ Python collectors that write personal stats into Redis (DragonflyDB) for the por
 
 Collector commands are defined in `apps/collector/pyproject.toml`:
 
-- `collector-github` (GitHub contributions activity, 16x7 daily grid)
+- `collector-github` (GitHub contributions activity, last 7 days grid)
 - `collector-cluster` (placeholder; writes a stub record)
 
 ## Local Development (uv)

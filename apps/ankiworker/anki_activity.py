@@ -16,6 +16,7 @@ env.read_env(recurse=False)
 
 ANKI_COLLECTION_PATH = env.str("ANKI_COLLECTION_PATH", default="")
 ANKI_TIMEZONE = env.str("ANKI_TIMEZONE", default="UTC")
+ANKI_ROLLOVER_HOUR = env.int("ANKI_ROLLOVER_HOUR", default=4)
 ANKI_SYNC_DIR = env.str("ANKI_SYNC_DIR", default="/tmp/anki-sync")
 
 # If ANKI_COLLECTION_PATH is not provided, we'll try to sync down a disposable local
@@ -25,10 +26,10 @@ ANKIWEB_PASSWORD = env.str("ANKIWEB_PASSWORD", default="")
 ANKI_SYNC_ENDPOINT = env.str("ANKI_SYNC_ENDPOINT", default="")
 
 
-def _date_range_16_weeks(today: date) -> tuple[date, date]:
+def _date_range_7_days(today: date) -> tuple[date, date]:
     # For "last N days" UI we want data up through today.
     end = today
-    start = end - timedelta(days=(16 * 7) - 1)
+    start = end - timedelta(days=6)
     return start, end
 
 
@@ -60,32 +61,94 @@ def _open_collection_db(path: Path) -> sqlite3.Connection:
     return sqlite3.connect(f"file:{path}?mode=ro", uri=True)
 
 
-def _fetch_review_ids_ms(*, collection_path: Path, start_ms: int, end_ms: int) -> list[int]:
+def _fetch_review_ids_ms(*, collection_path: Path, start_ms: int, end_ms_exclusive: int) -> list[int]:
     with _open_collection_db(collection_path) as conn:
         conn.row_factory = None
         cur = conn.cursor()
         cur.execute(
-            "SELECT id FROM revlog WHERE id >= ? AND id <= ?",
-            (start_ms, end_ms),
+            "SELECT id FROM revlog WHERE id >= ? AND id < ?",
+            (start_ms, end_ms_exclusive),
         )
         rows = cur.fetchall()
     return [int(r[0]) for r in rows]
 
 
-def _build_series_from_collection(
-    *, collection_path: Path, tz: ZoneInfo, start: date, end: date
-) -> ActivitySeries:
-    start_dt = datetime.combine(start, time.min, tzinfo=tz).astimezone(UTC)
-    # Inclusive end-of-day, then convert to UTC for the ms range.
-    end_dt = datetime.combine(end, time.max, tzinfo=tz).astimezone(UTC)
-    start_ms = _to_ms(start_dt)
-    end_ms = _to_ms(end_dt)
+def _iter_review_ids_ms_desc(*, collection_path: Path, max_ms_exclusive: int):
+    with _open_collection_db(collection_path) as conn:
+        conn.row_factory = None
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id FROM revlog WHERE id < ? ORDER BY id DESC",
+            (max_ms_exclusive,),
+        )
+        while True:
+            rows = cur.fetchmany(4096)
+            if not rows:
+                break
+            for row in rows:
+                yield int(row[0])
 
-    ids_ms = _fetch_review_ids_ms(collection_path=collection_path, start_ms=start_ms, end_ms=end_ms)
+
+def _to_anki_day(*, review_id_ms: int, tz: ZoneInfo, rollover_hour: int) -> date:
+    local_dt = datetime.fromtimestamp(review_id_ms / 1000, tz=UTC).astimezone(tz)
+    return (local_dt - timedelta(hours=rollover_hour)).date()
+
+
+def _streak_from_full_history(
+    *, collection_path: Path, tz: ZoneInfo, rollover_hour: int, end_day: date
+) -> int:
+    end_exclusive_local = datetime.combine(
+        end_day + timedelta(days=1),
+        time(hour=rollover_hour),
+        tzinfo=tz,
+    ).astimezone(UTC)
+    end_exclusive_ms = _to_ms(end_exclusive_local)
+
+    expected_day = end_day
+    streak = 0
+    last_seen_day: date | None = None
+
+    for review_id_ms in _iter_review_ids_ms_desc(
+        collection_path=collection_path,
+        max_ms_exclusive=end_exclusive_ms,
+    ):
+        day = _to_anki_day(review_id_ms=review_id_ms, tz=tz, rollover_hour=rollover_hour)
+        if day == last_seen_day:
+            continue
+        last_seen_day = day
+
+        if day > expected_day:
+            continue
+        if day == expected_day:
+            streak += 1
+            expected_day -= timedelta(days=1)
+            continue
+        break
+
+    return streak
+
+
+def _build_series_from_collection(
+    *, collection_path: Path, tz: ZoneInfo, start: date, end: date, rollover_hour: int
+) -> ActivitySeries:
+    start_dt = datetime.combine(start, time(hour=rollover_hour), tzinfo=tz).astimezone(UTC)
+    end_exclusive_dt = datetime.combine(
+        end + timedelta(days=1),
+        time(hour=rollover_hour),
+        tzinfo=tz,
+    ).astimezone(UTC)
+    start_ms = _to_ms(start_dt)
+    end_ms_exclusive = _to_ms(end_exclusive_dt)
+
+    ids_ms = _fetch_review_ids_ms(
+        collection_path=collection_path,
+        start_ms=start_ms,
+        end_ms_exclusive=end_ms_exclusive,
+    )
 
     counts: dict[date, int] = defaultdict(int)
     for review_id_ms in ids_ms:
-        d = datetime.fromtimestamp(review_id_ms / 1000, tz=UTC).astimezone(tz).date()
+        d = _to_anki_day(review_id_ms=review_id_ms, tz=tz, rollover_hour=rollover_hour)
         # Safety in case the DB has weird timestamps.
         if start <= d <= end:
             counts[d] += 1
@@ -105,12 +168,12 @@ def _build_series_from_collection(
         )
         cur += timedelta(days=1)
 
-    # Current streak: consecutive non-zero days ending today.
-    streak = 0
-    cur = end
-    while cur >= start and counts.get(cur, 0) > 0:
-        streak += 1
-        cur -= timedelta(days=1)
+    streak = _streak_from_full_history(
+        collection_path=collection_path,
+        tz=tz,
+        rollover_hour=rollover_hour,
+        end_day=end,
+    )
 
     return ActivitySeries(
         source="anki",
@@ -176,8 +239,9 @@ def _sync_down_collection_from_ankiweb(*, sync_dir: Path) -> Path:
 
 def main() -> None:
     tz = ZoneInfo(ANKI_TIMEZONE)
-    today = datetime.now(tz=tz).date()
-    start, end = _date_range_16_weeks(today)
+    rollover_hour = max(0, min(23, int(ANKI_ROLLOVER_HOUR)))
+    today = (datetime.now(tz=tz) - timedelta(hours=rollover_hour)).date()
+    start, end = _date_range_7_days(today)
 
     collection_path = Path(ANKI_COLLECTION_PATH).expanduser() if ANKI_COLLECTION_PATH else None
     if collection_path and collection_path.exists():
@@ -185,11 +249,16 @@ def main() -> None:
             "ankiworker.anki.start",
             collection=str(collection_path),
             tz=ANKI_TIMEZONE,
+            rollover_hour=rollover_hour,
             start=str(start),
             end=str(end),
         )
         series = _build_series_from_collection(
-            collection_path=collection_path, tz=tz, start=start, end=end
+            collection_path=collection_path,
+            tz=tz,
+            start=start,
+            end=end,
+            rollover_hour=rollover_hour,
         )
     else:
         try:
@@ -198,12 +267,17 @@ def main() -> None:
                 "ankiworker.anki.start",
                 collection=str(synced_path),
                 tz=ANKI_TIMEZONE,
+                rollover_hour=rollover_hour,
                 start=str(start),
                 end=str(end),
                 mode="ankiweb-sync",
             )
             series = _build_series_from_collection(
-                collection_path=synced_path, tz=tz, start=start, end=end
+                collection_path=synced_path,
+                tz=tz,
+                start=start,
+                end=end,
+                rollover_hour=rollover_hour,
             )
         except Exception as exc:
             logger.warning(

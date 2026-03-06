@@ -86,6 +86,11 @@ collectorCronJobs:
       command:
         - python
         - anki_activity.py
+      env:
+        - name: ANKI_TIMEZONE
+          value: Europe/Istanbul
+        - name: ANKI_ROLLOVER_HOUR
+          value: '4'
       secretRef: collector-secrets
     - name: collector-cluster-cronjob
       component: collector
