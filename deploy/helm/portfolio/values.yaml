@@ -92,18 +92,6 @@ collectorCronJobs:
         - name: ANKI_ROLLOVER_HOUR
           value: '4'
       secretRef: collector-secrets
-    - name: collector-cluster-cronjob
-      component: collector
-      schedule: '*/10 * * * *'
-      suspend: true
-      image:
-        repository: portfolio-collector
-        tag: dev
-        pullPolicy: IfNotPresent
-      command:
-        - python
-        - cluster.py
-      secretRef: collector-secrets
     - name: lyricist-sync-cronjob
       component: collector
       schedule: '0 */4 * * *'

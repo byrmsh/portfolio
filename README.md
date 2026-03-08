@@ -17,7 +17,7 @@ The infrastructure itself (cluster bootstrap, tunnels, GitOps controllers) lives
 apps/
   web/         Astro + Svelte frontend
   api/         Hono API (Redis/Dragonfly-backed)
-  collector/   GitHub + cluster collectors (Python)
+  collector/   GitHub activity collector (Python)
   ankiworker/  Anki activity collector (Python)
   lyricist/    YT Music lyric-note worker (Python)
 packages/

@@ -7,7 +7,6 @@ Python collectors that write personal stats into Redis (DragonflyDB) for the por
 Collector commands are defined in `apps/collector/pyproject.toml`:
 
 - `collector-github` (GitHub contributions activity, last 7 days grid)
-- `collector-cluster` (placeholder; writes a stub record)
 
 ## Local Development (uv)
 
@@ -38,6 +37,5 @@ The collectors write JSON payloads that the API/web can validate.
 Per collector:
 
 - `collector-github` (`github_activity.py`): GitHub GraphQL contributions calendar -> `stat:github:default` and `github_activity_updated`.
-- `collector-cluster` (`cluster.py`): placeholder -> `metric:cluster:status` and `cluster_status_updated`.
 
 Anki review activity was split into `apps/ankiworker` (separate dependencies and image).
