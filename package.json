@@ -9,7 +9,8 @@
     "k8s:local:apply": "./scripts/k8s-local-apply.sh",
     "k8s:local:helm": "./scripts/k8s-local-apply.sh",
     "k8s:local:api": "./scripts/k8s-local-api-update.sh",
-    "k8s:local:web": "./scripts/k8s-local-web-update.sh"
+    "k8s:local:web": "./scripts/k8s-local-web-update.sh",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,7 @@
     "globals": "^16.5.0",
     "prettier": "^3.8.1",
     "prettier-plugin-astro": "^0.14.1",
-    "typescript-eslint": "^8.46.3"
+    "typescript-eslint": "^8.46.3",
+    "vitest": "^3.2.4"
   }
 }
