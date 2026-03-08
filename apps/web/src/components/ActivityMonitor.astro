@@ -2,17 +2,17 @@
 import Code from '@lucide/astro/icons/code';
 import BrainCircuit from '@lucide/astro/icons/brain-circuit';
 import ky from 'ky';
+import type { ActivityMonitorData } from '@portfolio/schema/dashboard';
 import type { SupportedLocale } from '../i18n';
+import {
+  activityLevelClass,
+  findActivityRange,
+  last7Cells,
+  normalizeActivityMonitorData,
+  padTo7,
+  parseIsoDateUTC,
+} from '../lib/activity-monitor';
 import WidgetHeader from './WidgetHeader.astro';
-
-type ActivityCell = { date: string; count: number; level: number };
-type ActivitySeries = {
-  source: 'github' | 'anki';
-  label: string;
-  cells: ActivityCell[];
-  streak?: number;
-};
-type ActivityMonitorData = { github: ActivitySeries; anki: ActivitySeries };
 
 interface Props {
   t: (path: string, vars?: Record<string, string | number>) => string;
@@ -21,58 +21,18 @@ interface Props {
 
 const { t, locale } = Astro.props;
 
-function clampInt(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.trunc(n)));
-}
-
-function levelClass(source: 'github' | 'anki', level: number): string {
-  const l = clampInt(level ?? 0, 0, 4);
-  const ramps: Record<'github' | 'anki', string[]> = {
-    github: [
-      'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
-      'bg-emerald-100 text-emerald-950 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-900',
-      'bg-emerald-200 text-emerald-950 border-emerald-300 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-800',
-      'bg-emerald-400 text-white border-emerald-400 dark:bg-emerald-700 dark:text-emerald-50 dark:border-emerald-600',
-      'bg-emerald-700 text-white border-emerald-700 dark:bg-emerald-600 dark:text-emerald-50 dark:border-emerald-500',
-    ],
-    anki: [
-      'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
-      'bg-sky-100 text-sky-950 border-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-900',
-      'bg-sky-200 text-sky-950 border-sky-300 dark:bg-sky-900 dark:text-sky-100 dark:border-sky-800',
-      'bg-sky-400 text-white border-sky-400 dark:bg-sky-700 dark:text-sky-50 dark:border-sky-600',
-      'bg-sky-700 text-white border-sky-700 dark:bg-sky-600 dark:text-sky-50 dark:border-sky-500',
-    ],
-  };
-  return ramps[source][l];
-}
-
-function parseIsoDateUTC(s: string): Date {
-  const [y, m, d] = String(s)
-    .split('-')
-    .map((v) => Number(v));
-  return new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1));
-}
-
-function last7Cells(series: ActivitySeries | null | undefined): ActivityCell[] {
-  const cells = Array.isArray(series?.cells) ? series!.cells.slice() : [];
-  cells.sort((a, b) => String(a.date).localeCompare(String(b.date)));
-  return cells.slice(Math.max(0, cells.length - 7));
-}
-
-function padTo7(cells: ActivityCell[]): ActivityCell[] {
-  const out = cells.slice(0, 7);
-  while (out.length < 7) out.push({ date: '', count: 0, level: 0 });
-  return out;
-}
-
 const apiOrigin =
   process.env.API_ORIGIN ??
   import.meta.env.API_ORIGIN ??
   import.meta.env.PUBLIC_API_ORIGIN ??
   'http://localhost:3000';
 const activityEndpoint = '/api/activity-monitor';
+const activityLabels = {
+  github: t('activity.github_label'),
+  anki: t('activity.anki_label'),
+} as const;
 
-let activity: ActivityMonitorData | null = null;
+let activity = normalizeActivityMonitorData(null, activityLabels);
 try {
   const json = await ky
     .get(`${apiOrigin}${activityEndpoint}`, {
@@ -80,41 +40,16 @@ try {
       throwHttpErrors: false,
     })
     .json<{ data?: ActivityMonitorData }>();
-
-  // Allow partial data (e.g. anki present but github hasn't run yet).
-  if (json?.data?.github || json?.data?.anki) {
-    activity = {
-      github:
-        json.data?.github ??
-        ({
-          source: 'github',
-          label: t('activity.github_label'),
-          cells: [],
-        } satisfies ActivitySeries),
-      anki:
-        json.data?.anki ??
-        ({
-          source: 'anki',
-          label: t('activity.anki_label'),
-          cells: [],
-        } satisfies ActivitySeries),
-    };
-  }
+  activity = normalizeActivityMonitorData(json?.data, activityLabels);
 } catch {
-  activity = null;
+  activity = normalizeActivityMonitorData(null, activityLabels);
 }
 
 const fmtDay = new Intl.DateTimeFormat(locale, { weekday: 'short' });
 const fmtRange = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
-const githubCells = padTo7(last7Cells(activity?.github));
-const ankiCells = padTo7(last7Cells(activity?.anki));
-
-const rangeStart =
-  githubCells.find((c) => c.date)?.date || ankiCells.find((c) => c.date)?.date || '';
-const rangeEnd =
-  [...githubCells].reverse().find((c) => c.date)?.date ||
-  [...ankiCells].reverse().find((c) => c.date)?.date ||
-  '';
+const githubCells = padTo7(last7Cells(activity.github));
+const ankiCells = padTo7(last7Cells(activity.anki));
+const { start: rangeStart, end: rangeEnd } = findActivityRange(githubCells, ankiCells);
 
 const rangeLabel =
   rangeStart && rangeEnd
@@ -129,6 +64,8 @@ const rangeLabel =
   data-activity-monitor
   data-locale={locale}
   data-endpoint={activityEndpoint}
+  data-github-label={activityLabels.github}
+  data-anki-label={activityLabels.anki}
   data-range-template={t('activity.range_label', { start: '{start}', end: '{end}' })}
   data-streak-template={t('activity.streak_days', { count: '{count}' })}
   data-tooltip-with-date={t('activity.tooltip_with_date')}
@@ -158,7 +95,7 @@ const rangeLabel =
                 type="button"
                 class:list={[
                   'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-[var(--ring-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-subtle)]',
-                  levelClass('github', cell.level),
+                  activityLevelClass('github', cell.level),
                 ]}
                 aria-label={t('activity.github_day_aria', { day: i + 1 })}
                 data-source="github"
@@ -188,7 +125,7 @@ const rangeLabel =
         >
           {
             t('activity.streak_days', {
-              count: typeof activity?.anki?.streak === 'number' ? activity.anki.streak : 0,
+              count: typeof activity.anki.streak === 'number' ? activity.anki.streak : 0,
             })
           }
         </span>
@@ -204,7 +141,7 @@ const rangeLabel =
                 type="button"
                 class:list={[
                   'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-[var(--ring-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-subtle)]',
-                  levelClass('anki', cell.level),
+                  activityLevelClass('anki', cell.level),
                 ]}
                 aria-label={t('activity.anki_day_aria', { day: i + 1 })}
                 data-source="anki"
@@ -224,121 +161,196 @@ const rangeLabel =
   </div>
 </section>
 
-<script is:inline>
-  (() => {
-    const root = document.querySelector('[data-activity-monitor]');
-    if (!root) return;
+<script>
+  import type {
+    ActivityCell,
+    ActivityMonitorData,
+    ActivitySeries,
+  } from '@portfolio/schema/dashboard';
+  import {
+    activityColorRamps,
+    clampInt,
+    findActivityRange,
+    last7Cells,
+    normalizeActivityMonitorData,
+    padTo7,
+    parseIsoDateUTC,
+  } from '../lib/activity-monitor';
 
-    const endpoint = root.getAttribute('data-endpoint') || '/api/activity-monitor';
-    const locale = root.getAttribute('data-locale') || 'en';
+  const root = document.querySelector<HTMLElement>('[data-activity-monitor]');
 
-    const ramps = {
-      github: [
-        'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
-        'bg-emerald-100 text-emerald-950 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-900',
-        'bg-emerald-200 text-emerald-950 border-emerald-300 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-800',
-        'bg-emerald-400 text-white border-emerald-400 dark:bg-emerald-700 dark:text-emerald-50 dark:border-emerald-600',
-        'bg-emerald-700 text-white border-emerald-700 dark:bg-emerald-600 dark:text-emerald-50 dark:border-emerald-500',
-      ],
-      anki: [
-        'bg-[var(--surface-3)] text-[var(--text-muted)] border-[var(--border-subtle)]',
-        'bg-sky-100 text-sky-950 border-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-900',
-        'bg-sky-200 text-sky-950 border-sky-300 dark:bg-sky-900 dark:text-sky-100 dark:border-sky-800',
-        'bg-sky-400 text-white border-sky-400 dark:bg-sky-700 dark:text-sky-50 dark:border-sky-600',
-        'bg-sky-700 text-white border-sky-700 dark:bg-sky-600 dark:text-sky-50 dark:border-sky-500',
-      ],
-    };
-
+  if (root) {
+    const endpoint = root.dataset.endpoint ?? '/api/activity-monitor';
+    const locale = root.dataset.locale ?? 'en';
+    const labels = {
+      github: root.dataset.githubLabel ?? 'GitHub',
+      anki: root.dataset.ankiLabel ?? 'Anki',
+    } as const;
+    const rangeEl = root.querySelector<HTMLElement>('[data-range]');
+    const streakEl = root.querySelector<HTMLElement>('[data-streak-label="anki"]');
+    const rangeTemplate = root.dataset.rangeTemplate ?? '{start} to {end}';
+    const streakTemplate = root.dataset.streakTemplate ?? 'Streak: {count}';
+    const tooltipWithDateTpl = root.dataset.tooltipWithDate ?? '{label}: {date} ({count})';
+    const tooltipWithoutDateTpl = root.dataset.tooltipWithoutDate ?? '{label}: ({count})';
+    const fmtDay = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+    const fmtRange = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
+    const fmtTip = new Intl.DateTimeFormat(locale, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
     const baseBtn =
       'activity-tag rounded-lg border flex flex-col items-center justify-center leading-none select-none transition hover:ring-2 hover:ring-[var(--ring-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-subtle)]';
 
-    const clamp = (n, min, max) => Math.max(min, Math.min(max, Math.trunc(n)));
-    const parseIsoUTC = (s) => {
-      const [y, m, d] = String(s || '')
-        .split('-')
-        .map((v) => Number(v));
-      return new Date(Date.UTC(y, (m || 1) - 1, d || 1));
-    };
-    const last7 = (cells) => {
-      const list = Array.isArray(cells) ? cells.slice() : [];
-      list.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
-      return list.slice(Math.max(0, list.length - 7));
-    };
-    const pad7 = (cells) => {
-      const out = cells.slice(0, 7);
-      while (out.length < 7) out.push({ date: '', count: 0, level: 0 });
-      return out;
-    };
+    const formatTpl = (tpl: string, vars: Record<string, string | number>) =>
+      tpl.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? `{${key}}`));
 
-    const fmtDay = new Intl.DateTimeFormat(locale, { weekday: 'short' });
-    const fmtRange = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
-
-    const rangeEl = root.querySelector('[data-range]');
-    const rangeTemplate = root.getAttribute('data-range-template') || '{start} to {end}';
-    const streakTemplate = root.getAttribute('data-streak-template') || 'Streak: {count}';
-
-    function setRangeLabel(githubCells, ankiCells) {
-      const rangeStart =
-        githubCells.find((c) => c.date)?.date || ankiCells.find((c) => c.date)?.date || '';
-      const rangeEnd =
-        [...githubCells].reverse().find((c) => c.date)?.date ||
-        [...ankiCells].reverse().find((c) => c.date)?.date ||
-        '';
-
+    const setRangeLabel = (githubCells: ActivityCell[], ankiCells: ActivityCell[]) => {
       if (!rangeEl) return;
-      if (rangeStart && rangeEnd) {
-        const start = fmtRange.format(parseIsoUTC(rangeStart));
-        const end = fmtRange.format(parseIsoUTC(rangeEnd));
-        rangeEl.textContent = rangeTemplate.replaceAll('{start}', start).replaceAll('{end}', end);
-      }
-    }
+      const { start, end } = findActivityRange(githubCells, ankiCells);
+      if (!start || !end) return;
+      rangeEl.textContent = rangeTemplate
+        .replaceAll('{start}', fmtRange.format(parseIsoDateUTC(start)))
+        .replaceAll('{end}', fmtRange.format(parseIsoDateUTC(end)));
+    };
 
-    function applySeries(source, series) {
-      const container = root.querySelector(`[data-tags=\"${source}\"]`);
-      if (!container) return [];
-      const buttons = Array.from(container.querySelectorAll('button.activity-tag'));
-      const cells = pad7(last7(series && series.cells));
+    const applySeries = (source: keyof typeof activityColorRamps, series: ActivitySeries) => {
+      const container = root.querySelector<HTMLElement>(`[data-tags="${source}"]`);
+      if (!container) return padTo7([]);
+
+      const buttons = Array.from(
+        container.querySelectorAll<HTMLButtonElement>('button.activity-tag'),
+      );
+      const cells = padTo7(last7Cells(series));
 
       buttons.forEach((btn, i) => {
-        const cell = cells[i] || { date: '', count: 0, level: 0 };
-        const level = clamp(Number(cell.level || 0), 0, 4);
-        const d = cell.date ? parseIsoUTC(cell.date) : null;
-        const dow = d ? fmtDay.format(d) : '---';
+        const cell = cells[i] ?? { date: '', count: 0, level: 0 };
+        const level = clampInt(Number(cell.level || 0), 0, 4);
+        const date = cell.date ? parseIsoDateUTC(cell.date) : null;
 
-        btn.className = `${baseBtn} ${ramps[source][level]}`;
+        btn.className = `${baseBtn} ${activityColorRamps[source][level]}`;
         btn.dataset.date = String(cell.date || '');
         btn.dataset.count = String(cell.count || 0);
         btn.dataset.level = String(level);
 
-        const dowEl = btn.querySelector('.tag-dow');
-        const countEl = btn.querySelector('.tag-count');
-        if (dowEl) dowEl.textContent = dow;
+        const dowEl = btn.querySelector<HTMLElement>('.tag-dow');
+        const countEl = btn.querySelector<HTMLElement>('.tag-count');
+        if (dowEl) dowEl.textContent = date ? fmtDay.format(date) : '---';
         if (countEl) countEl.textContent = String(cell.count || 0);
       });
 
       return cells;
-    }
+    };
 
-    async function refresh() {
-      const res = await fetch(endpoint, { headers: { accept: 'application/json' } });
-      if (!res.ok) return;
-      const json = await res.json();
-      const data = json && json.data ? json.data : null;
-      if (!data) return;
+    const bindTooltip = () => {
+      const tip = document.createElement('div');
+      tip.setAttribute('data-tooltip', 'activity');
+      tip.className =
+        'pointer-events-none fixed z-50 hidden whitespace-nowrap rounded-md border border-[var(--border-subtle)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--text-primary)] shadow-lg';
+      tip.style.transform = 'translate3d(0, 0, 0)';
+      document.body.appendChild(tip);
 
-      const githubCells = applySeries('github', data.github || { cells: [] });
-      const ankiCells = applySeries('anki', data.anki || { cells: [], streak: 0 });
-      setRangeLabel(githubCells, ankiCells);
+      let lastPointerX = 0;
+      let lastPointerY = 0;
+      let tipWidth = 0;
+      let tipHeight = 0;
+      let rafId = 0;
 
-      const streakEl = root.querySelector('[data-streak-label=\"anki\"]');
-      if (streakEl && typeof data.anki?.streak === 'number') {
-        streakEl.textContent = streakTemplate.replaceAll('{count}', String(data.anki.streak));
+      const measureTip = () => {
+        const rect = tip.getBoundingClientRect();
+        tipWidth = rect.width;
+        tipHeight = rect.height;
+      };
+
+      const positionTip = () => {
+        rafId = 0;
+        if (tip.classList.contains('hidden')) return;
+        const gap = 12;
+        const pad = 8;
+        let left = lastPointerX + gap;
+        let top = lastPointerY + gap;
+
+        if (left + tipWidth + pad > window.innerWidth) left = lastPointerX - tipWidth - gap;
+        if (top + tipHeight + pad > window.innerHeight) top = lastPointerY - tipHeight - gap;
+        if (left < pad) left = pad;
+        if (top < pad) top = pad;
+
+        tip.style.left = `${left}px`;
+        tip.style.top = `${top}px`;
+      };
+
+      const schedulePosition = () => {
+        if (rafId) return;
+        rafId = window.requestAnimationFrame(positionTip);
+      };
+
+      const show = (el: HTMLButtonElement, x: number, y: number) => {
+        const sourceLabel = el.dataset.sourceLabel ?? el.dataset.source ?? '';
+        const source = el.dataset.source ?? '';
+        const date = el.dataset.date ?? '';
+        const count = Number(el.dataset.count ?? 0);
+        const unit = source === 'anki' ? 'reviews' : 'contributions';
+        const dateStr = date ? fmtTip.format(parseIsoDateUTC(date)) : '';
+
+        tip.textContent = dateStr
+          ? formatTpl(tooltipWithDateTpl, { label: sourceLabel, date: dateStr, count, unit })
+          : formatTpl(tooltipWithoutDateTpl, { label: sourceLabel, count, unit });
+
+        tip.classList.remove('hidden');
+        tip.style.visibility = 'visible';
+        lastPointerX = x;
+        lastPointerY = y;
+        measureTip();
+        schedulePosition();
+      };
+
+      const hide = () => {
+        tip.classList.add('hidden');
+        tip.style.visibility = 'hidden';
+        if (rafId) {
+          window.cancelAnimationFrame(rafId);
+          rafId = 0;
+        }
+      };
+
+      const move = (x: number, y: number) => {
+        lastPointerX = x;
+        lastPointerY = y;
+        schedulePosition();
+      };
+
+      for (const el of root.querySelectorAll<HTMLButtonElement>(
+        '[data-tags] button[data-source]',
+      )) {
+        el.addEventListener('mouseenter', (e) => show(el, e.clientX, e.clientY));
+        el.addEventListener('mousemove', (e) => move(e.clientX, e.clientY));
+        el.addEventListener('mouseleave', hide);
+        el.addEventListener('focus', () => {
+          const rect = el.getBoundingClientRect();
+          show(el, rect.left + rect.width / 2, rect.top + rect.height / 2);
+        });
+        el.addEventListener('blur', hide);
       }
-    }
+    };
 
-    // Refresh after load to avoid requiring a web rebuild for new activity.
+    const refresh = async () => {
+      const response = await fetch(endpoint, { headers: { accept: 'application/json' } });
+      if (!response.ok) return;
+
+      const json = (await response.json()) as { data?: ActivityMonitorData };
+      const data = normalizeActivityMonitorData(json.data, labels);
+      const githubCells = applySeries('github', data.github);
+      const ankiCells = applySeries('anki', data.anki);
+
+      setRangeLabel(githubCells, ankiCells);
+      if (streakEl) {
+        streakEl.textContent = streakTemplate.replaceAll('{count}', String(data.anki.streak ?? 0));
+      }
+    };
+
+    bindTooltip();
     refresh().catch(() => {});
-  })();
+  }
 </script>
 
 <style is:global>
@@ -384,117 +396,3 @@ const rangeLabel =
     }
   }
 </style>
-
-<script is:inline type="module">
-  const section = document.querySelector('[data-activity-monitor]');
-  const locale = section?.dataset.locale ?? 'en';
-  const tooltipWithDateTpl = section?.dataset.tooltipWithDate ?? '{label}: {date} ({count})';
-  const tooltipWithoutDateTpl = section?.dataset.tooltipWithoutDate ?? '{label}: ({count})';
-  const fmtTip = new Intl.DateTimeFormat(locale, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-
-  const parseIsoDate = (s) => {
-    const [y, m, d] = String(s)
-      .split('-')
-      .map((v) => Number(v));
-    return new Date(Date.UTC(y, m - 1, d));
-  };
-
-  const formatTpl = (tpl, vars) =>
-    tpl.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? `{${key}}`));
-
-  const bindTooltip = () => {
-    if (!section) return;
-    const tip = document.createElement('div');
-    tip.setAttribute('data-tooltip', 'activity');
-    tip.className =
-      'pointer-events-none fixed z-50 hidden whitespace-nowrap rounded-md border border-[var(--border-subtle)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--text-primary)] shadow-lg';
-    tip.style.transform = 'translate3d(0, 0, 0)';
-    document.body.appendChild(tip);
-
-    let lastPointerX = 0;
-    let lastPointerY = 0;
-    let tipWidth = 0;
-    let tipHeight = 0;
-    let rafId = 0;
-
-    const measureTip = () => {
-      const rect = tip.getBoundingClientRect();
-      tipWidth = rect.width;
-      tipHeight = rect.height;
-    };
-
-    const positionTip = () => {
-      rafId = 0;
-      if (tip.classList.contains('hidden')) return;
-      const gap = 12;
-      const pad = 8;
-      let left = lastPointerX + gap;
-      let top = lastPointerY + gap;
-
-      if (left + tipWidth + pad > window.innerWidth) left = lastPointerX - tipWidth - gap;
-      if (top + tipHeight + pad > window.innerHeight) top = lastPointerY - tipHeight - gap;
-      if (left < pad) left = pad;
-      if (top < pad) top = pad;
-
-      tip.style.left = `${left}px`;
-      tip.style.top = `${top}px`;
-    };
-
-    const schedulePosition = () => {
-      if (rafId) return;
-      rafId = window.requestAnimationFrame(positionTip);
-    };
-
-    const show = (el, x, y) => {
-      const sourceLabel = el.dataset.sourceLabel ?? el.dataset.source ?? '';
-      const source = el.dataset.source ?? '';
-      const date = el.dataset.date ?? '';
-      const count = Number(el.dataset.count ?? 0);
-      const unit = source === 'anki' ? 'reviews' : 'contributions';
-      const dateStr = date ? fmtTip.format(parseIsoDate(date)) : '';
-
-      tip.textContent = dateStr
-        ? formatTpl(tooltipWithDateTpl, { label: sourceLabel, date: dateStr, count, unit })
-        : formatTpl(tooltipWithoutDateTpl, { label: sourceLabel, count, unit });
-
-      tip.classList.remove('hidden');
-      tip.style.visibility = 'visible';
-      lastPointerX = x;
-      lastPointerY = y;
-      measureTip();
-      schedulePosition();
-    };
-    const hide = () => {
-      tip.classList.add('hidden');
-      tip.style.visibility = 'hidden';
-      if (rafId) {
-        window.cancelAnimationFrame(rafId);
-        rafId = 0;
-      }
-    };
-    const move = (x, y) => {
-      lastPointerX = x;
-      lastPointerY = y;
-      schedulePosition();
-    };
-
-    const nodes = document.querySelectorAll('[data-tags] button[data-source]');
-    for (const el of nodes) {
-      el.addEventListener('mouseenter', (e) => show(el, e.clientX, e.clientY));
-      el.addEventListener('mousemove', (e) => move(e.clientX, e.clientY));
-      el.addEventListener('mouseleave', hide);
-
-      el.addEventListener('focus', () => {
-        const r = el.getBoundingClientRect();
-        show(el, r.left + r.width / 2, r.top + r.height / 2);
-      });
-      el.addEventListener('blur', hide);
-    }
-  };
-
-  bindTooltip();
-</script>
