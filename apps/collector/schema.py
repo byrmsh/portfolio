@@ -4,9 +4,6 @@ from portfolio_schema import (
     ActivitySeries,
     DashboardSnapshot,
     DashboardSnapshotValidator,
-    JobLead,
-    JobRedisRecord,
-    JobRedisRecordValidator,
     KnowledgeGraphSnapshot,
     RedisKeys,
     SavedLyricNote,
@@ -16,7 +13,6 @@ from portfolio_schema import (
     SystemHealthSnapshot,
     WritingPost,
     validate_dashboard_snapshot,
-    validate_job_redis_record,
     validate_stat_redis_record,
 )
 
@@ -26,9 +22,6 @@ __all__ = [
     "ActivitySeries",
     "DashboardSnapshot",
     "DashboardSnapshotValidator",
-    "JobLead",
-    "JobRedisRecord",
-    "JobRedisRecordValidator",
     "KnowledgeGraphSnapshot",
     "RedisKeys",
     "SavedLyricNote",
@@ -38,6 +31,5 @@ __all__ = [
     "SystemHealthSnapshot",
     "WritingPost",
     "validate_dashboard_snapshot",
-    "validate_job_redis_record",
     "validate_stat_redis_record",
 ]

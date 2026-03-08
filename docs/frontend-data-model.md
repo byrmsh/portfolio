@@ -30,14 +30,7 @@ runtime contracts.
 - node count
 - summary text
 
-5. `JobScoutCard`:
-
-- source (public API)
-- capture age
-- job title
-- tags
-
-6. `LiveInfrastructureCard`:
+5. `LiveInfrastructureCard`:
 
 - source: `apps/web/src/pages/system-status.json.ts`
 - rendered by: `apps/web/src/components/LiveInfrastructureCard.astro`
@@ -46,10 +39,6 @@ runtime contracts.
 ## 2) Redis Keyspace Decision
 
 These keys follow the repository rules from `AGENTS.md`.
-
-### Jobs
-
-Jobs are fetched on-demand from a public job board API via `apps/api` (`GET /api/jobs`).
 
 ### Personal Stats / Content
 
@@ -88,7 +77,7 @@ Jobs are fetched on-demand from a public job board API via `apps/api` (`GET /api
 Both files define:
 
 - card-level UI payloads (`DashboardSnapshot`)
-- Redis-oriented records (`JobRedisRecord`, stat records)
+- Redis-oriented records (stat records)
 - key helper builders (`stat`, `stat_field`)
 
 ## 4) API Shape Recommendation
@@ -98,7 +87,7 @@ Serve the frontend from one aggregate endpoint:
 - `GET /api/dashboard`
 - response: `{ data: DashboardSnapshot, meta: { ts, source } }`
 
-Keep `/api/jobs` and `/api/status` for focused polling paths where needed.
+Keep `/api/status` for focused polling paths where needed.
 
 ## 5) Observability Boundary
 

@@ -4,9 +4,6 @@ from .dashboard import (
     ActivitySeries,
     DashboardSnapshot,
     DashboardSnapshotValidator,
-    JobLead,
-    JobRedisRecord,
-    JobRedisRecordValidator,
     KnowledgeGraphSnapshot,
     RedisKeys,
     SavedLyricNote,
@@ -20,7 +17,6 @@ from .dashboard import (
     YtMusicVocabularyItem,
     WritingPost,
     validate_dashboard_snapshot,
-    validate_job_redis_record,
     validate_stat_redis_record,
 )
 
@@ -30,9 +26,6 @@ __all__ = [
     "ActivitySeries",
     "DashboardSnapshot",
     "DashboardSnapshotValidator",
-    "JobLead",
-    "JobRedisRecord",
-    "JobRedisRecordValidator",
     "KnowledgeGraphSnapshot",
     "RedisKeys",
     "SavedLyricNote",
@@ -46,6 +39,5 @@ __all__ = [
     "YtMusicVocabularyItem",
     "WritingPost",
     "validate_dashboard_snapshot",
-    "validate_job_redis_record",
     "validate_stat_redis_record",
 ]

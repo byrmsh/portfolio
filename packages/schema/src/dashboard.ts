@@ -99,29 +99,6 @@ export const knowledgeGraphSnapshotSchema = z.object({
   updatedAt: isoDatetimeSchema,
 });
 
-export const jobLeadSchema = z.object({
-  id: z.string().min(1),
-  source: z.literal('public'),
-  title: z.string().min(1),
-  summary: z.string().min(1),
-  tags: z.array(z.string().min(1)),
-  publishedAt: isoDatetimeSchema,
-  capturedAt: isoDatetimeSchema,
-  href: z.string().url().optional(),
-  companyName: z.string().min(1).optional(),
-  location: z.string().min(1).optional(),
-  remote: z.boolean().optional(),
-  jobTypes: z.array(z.string().min(1)).optional(),
-});
-
-export const jobRedisRecordSchema = jobLeadSchema.extend({
-  description: z.string().min(1),
-});
-
-export const jobDetailSchema = jobRedisRecordSchema.extend({
-  // The upstream public job board API doesn't provide consistent budget/client metadata; keep details job-centric.
-});
-
 export const serviceHealthSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -144,7 +121,6 @@ export const dashboardSnapshotSchema = z.object({
   savedLyric: savedLyricNoteSchema.nullable(),
   writing: z.array(writingPostSchema),
   knowledgeGraph: knowledgeGraphSnapshotSchema,
-  latestJob: jobLeadSchema.nullable(),
   systemHealth: systemHealthSnapshotSchema,
   updatedAt: isoDatetimeSchema,
 });
@@ -171,9 +147,6 @@ export type YtMusicVocabularyItem = z.infer<typeof ytmusicVocabularyItemSchema>;
 export type YtMusicAnalysis = z.infer<typeof ytmusicAnalysisSchema>;
 export type WritingPost = z.infer<typeof writingPostSchema>;
 export type KnowledgeGraphSnapshot = z.infer<typeof knowledgeGraphSnapshotSchema>;
-export type JobLead = z.infer<typeof jobLeadSchema>;
-export type JobRedisRecord = z.infer<typeof jobRedisRecordSchema>;
-export type JobDetail = z.infer<typeof jobDetailSchema>;
 export type ServiceHealth = z.infer<typeof serviceHealthSchema>;
 export type SystemHealthSnapshot = z.infer<typeof systemHealthSnapshotSchema>;
 export type DashboardSnapshot = z.infer<typeof dashboardSnapshotSchema>;
@@ -197,14 +170,6 @@ export const redisKeys = {
 
 export function parseDashboardSnapshot(value: unknown): DashboardSnapshot {
   return dashboardSnapshotSchema.parse(value);
-}
-
-export function parseJobRedisRecord(value: unknown): JobRedisRecord {
-  return jobRedisRecordSchema.parse(value);
-}
-
-export function parseJobDetail(value: unknown): JobDetail {
-  return jobDetailSchema.parse(value);
 }
 
 export function parseStatRedisRecord(value: unknown): StatRedisRecord {

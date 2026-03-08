@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { Redis } from 'ioredis';
+import { pathToFileURL } from 'node:url';
 
 import {
   activityMonitorDataSchema,
@@ -12,13 +13,9 @@ import {
   type ActivitySource,
   type ActivitySeries,
   type ApiEnvelope,
-  type JobDetail,
-  type JobLead,
   type SavedLyricNote,
   type YtMusicAnalysis,
 } from '@portfolio/schema/dashboard';
-
-import { parseJobBoardJob, projectJobBoardJobToDetail } from './jobs/job-board.js';
 
 const app = new Hono();
 const localDevOrigins = new Set([
@@ -41,49 +38,6 @@ const configuredWebOrigins = new Set(
 const allowedCorsOrigins = new Set([...localDevOrigins, ...configuredWebOrigins]);
 
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379/0');
-
-const JOB_CACHE_TTL_MS = 15 * 60 * 1000;
-const jobCache = new Map<string, { expiresAt: number; value: JobDetail }>();
-
-function cacheGetJob(id: string): JobDetail | null {
-  const entry = jobCache.get(id);
-  if (!entry) return null;
-  if (Date.now() >= entry.expiresAt) {
-    jobCache.delete(id);
-    return null;
-  }
-  return entry.value;
-}
-
-function cachePutJob(detail: JobDetail): void {
-  jobCache.set(detail.id, { value: detail, expiresAt: Date.now() + JOB_CACHE_TTL_MS });
-}
-
-function clampInt(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, Math.trunc(n)));
-}
-
-type JobsCursor = { page: number; offset: number };
-
-function decodeJobsCursor(raw: string | null): JobsCursor {
-  if (!raw) return { page: 1, offset: 0 };
-  const trimmed = raw.trim();
-  if (/^\d+$/.test(trimmed)) return { page: clampInt(Number(trimmed), 1, 100000), offset: 0 };
-
-  try {
-    const json = Buffer.from(trimmed, 'base64url').toString('utf8');
-    const parsed = JSON.parse(json) as { page?: unknown; offset?: unknown };
-    const page = typeof parsed.page === 'number' ? clampInt(parsed.page, 1, 100000) : 1;
-    const offset = typeof parsed.offset === 'number' ? clampInt(parsed.offset, 0, 500) : 0;
-    return { page, offset };
-  } catch {
-    return { page: 1, offset: 0 };
-  }
-}
-
-function encodeJobsCursor(cur: JobsCursor): string {
-  return Buffer.from(JSON.stringify(cur), 'utf8').toString('base64url');
-}
 
 function isoDate(d: Date): string {
   // YYYY-MM-DD in UTC.
@@ -308,137 +262,6 @@ app.get('/api/status', async (c) => {
   );
 });
 
-app.get('/api/jobs', (c) => {
-  return (async () => {
-    const limitRaw = c.req.query('limit');
-    const limit = clampInt(Number.parseInt(limitRaw ?? '20', 10) || 20, 1, 50);
-    const beforeRaw = c.req.query('before');
-    const cursor = decodeJobsCursor(beforeRaw ?? null);
-    const capturedAtIso = new Date().toISOString();
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
-
-    let data: unknown[] = [];
-    let hasNext = false;
-    try {
-      const res = await fetch(`https://www.arbeitnow.com/api/job-board-api?page=${cursor.page}`, {
-        headers: { accept: 'application/json' },
-        signal: controller.signal,
-      });
-      const json = (await res.json()) as {
-        data?: unknown;
-        links?: { next?: unknown } | null;
-      };
-      data = Array.isArray(json?.data) ? json.data : [];
-      hasNext = Boolean(json?.links && (json.links as { next?: unknown }).next);
-    } catch {
-      data = [];
-      hasNext = false;
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    const parsed = data.map(parseJobBoardJob).filter((v): v is NonNullable<typeof v> => !!v);
-    const slice = parsed.slice(cursor.offset, cursor.offset + limit);
-
-    const items: JobLead[] = [];
-    for (const job of slice) {
-      const detail = projectJobBoardJobToDetail(job, capturedAtIso);
-      if (!detail) continue;
-      cachePutJob(detail);
-      const lead: JobLead = {
-        id: detail.id,
-        source: detail.source,
-        title: detail.title,
-        summary: detail.summary,
-        tags: detail.tags,
-        publishedAt: detail.publishedAt,
-        capturedAt: detail.capturedAt,
-        href: detail.href,
-        companyName: detail.companyName,
-        location: detail.location,
-        remote: detail.remote,
-        jobTypes: detail.jobTypes,
-      };
-      items.push(lead);
-    }
-
-    const nextOffset = cursor.offset + slice.length;
-    const nextCursor =
-      slice.length === 0
-        ? null
-        : nextOffset < parsed.length
-          ? encodeJobsCursor({ page: cursor.page, offset: nextOffset })
-          : hasNext
-            ? encodeJobsCursor({ page: cursor.page + 1, offset: 0 })
-            : null;
-
-    const envelope: ApiEnvelope<{ items: JobLead[]; nextCursor: string | null }> = {
-      data: { items, nextCursor },
-      meta: { ts: new Date().toISOString(), source: 'public' },
-    };
-    return c.json(envelope);
-  })();
-});
-
-app.get('/api/jobs/:id', (c) => {
-  return (async () => {
-    const jobId = c.req.param('id');
-
-    const cached = cacheGetJob(jobId);
-    if (cached) {
-      const envelope: ApiEnvelope<JobDetail> = {
-        data: cached,
-        meta: { ts: new Date().toISOString(), source: 'public', cache: 'hit' },
-      };
-      return c.json(envelope);
-    }
-
-    const capturedAtIso = new Date().toISOString();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
-
-    const cursorRaw = c.req.query('cursor');
-    const cursorPage = cursorRaw ? decodeJobsCursor(cursorRaw ?? null).page : null;
-    const scanPages = clampInt(
-      Number.parseInt(c.req.query('page') ?? '', 10) || cursorPage || 1,
-      1,
-      100000,
-    );
-    const maxPages = 5;
-
-    try {
-      for (let p = scanPages; p < scanPages + maxPages; p += 1) {
-        const res = await fetch(`https://www.arbeitnow.com/api/job-board-api?page=${p}`, {
-          headers: { accept: 'application/json' },
-          signal: controller.signal,
-        });
-        const json = (await res.json()) as { data?: unknown };
-        const rows = Array.isArray(json?.data) ? json.data : [];
-        const parsed = rows.map(parseJobBoardJob).filter((v): v is NonNullable<typeof v> => !!v);
-        const found = parsed.find((j) => j.slug === jobId);
-        if (!found) continue;
-
-        const detail = projectJobBoardJobToDetail(found, capturedAtIso);
-        if (!detail) return c.json({ error: 'invalid record' }, 500);
-        cachePutJob(detail);
-        const envelope: ApiEnvelope<JobDetail> = {
-          data: detail,
-          meta: { ts: new Date().toISOString(), source: 'public' },
-        };
-        return c.json(envelope);
-      }
-    } catch {
-      // fall through
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    return c.json({ error: 'not found' }, 404);
-  })();
-});
-
 app.get('/api/activity-series/:source', async (c) => {
   const source = c.req.param('source');
   if (source !== 'github' && source !== 'anki') {
@@ -583,6 +406,13 @@ app.get('/api/ytmusic/:id/analysis', async (c) => {
 });
 
 const port = Number(process.env.PORT ?? 3000);
-serve({ fetch: app.fetch, port });
+
+export function startServer() {
+  return serve({ fetch: app.fetch, port });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startServer();
+}
 
 export default app;

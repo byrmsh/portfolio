@@ -104,25 +104,6 @@ class KnowledgeGraphSnapshot(BaseSchema):
     updatedAt: datetime
 
 
-class JobLead(BaseSchema):
-    id: str
-    source: Literal["public"]
-    title: str
-    summary: str
-    tags: list[str]
-    publishedAt: datetime
-    capturedAt: datetime
-    href: str | None = None
-    companyName: str | None = None
-    location: str | None = None
-    remote: bool | None = None
-    jobTypes: list[str] | None = None
-
-
-class JobRedisRecord(JobLead):
-    description: str
-
-
 class ServiceHealth(BaseSchema):
     id: str
     name: str
@@ -145,7 +126,6 @@ class DashboardSnapshot(BaseSchema):
     savedLyric: SavedLyricNote | None
     writing: list[WritingPost]
     knowledgeGraph: KnowledgeGraphSnapshot
-    latestJob: JobLead | None
     systemHealth: SystemHealthSnapshot
     updatedAt: datetime
 
@@ -160,16 +140,11 @@ StatRedisRecord = (
 )
 
 DashboardSnapshotValidator = TypeAdapter(DashboardSnapshot)
-JobRedisRecordValidator = TypeAdapter(JobRedisRecord)
 StatRedisRecordValidator = TypeAdapter(StatRedisRecord)
 
 
 def validate_dashboard_snapshot(payload: object) -> DashboardSnapshot:
     return DashboardSnapshotValidator.validate_python(payload)
-
-
-def validate_job_redis_record(payload: object) -> JobRedisRecord:
-    return JobRedisRecordValidator.validate_python(payload)
 
 
 def validate_stat_redis_record(payload: object) -> StatRedisRecord:
