@@ -77,7 +77,6 @@ const enTranslations = {
     projects: 'Projects',
     contact: 'Contact',
     open_menu: 'Open menu',
-    language: 'Language',
   },
   contact: {
     eyebrow: 'Contact',
@@ -161,6 +160,7 @@ const enTranslations = {
   },
   footer: {
     copyright: '© {year} {name}',
+    language: 'Language',
     source: 'Source',
     rss: 'RSS',
   },
