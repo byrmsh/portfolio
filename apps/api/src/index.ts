@@ -17,6 +17,19 @@ import {
   type YtMusicAnalysis,
 } from '@portfolio/schema/dashboard';
 
+import {
+  metricsMiddleware,
+  errorHandlingMiddleware,
+  getMetrics,
+  redisConnectionErrors,
+} from './middleware.js';
+import {
+  activitySourceParamSchema,
+  trackIdParamSchema,
+  validatePathParams,
+  ValidationError,
+} from './validators.js';
+
 const app = new Hono();
 const localDevOrigins = new Set([
   'http://localhost:4321',
@@ -38,6 +51,10 @@ const configuredWebOrigins = new Set(
 const allowedCorsOrigins = new Set([...localDevOrigins, ...configuredWebOrigins]);
 
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379/0');
+
+// Register middleware
+app.use('*', errorHandlingMiddleware);
+app.use('*', metricsMiddleware);
 
 function isoDate(d: Date): string {
   // YYYY-MM-DD in UTC.
@@ -73,14 +90,24 @@ function buildEmptyActivitySeries(source: ActivitySource): ActivitySeries {
 
 async function readActivitySeries(source: ActivitySource): Promise<ActivitySeries> {
   const key = redisKeys.stat(source, 'default');
-  const raw = await redis.get(key);
-  if (!raw) return buildEmptyActivitySeries(source);
-  const parsedJson = JSON.parse(raw) as Record<string, unknown>;
-  // Historical collector payloads may include `"streak": null`. Our schema treats streak as
-  // optional, so normalize null -> missing to avoid 500s.
-  if (parsedJson.streak === null) delete parsedJson.streak;
-  const parsed = activitySeriesSchema.parse(parsedJson);
-  return parsed;
+  try {
+    const raw = await redis.get(key);
+    if (!raw) return buildEmptyActivitySeries(source);
+    const parsedJson = JSON.parse(raw) as Record<string, unknown>;
+    // Historical collector payloads may include `"streak": null`. Our schema treats streak as
+    // optional, so normalize null -> missing to avoid 500s.
+    if (parsedJson.streak === null) delete parsedJson.streak;
+    const parsed = activitySeriesSchema.parse(parsedJson);
+    return parsed;
+  } catch (error) {
+    redisConnectionErrors.labels('readActivitySeries').inc();
+    console.error('[Redis Error]', {
+      operation: 'readActivitySeries',
+      source,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return buildEmptyActivitySeries(source);
+  }
 }
 
 app.get('/', (c) => {
@@ -99,6 +126,12 @@ app.use(
 
 app.get('/health', (c) => {
   return c.json({ data: { status: 'ok' }, meta: { ts: new Date().toISOString() } });
+});
+
+app.get('/metrics', async (c) => {
+  c.header('Content-Type', 'text/plain; version=0.0.4');
+  const metrics = await getMetrics();
+  return c.text(metrics);
 });
 
 app.get('/api/status', async (c) => {
@@ -263,19 +296,34 @@ app.get('/api/status', async (c) => {
 });
 
 app.get('/api/activity-series/:source', async (c) => {
-  const source = c.req.param('source');
-  if (source !== 'github' && source !== 'anki') {
-    return c.json({ error: 'invalid source' }, 400);
-  }
+  try {
+    const params = validatePathParams(activitySourceParamSchema, {
+      source: c.req.param('source'),
+    });
 
-  const data = await readActivitySeries(source);
-  const envelope: ApiEnvelope<ActivitySeries> = {
-    data,
-    meta: { ts: new Date().toISOString(), source: 'redis' },
-  };
-  // validate shape in runtime for safety
-  activitySeriesSchema.parse(envelope.data);
-  return c.json(envelope);
+    const data = await readActivitySeries(params.source);
+    const envelope: ApiEnvelope<ActivitySeries> = {
+      data,
+      meta: { ts: new Date().toISOString(), source: 'redis' },
+    };
+    // validate shape in runtime for safety
+    activitySeriesSchema.parse(envelope.data);
+    return c.json(envelope);
+  } catch (error) {
+    const validationError = error instanceof ValidationError ? error : null;
+    if (validationError) {
+      return c.json(
+        {
+          error: 'Invalid request',
+          message: validationError.message,
+          details: validationError.details,
+          meta: { ts: new Date().toISOString() },
+        },
+        400,
+      );
+    }
+    throw error;
+  }
 });
 
 app.get('/api/activity-monitor', async (c) => {
@@ -290,15 +338,24 @@ app.get('/api/activity-monitor', async (c) => {
 });
 
 async function readLatestSavedLyric(): Promise<SavedLyricNote | null> {
-  const trackIds = await redis.zrevrange(redisKeys.index.lyricsRecent, 0, 0);
-  const trackId = trackIds?.[0];
-  if (!trackId) return null;
+  try {
+    const trackIds = await redis.zrevrange(redisKeys.index.lyricsRecent, 0, 0);
+    const trackId = trackIds?.[0];
+    if (!trackId) return null;
 
-  const key = redisKeys.stat('ytmusic', trackId);
-  const raw = await redis.get(key);
-  if (!raw) return null;
-  const parsed = savedLyricNoteSchema.parse(JSON.parse(raw) as unknown);
-  return parsed;
+    const key = redisKeys.stat('ytmusic', trackId);
+    const raw = await redis.get(key);
+    if (!raw) return null;
+    const parsed = savedLyricNoteSchema.parse(JSON.parse(raw) as unknown);
+    return parsed;
+  } catch (error) {
+    redisConnectionErrors.labels('readLatestSavedLyric').inc();
+    console.error('[Redis Error]', {
+      operation: 'readLatestSavedLyric',
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 }
 
 const YTMUSIC_SAVED_PAGE_SIZE = 50;
@@ -310,56 +367,84 @@ async function readSavedLyricsPage(page: number): Promise<{
   total: number;
   totalPages: number;
 }> {
-  const total = await redis.zcard(redisKeys.index.lyricsRecent);
-  const totalPages = total === 0 ? 0 : Math.ceil(total / YTMUSIC_SAVED_PAGE_SIZE);
-  if (total === 0) {
-    return { items: [], page: 1, pageSize: YTMUSIC_SAVED_PAGE_SIZE, total: 0, totalPages: 0 };
-  }
+  try {
+    const total = await redis.zcard(redisKeys.index.lyricsRecent);
+    const totalPages = total === 0 ? 0 : Math.ceil(total / YTMUSIC_SAVED_PAGE_SIZE);
+    if (total === 0) {
+      return { items: [], page: 1, pageSize: YTMUSIC_SAVED_PAGE_SIZE, total: 0, totalPages: 0 };
+    }
 
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * YTMUSIC_SAVED_PAGE_SIZE;
-  const stop = start + YTMUSIC_SAVED_PAGE_SIZE - 1;
-  const trackIds = await redis.zrevrange(redisKeys.index.lyricsRecent, start, stop);
-  if (!trackIds.length) {
+    const safePage = Math.min(Math.max(1, page), totalPages);
+    const start = (safePage - 1) * YTMUSIC_SAVED_PAGE_SIZE;
+    const stop = start + YTMUSIC_SAVED_PAGE_SIZE - 1;
+    const trackIds = await redis.zrevrange(redisKeys.index.lyricsRecent, start, stop);
+    if (!trackIds.length) {
+      return {
+        items: [],
+        page: safePage,
+        pageSize: YTMUSIC_SAVED_PAGE_SIZE,
+        total,
+        totalPages,
+      };
+    }
+
+    const pipeline = redis.pipeline();
+    for (const trackId of trackIds) pipeline.get(redisKeys.stat('ytmusic', trackId));
+    const results = await pipeline.exec();
+
+    const items: SavedLyricNote[] = [];
+    for (const [, raw] of results ?? []) {
+      if (typeof raw !== 'string') continue;
+      try {
+        items.push(savedLyricNoteSchema.parse(JSON.parse(raw) as unknown));
+      } catch (error) {
+        // Ignore malformed historical records so the list still renders.
+        console.warn('[Schema Validation]', {
+          operation: 'readSavedLyricsPage',
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     return {
-      items: [],
+      items,
       page: safePage,
       pageSize: YTMUSIC_SAVED_PAGE_SIZE,
       total,
       totalPages,
     };
+  } catch (error) {
+    redisConnectionErrors.labels('readSavedLyricsPage').inc();
+    console.error('[Redis Error]', {
+      operation: 'readSavedLyricsPage',
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { items: [], page, pageSize: YTMUSIC_SAVED_PAGE_SIZE, total: 0, totalPages: 0 };
   }
-
-  const pipeline = redis.pipeline();
-  for (const trackId of trackIds) pipeline.get(redisKeys.stat('ytmusic', trackId));
-  const results = await pipeline.exec();
-
-  const items: SavedLyricNote[] = [];
-  for (const [, raw] of results ?? []) {
-    if (typeof raw !== 'string') continue;
-    try {
-      items.push(savedLyricNoteSchema.parse(JSON.parse(raw) as unknown));
-    } catch {
-      // Ignore malformed historical records so the list still renders.
-    }
-  }
-
-  return {
-    items,
-    page: safePage,
-    pageSize: YTMUSIC_SAVED_PAGE_SIZE,
-    total,
-    totalPages,
-  };
 }
 
 async function readYtMusicAnalysis(trackId: string): Promise<YtMusicAnalysis | null> {
-  const key = redisKeys.statField('ytmusic', trackId, 'analysis');
-  const raw = await redis.get(key);
-  if (!raw) return null;
   try {
-    return ytmusicAnalysisSchema.parse(JSON.parse(raw) as unknown);
-  } catch {
+    const key = redisKeys.statField('ytmusic', trackId, 'analysis');
+    const raw = await redis.get(key);
+    if (!raw) return null;
+    try {
+      return ytmusicAnalysisSchema.parse(JSON.parse(raw) as unknown);
+    } catch (parseError) {
+      console.warn('[Schema Validation]', {
+        operation: 'readYtMusicAnalysis',
+        trackId,
+        error: parseError instanceof Error ? parseError.message : String(parseError),
+      });
+      return null;
+    }
+  } catch (error) {
+    redisConnectionErrors.labels('readYtMusicAnalysis').inc();
+    console.error('[Redis Error]', {
+      operation: 'readYtMusicAnalysis',
+      trackId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }
@@ -374,15 +459,31 @@ app.get('/api/ytmusic/saved/latest', async (c) => {
 });
 
 app.get('/api/ytmusic/saved', async (c) => {
-  const pageRaw = c.req.query('page');
-  const page = Number.parseInt(pageRaw ?? '1', 10) || 1;
+  try {
+    const pageRaw = c.req.query('page') || '1';
+    const pageNum = Number.parseInt(String(pageRaw), 10) || 1;
 
-  const data = await readSavedLyricsPage(page);
-  const envelope: ApiEnvelope<typeof data> = {
-    data,
-    meta: { ts: new Date().toISOString(), source: 'redis' },
-  };
-  return c.json(envelope);
+    const data = await readSavedLyricsPage(pageNum);
+    const envelope: ApiEnvelope<typeof data> = {
+      data,
+      meta: { ts: new Date().toISOString(), source: 'redis' },
+    };
+    return c.json(envelope);
+  } catch (error) {
+    const validationError = error instanceof ValidationError ? error : null;
+    if (validationError) {
+      return c.json(
+        {
+          error: 'Invalid request',
+          message: validationError.message,
+          details: validationError.details,
+          meta: { ts: new Date().toISOString() },
+        },
+        400,
+      );
+    }
+    throw error;
+  }
 });
 
 app.get('/api/ytmusic/analysis/pending/count', async (c) => {
@@ -395,14 +496,31 @@ app.get('/api/ytmusic/analysis/pending/count', async (c) => {
 });
 
 app.get('/api/ytmusic/:id/analysis', async (c) => {
-  const trackId = c.req.param('id');
-  const data = await readYtMusicAnalysis(trackId);
-  if (!data) return c.json({ error: 'not found' }, 404);
-  const envelope: ApiEnvelope<typeof data> = {
-    data,
-    meta: { ts: new Date().toISOString(), source: 'redis' },
-  };
-  return c.json(envelope);
+  try {
+    const params = validatePathParams(trackIdParamSchema, { id: c.req.param('id') });
+
+    const data = await readYtMusicAnalysis(params.id);
+    if (!data) return c.json({ error: 'not found' }, 404);
+    const envelope: ApiEnvelope<typeof data> = {
+      data,
+      meta: { ts: new Date().toISOString(), source: 'redis' },
+    };
+    return c.json(envelope);
+  } catch (error) {
+    const validationError = error instanceof ValidationError ? error : null;
+    if (validationError) {
+      return c.json(
+        {
+          error: 'Invalid request',
+          message: validationError.message,
+          details: validationError.details,
+          meta: { ts: new Date().toISOString() },
+        },
+        400,
+      );
+    }
+    throw error;
+  }
 });
 
 const port = Number(process.env.PORT ?? 3000);
