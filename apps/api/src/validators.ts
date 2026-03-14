@@ -13,18 +13,17 @@ export const activitySourceParamSchema = z.object({
  * Handles string, array, or undefined input.
  */
 export const pageQuerySchema = z.object({
-  page: z.union([z.string(), z.array(z.string()), z.undefined()]).transform((val) => {
-    let strVal: string;
-    if (Array.isArray(val)) {
-      strVal = val[0] || '1';
-    } else if (typeof val === 'string') {
-      strVal = val;
-    } else {
-      strVal = '1';
-    }
-    const parsed = Number.parseInt(strVal, 10);
-    return Number.isNaN(parsed) ? 1 : parsed;
-  }),
+  page: z.preprocess(
+    (value) => {
+      if (Array.isArray(value)) return value[0] ?? '1';
+      return value ?? '1';
+    },
+    z
+      .string()
+      .regex(/^\d+$/, 'Page must be a positive integer')
+      .transform((value) => Number.parseInt(value, 10))
+      .refine((value) => value >= 1, 'Page must be at least 1'),
+  ),
 });
 
 /**
@@ -38,17 +37,32 @@ export const trackIdParamSchema = z.object({
  * Utility to validate request path parameters.
  * Returns parsed data or throws a validation error with details.
  */
-export function validatePathParams<T>(
-  schema: z.ZodSchema<T>,
+export function validatePathParams<TSchema extends z.ZodTypeAny>(
+  schema: TSchema,
   params: Record<string, string | string[] | undefined>,
-): T {
+): z.infer<TSchema> {
+  return validateRequestData(schema, params, 'Invalid path parameters');
+}
+
+export function validateQueryParams<TSchema extends z.ZodTypeAny>(
+  schema: TSchema,
+  params: Record<string, string | string[] | undefined>,
+): z.infer<TSchema> {
+  return validateRequestData(schema, params, 'Invalid query parameters');
+}
+
+function validateRequestData<TSchema extends z.ZodTypeAny>(
+  schema: TSchema,
+  params: Record<string, string | string[] | undefined>,
+  message: string,
+): z.infer<TSchema> {
   const result = schema.safeParse(params);
   if (!result.success) {
     const errors = result.error.errors.map((err) => ({
       path: err.path.join('.'),
       message: err.message,
     }));
-    throw new ValidationError('Invalid path parameters', errors);
+    throw new ValidationError(message, errors);
   }
   return result.data;
 }

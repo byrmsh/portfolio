@@ -57,4 +57,32 @@ describe('api routes', () => {
     expect(payload.dragonfly.status).toBe('degraded');
     expect(payload.collector.runs).toBe(0);
   });
+
+  it('rejects invalid page query values with a structured 400 response', async () => {
+    const response = await app.request('http://localhost/api/ytmusic/saved?page=abc');
+    const payload = (await response.json()) as {
+      error: string;
+      message: string;
+      details: Array<{ path: string; message: string }>;
+    };
+
+    expect(response.status).toBe(400);
+    expect(payload.error).toBe('Invalid request');
+    expect(payload.message).toBe('Invalid query parameters');
+    expect(payload.details).toContainEqual({
+      path: 'page',
+      message: 'Page must be a positive integer',
+    });
+  });
+
+  it('records metrics with the route template instead of the raw path', async () => {
+    redisMock.get.mockResolvedValue(null);
+
+    await app.request('http://localhost/api/ytmusic/track-123/analysis');
+    const response = await app.request('http://localhost/metrics');
+    const metrics = await response.text();
+
+    expect(metrics).toContain('route="/api/ytmusic/:id/analysis"');
+    expect(metrics).not.toContain('route="/api/ytmusic/track-123/analysis"');
+  });
 });

@@ -25,8 +25,10 @@ import {
 } from './middleware.js';
 import {
   activitySourceParamSchema,
+  pageQuerySchema,
   trackIdParamSchema,
   validatePathParams,
+  validateQueryParams,
   ValidationError,
 } from './validators.js';
 
@@ -460,10 +462,11 @@ app.get('/api/ytmusic/saved/latest', async (c) => {
 
 app.get('/api/ytmusic/saved', async (c) => {
   try {
-    const pageRaw = c.req.query('page') || '1';
-    const pageNum = Number.parseInt(String(pageRaw), 10) || 1;
+    const query = validateQueryParams(pageQuerySchema, {
+      page: c.req.query('page'),
+    });
 
-    const data = await readSavedLyricsPage(pageNum);
+    const data = await readSavedLyricsPage(query.page);
     const envelope: ApiEnvelope<typeof data> = {
       data,
       meta: { ts: new Date().toISOString(), source: 'redis' },

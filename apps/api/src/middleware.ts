@@ -1,4 +1,5 @@
 import { Context, Next } from 'hono';
+import { routePath } from 'hono/route';
 import { Counter, Histogram, register, collectDefaultMetrics } from 'prom-client';
 
 // Initialize default metrics (cpu, memory, gc)
@@ -36,19 +37,24 @@ export const redisConnectionErrors = new Counter({
  */
 export async function metricsMiddleware(c: Context, next: Next) {
   const startTime = Date.now();
-  const route = c.req.path;
   const method = c.req.method;
+  const metricRoute = () => {
+    const matchedRoute = routePath(c, -1) || routePath(c);
+    return matchedRoute && matchedRoute !== '*' ? matchedRoute : c.req.path;
+  };
 
   try {
     await next();
     const duration = (Date.now() - startTime) / 1000;
     const status = c.res.status;
+    const route = metricRoute();
 
     httpRequestDuration.labels(method, route, String(status)).observe(duration);
     httpRequestTotal.labels(method, route, String(status)).inc();
   } catch (error) {
     const duration = (Date.now() - startTime) / 1000;
     const errorType = error instanceof Error ? error.constructor.name : 'Unknown';
+    const route = metricRoute();
 
     httpRequestDuration.labels(method, route, '500').observe(duration);
     httpRequestTotal.labels(method, route, '500').inc();
@@ -85,7 +91,7 @@ export async function errorHandlingMiddleware(c: Context, next: Next) {
     return c.json(
       {
         error: 'Internal Server Error',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        message: 'An unexpected error occurred',
         meta: {
           ts: requestTime,
           path,
