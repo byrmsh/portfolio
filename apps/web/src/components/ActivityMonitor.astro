@@ -1,6 +1,7 @@
 ---
 import Code from '@lucide/astro/icons/code';
 import BrainCircuit from '@lucide/astro/icons/brain-circuit';
+import Info from '@lucide/astro/icons/info';
 import ky from 'ky';
 import type { ActivityMonitorData } from '@portfolio/schema/dashboard';
 import type { SupportedLocale } from '../i18n';
@@ -28,8 +29,8 @@ const apiOrigin =
   'http://localhost:3000';
 const activityEndpoint = '/api/activity-monitor';
 const activityLabels = {
-  github: t('activity.github_label'),
-  anki: t('activity.anki_label'),
+  github: t('activity.github'),
+  anki: t('activity.anki'),
 } as const;
 
 let activity = normalizeActivityMonitorData(null, activityLabels);
@@ -53,11 +54,28 @@ const { start: rangeStart, end: rangeEnd } = findActivityRange(githubCells, anki
 
 const rangeLabel =
   rangeStart && rangeEnd
-    ? t('activity.range_label', {
+    ? t('activity.range', {
         start: fmtRange.format(parseIsoDateUTC(rangeStart)),
         end: fmtRange.format(parseIsoDateUTC(rangeEnd)),
       })
     : t('activity.last7_days');
+
+const todayIso = new Date().toISOString().split('T')[0];
+const lastAnkiCell = ankiCells[ankiCells.length - 1];
+
+// Compute current Anki day using rollover hour and timezone
+const ankiTz = activity.anki.timezone ?? 'UTC';
+const ankiRolloverHour = activity.anki.rolloverHour ?? 4;
+const nowInAnkiTz = new Date(new Date().toLocaleString('en-US', { timeZone: ankiTz }));
+const rolloverTime = new Date(nowInAnkiTz);
+rolloverTime.setHours(ankiRolloverHour, 0, 0, 0);
+const currentAnkiDay =
+  nowInAnkiTz < rolloverTime
+    ? new Date(nowInAnkiTz.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    : nowInAnkiTz.toISOString().split('T')[0];
+
+const hasReviewToday = lastAnkiCell?.date === currentAnkiDay && lastAnkiCell.count > 0;
+const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.streak : 0;
 ---
 
 <section
@@ -66,7 +84,7 @@ const rangeLabel =
   data-endpoint={activityEndpoint}
   data-github-label={activityLabels.github}
   data-anki-label={activityLabels.anki}
-  data-range-template={t('activity.range_label', { start: '{start}', end: '{end}' })}
+  data-range-template={t('activity.range', { start: '{start}', end: '{end}' })}
   data-streak-template={t('activity.streak_days', { count: '{count}' })}
   data-tooltip-with-date={t('activity.tooltip_with_date')}
   data-tooltip-without-date={t('activity.tooltip_without_date')}
@@ -82,7 +100,7 @@ const rangeLabel =
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <Code class="w-4 h-4 text-[var(--text-primary)]" />
-        <span class="text-sm font-semibold">{t('activity.github_label')}</span>
+        <span class="text-sm font-semibold truncate">{t('activity.github')}</span>
       </div>
 
       <div class="activity-tags" data-tags="github" aria-label={t('activity.github_aria')}>
@@ -99,7 +117,7 @@ const rangeLabel =
                 ]}
                 aria-label={t('activity.github_day_aria', { day: i + 1 })}
                 data-source="github"
-                data-source-label={t('activity.github_label')}
+                data-source-label={t('activity.github')}
                 data-date={cell.date}
                 data-count={String(cell.count)}
                 data-level={String(cell.level)}
@@ -117,17 +135,30 @@ const rangeLabel =
 
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
-        <BrainCircuit class="w-4 h-4 text-[var(--text-primary)]" />
-        <span class="text-sm font-semibold">{t('activity.anki_label')}</span>
+        <BrainCircuit class="w-4 h-4 text-[var(--text-primary)] shrink-0" />
+        <span class="text-sm font-semibold truncate">{t('activity.anki')}</span>
         <span
-          class="text-xxs font-mono text-[var(--text-muted)] ml-auto whitespace-nowrap"
+          class="flex items-center gap-1 ml-auto whitespace-nowrap shrink-0"
           data-streak-label="anki"
         >
-          {
-            t('activity.streak_days', {
-              count: typeof activity.anki.streak === 'number' ? activity.anki.streak : 0,
-            })
-          }
+          <span
+            class="text-xxs font-mono text-[var(--text-muted)]"
+            set:html={t('activity.streak_days', {
+              count: `<span data-streak-count>${typeof ankiStreak === 'number' ? ankiStreak : 0}</span>`,
+            })}
+          />
+          <button
+            type="button"
+            class:list={[
+              'relative focus:outline-none rounded-sm focus:ring-2 focus:ring-[var(--ring-subtle)]',
+              { hidden: hasReviewToday },
+            ]}
+            data-streak-info
+            data-info-tooltip={t('activity.no_review_today')}
+            aria-label={t('activity.no_review_today')}
+          >
+            <Info class="w-3 h-3 text-[var(--text-muted)] cursor-help" />
+          </button>
         </span>
       </div>
 
@@ -145,7 +176,7 @@ const rangeLabel =
                 ]}
                 aria-label={t('activity.anki_day_aria', { day: i + 1 })}
                 data-source="anki"
-                data-source-label={t('activity.anki_label')}
+                data-source-label={t('activity.anki')}
                 data-date={cell.date}
                 data-count={String(cell.count)}
                 data-level={String(cell.level)}
@@ -331,6 +362,26 @@ const rangeLabel =
         });
         el.addEventListener('blur', hide);
       }
+
+      for (const el of root.querySelectorAll<HTMLElement>('[data-info-tooltip]')) {
+        const showInfo = (x: number, y: number) => {
+          tip.textContent = el.dataset.infoTooltip ?? '';
+          tip.classList.remove('hidden');
+          tip.style.visibility = 'visible';
+          lastPointerX = x;
+          lastPointerY = y;
+          measureTip();
+          schedulePosition();
+        };
+        el.addEventListener('mouseenter', (e) => showInfo(e.clientX, e.clientY));
+        el.addEventListener('mousemove', (e) => move(e.clientX, e.clientY));
+        el.addEventListener('mouseleave', hide);
+        el.addEventListener('focus', () => {
+          const rect = el.getBoundingClientRect();
+          showInfo(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        });
+        el.addEventListener('blur', hide);
+      }
     };
 
     const refresh = async () => {
@@ -342,9 +393,31 @@ const rangeLabel =
       const githubCells = applySeries('github', data.github);
       const ankiCells = applySeries('anki', data.anki);
 
+      // Compute current Anki day using rollover hour and timezone
+      const ankiTz = data.anki.timezone ?? 'UTC';
+      const ankiRolloverHour = data.anki.rolloverHour ?? 4;
+      const nowInAnkiTz = new Date(new Date().toLocaleString('en-US', { timeZone: ankiTz }));
+      const rolloverTime = new Date(nowInAnkiTz);
+      rolloverTime.setHours(ankiRolloverHour, 0, 0, 0);
+      const currentAnkiDay =
+        nowInAnkiTz < rolloverTime
+          ? new Date(nowInAnkiTz.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          : nowInAnkiTz.toISOString().split('T')[0];
+
+      const lastAnkiCell = ankiCells[ankiCells.length - 1];
+      const hasReviewToday = lastAnkiCell?.date === currentAnkiDay && lastAnkiCell.count > 0;
+      const ankiStreak = typeof data.anki.streak === 'number' ? data.anki.streak : 0;
+
       setRangeLabel(githubCells, ankiCells);
       if (streakEl) {
-        streakEl.textContent = streakTemplate.replaceAll('{count}', String(data.anki.streak ?? 0));
+        const countSpan = streakEl.querySelector<HTMLElement>('[data-streak-count]');
+        if (countSpan) {
+          countSpan.textContent = String(ankiStreak);
+        }
+        const infoSpan = streakEl.querySelector<HTMLElement>('[data-streak-info]');
+        if (infoSpan) {
+          infoSpan.classList.toggle('hidden', hasReviewToday);
+        }
       }
     };
 
