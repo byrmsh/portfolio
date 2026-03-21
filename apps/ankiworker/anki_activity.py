@@ -61,7 +61,9 @@ def _open_collection_db(path: Path) -> sqlite3.Connection:
     return sqlite3.connect(f"file:{path}?mode=ro", uri=True)
 
 
-def _fetch_review_ids_ms(*, collection_path: Path, start_ms: int, end_ms_exclusive: int) -> list[int]:
+def _fetch_review_ids_ms(
+    *, collection_path: Path, start_ms: int, end_ms_exclusive: int
+) -> list[int]:
     with _open_collection_db(collection_path) as conn:
         conn.row_factory = None
         cur = conn.cursor()
@@ -97,28 +99,32 @@ def _to_anki_day(*, review_id_ms: int, tz: ZoneInfo, rollover_hour: int) -> date
 def _streak_from_full_history(
     *, collection_path: Path, tz: ZoneInfo, rollover_hour: int, end_day: date
 ) -> int:
-    end_exclusive_local = datetime.combine(
-        end_day + timedelta(days=1),
+    end_inclusive_local = datetime.combine(
+        end_day,
         time(hour=rollover_hour),
         tzinfo=tz,
     ).astimezone(UTC)
-    end_exclusive_ms = _to_ms(end_exclusive_local)
+    end_inclusive_ms = _to_ms(end_inclusive_local)
 
-    expected_day = end_day
     streak = 0
     last_seen_day: date | None = None
+    expected_day: date | None = None
 
     for review_id_ms in _iter_review_ids_ms_desc(
         collection_path=collection_path,
-        max_ms_exclusive=end_exclusive_ms,
+        max_ms_exclusive=end_inclusive_ms + 1,
     ):
         day = _to_anki_day(review_id_ms=review_id_ms, tz=tz, rollover_hour=rollover_hour)
         if day == last_seen_day:
             continue
         last_seen_day = day
 
-        if day > expected_day:
+        if expected_day is None:
+            expected_day = day
+            streak = 1
+            expected_day -= timedelta(days=1)
             continue
+
         if day == expected_day:
             streak += 1
             expected_day -= timedelta(days=1)
@@ -180,7 +186,9 @@ def _build_series_from_collection(
         label="Anki",
         cells=cells,
         streak=streak,
-        updatedAt=datetime.now(tz=UTC),
+        rollover_hour=rollover_hour,
+        timezone=str(tz),
+        updated_at=datetime.now(tz=UTC),
     )
 
 
@@ -297,12 +305,21 @@ def main() -> None:
                 label="Anki",
                 cells=cells,
                 streak=0,
-                updatedAt=datetime.now(tz=UTC),
+                rollover_hour=rollover_hour,
+                timezone=str(tz),
+                updated_at=datetime.now(tz=UTC),
             )
 
     r = redis_client()
     key = RedisKeys.stat("anki", "default")
-    write_metric(r, key, series.model_dump(mode="json", exclude_none=True))
+    logger.debug(
+        "ankiworker.anki.series_before_dump",
+        rollover_hour=series.rollover_hour,
+        timezone=series.timezone,
+    )
+    payload = series.model_dump(mode="json", by_alias=True, exclude_none=True)
+    logger.debug("ankiworker.anki.payload", payload_keys=list(payload.keys()))
+    write_metric(r, key, payload)
     emit_event(r, "anki_activity_updated", {"key": key})
     logger.info(
         "ankiworker.anki.done",

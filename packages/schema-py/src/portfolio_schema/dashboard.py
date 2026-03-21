@@ -28,11 +28,15 @@ class ActivityCell(BaseSchema):
 
 
 class ActivitySeries(BaseSchema):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
     source: ActivitySource
     label: str
     cells: list[ActivityCell]
     streak: int | None = Field(default=None, ge=0)
-    updatedAt: datetime
+    rollover_hour: int | None = Field(default=None, ge=0, le=23, alias="rolloverHour")
+    timezone: str | None = None
+    updated_at: datetime = Field(alias="updatedAt")
 
 
 class ActivityMonitorData(BaseSchema):

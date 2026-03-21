@@ -27,6 +27,8 @@ export const activitySeriesSchema = z.object({
   label: z.string().min(1),
   cells: z.array(activityCellSchema),
   streak: z.number().int().min(0).optional(),
+  rolloverHour: z.number().int().min(0).max(23).optional(),
+  timezone: z.string().optional(),
   updatedAt: isoDatetimeSchema,
 });
 
