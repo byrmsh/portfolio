@@ -100,7 +100,7 @@ def _streak_from_full_history(
     *, collection_path: Path, tz: ZoneInfo, rollover_hour: int, end_day: date
 ) -> int:
     end_inclusive_local = datetime.combine(
-        end_day,
+        end_day + timedelta(days=1),
         time(hour=rollover_hour),
         tzinfo=tz,
     ).astimezone(UTC)
