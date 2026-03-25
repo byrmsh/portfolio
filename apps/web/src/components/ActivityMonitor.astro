@@ -7,6 +7,7 @@ import type { ActivityMonitorData } from '@portfolio/schema/dashboard';
 import type { SupportedLocale } from '../i18n';
 import {
   activityLevelClass,
+  computeCurrentAnkiDay,
   findActivityRange,
   last7Cells,
   normalizeActivityMonitorData,
@@ -60,19 +61,10 @@ const rangeLabel =
       })
     : t('activity.last7_days');
 
-const todayIso = new Date().toISOString().split('T')[0];
 const lastAnkiCell = ankiCells[ankiCells.length - 1];
-
-// Compute current Anki day using rollover hour and timezone
 const ankiTz = activity.anki.timezone ?? 'UTC';
 const ankiRolloverHour = activity.anki.rolloverHour ?? 4;
-const nowInAnkiTz = new Date(new Date().toLocaleString('en-US', { timeZone: ankiTz }));
-const rolloverTime = new Date(nowInAnkiTz);
-rolloverTime.setHours(ankiRolloverHour, 0, 0, 0);
-const currentAnkiDay =
-  nowInAnkiTz < rolloverTime
-    ? new Date(nowInAnkiTz.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    : nowInAnkiTz.toISOString().split('T')[0];
+const currentAnkiDay = computeCurrentAnkiDay(ankiTz, ankiRolloverHour);
 
 const hasReviewToday = lastAnkiCell?.date === currentAnkiDay && lastAnkiCell.count > 0;
 const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.streak : 0;
@@ -201,6 +193,7 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
   import {
     activityColorRamps,
     clampInt,
+    computeCurrentAnkiDay,
     findActivityRange,
     last7Cells,
     normalizeActivityMonitorData,
@@ -393,16 +386,9 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
       const githubCells = applySeries('github', data.github);
       const ankiCells = applySeries('anki', data.anki);
 
-      // Compute current Anki day using rollover hour and timezone
       const ankiTz = data.anki.timezone ?? 'UTC';
       const ankiRolloverHour = data.anki.rolloverHour ?? 4;
-      const nowInAnkiTz = new Date(new Date().toLocaleString('en-US', { timeZone: ankiTz }));
-      const rolloverTime = new Date(nowInAnkiTz);
-      rolloverTime.setHours(ankiRolloverHour, 0, 0, 0);
-      const currentAnkiDay =
-        nowInAnkiTz < rolloverTime
-          ? new Date(nowInAnkiTz.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          : nowInAnkiTz.toISOString().split('T')[0];
+      const currentAnkiDay = computeCurrentAnkiDay(ankiTz, ankiRolloverHour);
 
       const lastAnkiCell = ankiCells[ankiCells.length - 1];
       const hasReviewToday = lastAnkiCell?.date === currentAnkiDay && lastAnkiCell.count > 0;

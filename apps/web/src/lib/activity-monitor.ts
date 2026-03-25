@@ -72,6 +72,24 @@ export function normalizeActivityMonitorData(
   } as ActivityMonitorData;
 }
 
+export function computeCurrentAnkiDay(timezone: string, rolloverHour: number): string {
+  const now = new Date();
+  const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(now);
+  const hour = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour: '2-digit',
+      hour12: false,
+      hourCycle: 'h23',
+    }).format(now),
+  );
+  if (hour < rolloverHour) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, (m ?? 1) - 1, (d ?? 1) - 1)).toISOString().split('T')[0];
+  }
+  return dateStr;
+}
+
 export function findActivityRange(
   githubCells: ActivityCell[],
   ankiCells: ActivityCell[],
