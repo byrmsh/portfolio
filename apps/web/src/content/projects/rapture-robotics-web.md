@@ -8,11 +8,11 @@ stack:
   - TypeScript
   - Supabase
   - Tailwind CSS
-heroImage: /projects/rapture-robotics/SS1.webp
+heroImage: ../../assets/projects/rapture-robotics/SS1.webp
 galleryImages:
-  - /projects/rapture-robotics/SS1.webp
-  - /projects/rapture-robotics/SS2.webp
-  - /projects/rapture-robotics/SS3.webp
+  - ../../assets/projects/rapture-robotics/SS1.webp
+  - ../../assets/projects/rapture-robotics/SS2.webp
+  - ../../assets/projects/rapture-robotics/SS3.webp
 order: 8
 ---
 

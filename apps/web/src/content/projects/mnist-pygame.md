@@ -8,9 +8,9 @@ stack:
   - TensorFlow
   - Pygame
   - NumPy
-heroImage: /projects/mnist-pygame/SS1.webp
+heroImage: ../../assets/projects/mnist-pygame/SS1.webp
 galleryImages:
-  - /projects/mnist-pygame/SS1.webp
+  - ../../assets/projects/mnist-pygame/SS1.webp
 order: 10
 ---
 

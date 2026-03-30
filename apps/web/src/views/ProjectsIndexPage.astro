@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import SiteNav from '../components/SiteNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import BlurImage from '../components/BlurImage.astro';
 import { SITE } from '../config/site';
 import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
 import { getCollection } from 'astro:content';
@@ -47,11 +48,11 @@ const projects = (await getCollection('projects'))
               <article class="group rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
                 <a href={detailHref} class="block">
                   <div class="relative h-56 lg:h-64 rounded-lg overflow-hidden border border-[var(--border-muted)]">
-                    <img
+                    <BlurImage
                       src={project.data.heroImage}
                       alt=""
                       loading="lazy"
-                      class="absolute inset-0 w-full h-full object-cover"
+                      class="absolute inset-0 w-full h-full"
                     />
                     <div class="absolute inset-0 bg-gradient-to-r from-black/35 to-black/10" />
                   </div>

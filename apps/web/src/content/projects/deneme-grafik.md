@@ -8,10 +8,10 @@ stack:
   - Prisma
   - PostgreSQL
   - Mantine
-heroImage: /projects/deneme-grafik/SS1.webp
+heroImage: ../../assets/projects/deneme-grafik/SS1.webp
 galleryImages:
-  - /projects/deneme-grafik/SS1.webp
-  - /projects/deneme-grafik/SS2.webp
+  - ../../assets/projects/deneme-grafik/SS1.webp
+  - ../../assets/projects/deneme-grafik/SS2.webp
 order: 3
 ---
 

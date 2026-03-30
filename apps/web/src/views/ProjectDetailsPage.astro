@@ -28,9 +28,14 @@ const projectCommitPathFilters = Array.from(
     `apps/web/src/content/projects/${project.slug}.mdx`,
   ]),
 );
-const gallery = [project.data.heroImage, ...(project.data.galleryImages ?? [])].filter(
-  (v, i, arr) => typeof v === 'string' && arr.indexOf(v) === i,
-);
+const galleryRaw = [project.data.heroImage, ...(project.data.galleryImages ?? [])];
+const seen = new Set<string>();
+const gallery = galleryRaw.filter((img) => {
+  const key = img.src;
+  if (seen.has(key)) return false;
+  seen.add(key);
+  return true;
+});
 ---
 
 <Layout
