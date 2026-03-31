@@ -150,6 +150,7 @@ const enTranslations = {
     date: 'DATE',
     hash: 'HASH',
     open_commit: 'Open commit {hash}',
+    revert: 'REVERT',
     breaking: 'BREAKING',
     type_feat: 'FEATURE',
     type_fix: 'FIX',

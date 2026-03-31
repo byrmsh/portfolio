@@ -25,6 +25,7 @@ type ParsedCommit = {
   scope: string | null;
   description: string;
   breaking: boolean;
+  revert: boolean;
 };
 
 type GitMetadata = {
@@ -158,6 +159,28 @@ function getRepoUrlFromOrigin(): string | null {
 
 function parseConventionalSubject(subject: string): ParsedCommit {
   const normalizedSubject = normalizeSubjectForDisplay(subject);
+  const trimmed = normalizedSubject.trim();
+
+  const quotedRevertMatch = /^revert\s+"(.+)"$/i.exec(trimmed);
+  if (quotedRevertMatch) {
+    const parsedInner = parseConventionalSubject(quotedRevertMatch[1]);
+    return {
+      ...parsedInner,
+      description: `Revert ${parsedInner.description}`,
+      revert: true,
+    };
+  }
+
+  const prefixedRevertMatch = /^revert:\s*(.+)$/i.exec(trimmed);
+  if (prefixedRevertMatch) {
+    const parsedInner = parseConventionalSubject(prefixedRevertMatch[1]);
+    return {
+      ...parsedInner,
+      description: `Revert ${parsedInner.description}`,
+      revert: true,
+    };
+  }
+
   const match = /^([a-z]+)(\(([^)]+)\))?(!)?:\s*(.+)$/i.exec(normalizedSubject.trim());
   if (!match) {
     return {
@@ -165,6 +188,7 @@ function parseConventionalSubject(subject: string): ParsedCommit {
       scope: null,
       description: capitalizeMessage(normalizedSubject.trim()),
       breaking: false,
+      revert: false,
     };
   }
 
@@ -174,6 +198,7 @@ function parseConventionalSubject(subject: string): ParsedCommit {
     scope: scope ?? null,
     description: capitalizeMessage(String(rawDescription).trim()),
     breaking: bang === '!',
+    revert: false,
   };
 }
 
@@ -289,6 +314,11 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                 {parsed.scope && (
                   <span class="inline-flex shrink-0 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-body)] whitespace-nowrap">
                     {parsed.scope}
+                  </span>
+                )}
+                {parsed.revert && (
+                  <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
+                    {t('git_commits.revert')}
                   </span>
                 )}
                 {parsed.breaking && (
