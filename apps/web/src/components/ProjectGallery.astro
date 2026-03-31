@@ -265,13 +265,6 @@ function format(template: string, vars: Record<string, string | number>): string
 
     if (!slides.length) continue;
 
-    // Force-load hidden slide images that lazy loading skips (opacity:0 elements)
-    for (const slide of slides) {
-      for (const img of slide.querySelectorAll<HTMLImageElement>('img[loading="lazy"]')) {
-        img.loading = 'eager';
-      }
-    }
-
     let index = 0;
     let dialogScale = 1;
     let dialogOffsetX = 0;
