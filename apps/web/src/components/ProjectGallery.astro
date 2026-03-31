@@ -1,4 +1,6 @@
 ---
+import FadeImage from './FadeImage.astro';
+
 interface Props {
   images: string[];
   title: string;
@@ -28,11 +30,11 @@ function format(template: string, vars: Record<string, string | number>): string
     >
       <div class="relative h-72 sm:h-80 lg:h-[34rem] rounded-lg overflow-hidden border border-[var(--border-muted)] bg-[var(--surface-2)]">
         {deduped.map((image, index) => (
-          <img
+          <FadeImage
             src={image}
             alt={format(labels.imageAlt, { index: index + 1, title })}
             loading={index === 0 ? 'eager' : 'lazy'}
-            class={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            class={`absolute inset-0 w-full h-full transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             data-gallery-slide
             data-gallery-index={index}
           />
@@ -117,7 +119,7 @@ function format(template: string, vars: Record<string, string | number>): string
               data-gallery-index={index}
               aria-label={format(labels.imageAlt, { index: index + 1, title })}
             >
-              <img src={image} alt="" loading="lazy" class="w-full h-full object-cover" />
+              <FadeImage src={image} alt="" loading="lazy" class="w-full h-full" />
             </button>
           ))}
         </div>
@@ -160,11 +162,12 @@ function format(template: string, vars: Record<string, string | number>): string
 
           <div class="gallery-modal-stage" data-gallery-dialog-stage>
             {deduped.map((image, index) => (
-              <img
+              <FadeImage
                 src={image}
                 alt={format(labels.imageAlt, { index: index + 1, title })}
                 loading="lazy"
-                class={`absolute inset-0 h-full w-full object-contain transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                fit="contain"
+                class={`absolute inset-0 h-full w-full transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 data-gallery-dialog-slide
                 data-gallery-index={index}
                 draggable="false"
@@ -215,11 +218,11 @@ function format(template: string, vars: Record<string, string | number>): string
     <div class="gallery-noscript-fallback space-y-3">
       <p class="text-xs font-mono text-[var(--text-muted)]">{labels.noScript}</p>
       {deduped.map((image, index) => (
-        <img
+        <FadeImage
           src={image}
           alt={format(labels.imageAlt, { index: index + 1, title })}
           loading={index === 0 ? 'eager' : 'lazy'}
-          class="w-full rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] object-cover"
+          class="w-full rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)]"
         />
       ))}
     </div>
@@ -230,7 +233,7 @@ function format(template: string, vars: Record<string, string | number>): string
   const galleries = document.querySelectorAll('[data-project-gallery]');
 
   for (const gallery of galleries) {
-    const slides = Array.from(gallery.querySelectorAll<HTMLImageElement>('[data-gallery-slide]'));
+    const slides = Array.from(gallery.querySelectorAll<HTMLElement>('[data-gallery-slide]'));
     const thumbs = Array.from(gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-thumb]'));
     const prev = gallery.querySelector<HTMLButtonElement>('[data-gallery-prev]');
     const next = gallery.querySelector<HTMLButtonElement>('[data-gallery-next]');
@@ -238,7 +241,7 @@ function format(template: string, vars: Record<string, string | number>): string
     const dialog = gallery.querySelector<HTMLDialogElement>('[data-gallery-dialog]');
     const close = gallery.querySelector<HTMLButtonElement>('[data-gallery-close]');
     const dialogSlides = Array.from(
-      gallery.querySelectorAll<HTMLImageElement>('[data-gallery-dialog-slide]'),
+      gallery.querySelectorAll<HTMLElement>('[data-gallery-dialog-slide]'),
     );
     const dialogPrev = gallery.querySelector<HTMLButtonElement>('[data-gallery-dialog-prev]');
     const dialogNext = gallery.querySelector<HTMLButtonElement>('[data-gallery-dialog-next]');
@@ -272,8 +275,10 @@ function format(template: string, vars: Record<string, string | number>): string
       const activeSlide = dialogSlides[index];
       if (!activeSlide) return null;
 
-      const naturalWidth = activeSlide.naturalWidth;
-      const naturalHeight = activeSlide.naturalHeight;
+      const activeImage = activeSlide.querySelector<HTMLImageElement>('img');
+
+      const naturalWidth = activeImage?.naturalWidth ?? 0;
+      const naturalHeight = activeImage?.naturalHeight ?? 0;
       if (!naturalWidth || !naturalHeight) {
         return {
           stageWidth: stageRect.width,

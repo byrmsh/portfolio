@@ -1,0 +1,94 @@
+---
+interface Props extends astroHTML.JSX.HTMLAttributes {
+  src: string;
+  alt: string;
+  loading?: 'lazy' | 'eager';
+  fit?: 'cover' | 'contain';
+}
+
+const { src, alt, class: className, loading = 'lazy', fit = 'cover', ...attrs } = Astro.props;
+---
+
+<div class:list={[className]} data-fade-image {...attrs}>
+  <img
+    src={src}
+    alt={alt}
+    loading={loading}
+    class:list={[
+      'fade-image-img',
+      fit === 'contain' ? 'fade-image-img--contain' : 'fade-image-img--cover',
+    ]}
+  />
+</div>
+
+<style>
+  .fade-image-img {
+    width: 100%;
+    height: 100%;
+    transition:
+      opacity 0.35s ease,
+      filter 0.45s ease,
+      transform 0.45s ease;
+    will-change: opacity, filter, transform;
+  }
+
+  .fade-image-img--cover {
+    object-fit: cover;
+  }
+
+  .fade-image-img--contain {
+    object-fit: contain;
+  }
+
+  [data-fade-image].is-loading .fade-image-img {
+    opacity: 0.02;
+    filter: blur(10px);
+    transform: scale(1.02);
+  }
+
+  [data-fade-image].is-loaded .fade-image-img {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+</style>
+
+<script>
+  function initFadeImages() {
+    const wrappers = document.querySelectorAll<HTMLElement>('[data-fade-image]');
+    for (const wrapper of wrappers) {
+      if (wrapper.dataset.fadeInit === '1') continue;
+      wrapper.dataset.fadeInit = '1';
+
+      const img = wrapper.querySelector<HTMLImageElement>('img.fade-image-img');
+      if (!img) continue;
+
+      if (img.complete && img.naturalWidth > 0) {
+        wrapper.classList.add('is-loaded');
+        continue;
+      }
+
+      wrapper.classList.add('is-loading');
+
+      img.addEventListener(
+        'load',
+        () => {
+          wrapper.classList.remove('is-loading');
+          wrapper.classList.add('is-loaded');
+        },
+        { once: true },
+      );
+
+      img.addEventListener(
+        'error',
+        () => {
+          wrapper.classList.remove('is-loading');
+        },
+        { once: true },
+      );
+    }
+  }
+
+  initFadeImages();
+  document.addEventListener('astro:page-load', initFadeImages);
+</script>
