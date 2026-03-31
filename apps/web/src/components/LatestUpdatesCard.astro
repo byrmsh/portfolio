@@ -25,7 +25,6 @@ type ParsedCommit = {
   scope: string | null;
   description: string;
   breaking: boolean;
-  revert: boolean;
 };
 
 type GitMetadata = {
@@ -165,9 +164,10 @@ function parseConventionalSubject(subject: string): ParsedCommit {
   if (quotedRevertMatch) {
     const parsedInner = parseConventionalSubject(quotedRevertMatch[1]);
     return {
-      ...parsedInner,
-      description: `Revert ${parsedInner.description}`,
-      revert: true,
+      type: 'revert',
+      scope: null,
+      description: parsedInner.description,
+      breaking: false,
     };
   }
 
@@ -175,9 +175,10 @@ function parseConventionalSubject(subject: string): ParsedCommit {
   if (prefixedRevertMatch) {
     const parsedInner = parseConventionalSubject(prefixedRevertMatch[1]);
     return {
-      ...parsedInner,
-      description: `Revert ${parsedInner.description}`,
-      revert: true,
+      type: 'revert',
+      scope: null,
+      description: parsedInner.description,
+      breaking: false,
     };
   }
 
@@ -188,7 +189,6 @@ function parseConventionalSubject(subject: string): ParsedCommit {
       scope: null,
       description: capitalizeMessage(normalizedSubject.trim()),
       breaking: false,
-      revert: false,
     };
   }
 
@@ -198,7 +198,6 @@ function parseConventionalSubject(subject: string): ParsedCommit {
     scope: scope ?? null,
     description: capitalizeMessage(String(rawDescription).trim()),
     breaking: bang === '!',
-    revert: false,
   };
 }
 
@@ -242,6 +241,7 @@ function commitTypeClass(type: string): string {
     refactor: 'bg-cyan-100 text-cyan-700 border-cyan-300',
     perf: 'bg-lime-100 text-lime-700 border-lime-300',
     test: 'bg-orange-100 text-orange-700 border-orange-300',
+    revert: 'bg-rose-100 text-rose-800 border-rose-300',
     ci: 'bg-indigo-100 text-indigo-700 border-indigo-300',
     build: 'bg-teal-100 text-teal-700 border-teal-300',
     style: 'bg-[var(--surface-3)] text-[var(--text-body)] border-[var(--border-strong)]',
@@ -259,6 +259,7 @@ function labelForType(type: string): string {
     refactor: t('git_commits.type_refactor'),
     test: t('git_commits.type_test'),
     perf: t('git_commits.type_perf'),
+    revert: t('git_commits.revert'),
   };
   return labels[type] ?? type.toUpperCase();
 }
@@ -314,11 +315,6 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
                 {parsed.scope && (
                   <span class="inline-flex shrink-0 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-body)] whitespace-nowrap">
                     {parsed.scope}
-                  </span>
-                )}
-                {parsed.revert && (
-                  <span class="inline-flex shrink-0 items-center rounded-md border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap">
-                    {t('git_commits.revert')}
                   </span>
                 )}
                 {parsed.breaking && (
