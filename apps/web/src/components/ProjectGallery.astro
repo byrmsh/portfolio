@@ -1,10 +1,6 @@
 ---
-import { Image } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
-import BlurImage from './BlurImage.astro';
-
 interface Props {
-  images: ImageMetadata[];
+  images: string[];
   title: string;
   labels: {
     prev: string;
@@ -17,6 +13,7 @@ interface Props {
 }
 
 const { images, title, labels } = Astro.props;
+const deduped = images.filter((v, i, arr) => typeof v === 'string' && arr.indexOf(v) === i);
 
 function format(template: string, vars: Record<string, string | number>): string {
   return template.replaceAll(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`));
@@ -24,31 +21,29 @@ function format(template: string, vars: Record<string, string | number>): string
 ---
 
 {
-  images.length ? (
+  deduped.length ? (
     <div
       data-project-gallery
-      class={`project-gallery ${images.length > 1 ? 'project-gallery--multi' : ''}`}
+      class={`project-gallery ${deduped.length > 1 ? 'project-gallery--multi' : ''}`}
     >
       <div class="relative h-72 sm:h-80 lg:h-[34rem] rounded-lg overflow-hidden border border-[var(--border-muted)] bg-[var(--surface-2)]">
-        {images.map((image, index) => (
-          <BlurImage
+        {deduped.map((image, index) => (
+          <img
             src={image}
             alt={format(labels.imageAlt, { index: index + 1, title })}
             loading={index === 0 ? 'eager' : 'lazy'}
-            widths={[600, 1000, 1400]}
-            sizes="(max-width: 768px) 100vw, 800px"
-            class={`absolute inset-0 w-full h-full transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            class={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             data-gallery-slide
             data-gallery-index={index}
           />
         ))}
         <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
 
-        {images.length > 1 ? (
+        {deduped.length > 1 ? (
           <>
             <button
               type="button"
-              class="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
+              class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
               aria-label={labels.prev}
               data-gallery-prev
             >
@@ -56,7 +51,7 @@ function format(template: string, vars: Record<string, string | number>): string
             </button>
             <button
               type="button"
-              class="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full border border-white/30 bg-black/45 text-white hover:bg-black/55"
               aria-label={labels.next}
               data-gallery-next
             >
@@ -112,9 +107,9 @@ function format(template: string, vars: Record<string, string | number>): string
         </button>
       </div>
 
-      {images.length > 1 ? (
+      {deduped.length > 1 ? (
         <div class="mt-3 flex items-center gap-2 overflow-x-auto pb-1" data-gallery-thumbs>
-          {images.map((image, index) => (
+          {deduped.map((image, index) => (
             <button
               type="button"
               class={`shrink-0 w-16 h-11 rounded border overflow-hidden ${index === 0 ? 'border-[var(--color-accent)]' : 'border-[var(--border-subtle)]'}`}
@@ -122,14 +117,7 @@ function format(template: string, vars: Record<string, string | number>): string
               data-gallery-index={index}
               aria-label={format(labels.imageAlt, { index: index + 1, title })}
             >
-              <Image
-                src={image}
-                alt=""
-                loading="lazy"
-                widths={[80]}
-                sizes="80px"
-                class="w-full h-full object-cover"
-              />
+              <img src={image} alt="" loading="lazy" class="w-full h-full object-cover" />
             </button>
           ))}
         </div>
@@ -171,13 +159,11 @@ function format(template: string, vars: Record<string, string | number>): string
           </div>
 
           <div class="gallery-modal-stage" data-gallery-dialog-stage>
-            {images.map((image, index) => (
-              <Image
+            {deduped.map((image, index) => (
+              <img
                 src={image}
                 alt={format(labels.imageAlt, { index: index + 1, title })}
                 loading="lazy"
-                widths={[800, 1400]}
-                sizes="min(100vw, 1360px)"
                 class={`absolute inset-0 h-full w-full object-contain transition-opacity duration-200 ${index === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 data-gallery-dialog-slide
                 data-gallery-index={index}
@@ -185,7 +171,7 @@ function format(template: string, vars: Record<string, string | number>): string
               />
             ))}
 
-            {images.length > 1 ? (
+            {deduped.length > 1 ? (
               <>
                 <button
                   type="button"
@@ -205,7 +191,7 @@ function format(template: string, vars: Record<string, string | number>): string
                 </button>
 
                 <div class="gallery-modal-dots">
-                  {images.map((_, dotIndex) => (
+                  {deduped.map((_, dotIndex) => (
                     <button
                       type="button"
                       class={`gallery-modal-dot ${dotIndex === 0 ? 'is-active' : ''}`}
@@ -225,16 +211,14 @@ function format(template: string, vars: Record<string, string | number>): string
 }
 
 {
-  images.length > 1 ? (
+  deduped.length > 1 ? (
     <div class="gallery-noscript-fallback space-y-3">
       <p class="text-xs font-mono text-[var(--text-muted)]">{labels.noScript}</p>
-      {images.map((image, index) => (
-        <Image
+      {deduped.map((image, index) => (
+        <img
           src={image}
           alt={format(labels.imageAlt, { index: index + 1, title })}
           loading={index === 0 ? 'eager' : 'lazy'}
-          widths={[800]}
-          sizes="800px"
           class="w-full rounded-lg border border-[var(--border-muted)] bg-[var(--surface-2)] object-cover"
         />
       ))}
@@ -246,7 +230,7 @@ function format(template: string, vars: Record<string, string | number>): string
   const galleries = document.querySelectorAll('[data-project-gallery]');
 
   for (const gallery of galleries) {
-    const slides = Array.from(gallery.querySelectorAll<HTMLElement>('[data-gallery-slide]'));
+    const slides = Array.from(gallery.querySelectorAll<HTMLImageElement>('[data-gallery-slide]'));
     const thumbs = Array.from(gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-thumb]'));
     const prev = gallery.querySelector<HTMLButtonElement>('[data-gallery-prev]');
     const next = gallery.querySelector<HTMLButtonElement>('[data-gallery-next]');
@@ -264,13 +248,6 @@ function format(template: string, vars: Record<string, string | number>): string
     );
 
     if (!slides.length) continue;
-
-    // Force-load hidden slide images that lazy loading skips (opacity:0 elements)
-    for (const slide of slides) {
-      for (const img of slide.querySelectorAll<HTMLImageElement>('img[loading="lazy"]')) {
-        img.loading = 'eager';
-      }
-    }
 
     let index = 0;
     let dialogScale = 1;

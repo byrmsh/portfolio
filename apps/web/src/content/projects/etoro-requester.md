@@ -8,10 +8,10 @@ stack:
   - aiohttp
   - SQLite
   - Streamlit
-heroImage: ../../assets/projects/etoro-requester/SS1.webp
+heroImage: /projects/etoro-requester/SS1.webp
 galleryImages:
-  - ../../assets/projects/etoro-requester/SS1.webp
-  - ../../assets/projects/etoro-requester/SS2.webp
+  - /projects/etoro-requester/SS1.webp
+  - /projects/etoro-requester/SS2.webp
 order: 5
 ---
 

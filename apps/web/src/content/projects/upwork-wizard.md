@@ -8,10 +8,10 @@ stack:
   - Redis Streams
   - OpenAI API
   - Slack API
-heroImage: ../../assets/projects/upwork-wizard/SS1.webp
+heroImage: /projects/upwork-wizard/SS1.webp
 galleryImages:
-  - ../../assets/projects/upwork-wizard/SS1.webp
-  - ../../assets/projects/upwork-wizard/SS2.webp
+  - /projects/upwork-wizard/SS1.webp
+  - /projects/upwork-wizard/SS2.webp
 order: 4
 ---
 

@@ -8,9 +8,9 @@ stack:
   - Prisma
   - PostgreSQL
   - Material UI
-heroImage: ../../assets/projects/asin-scraper/SS1.webp
+heroImage: /projects/asin-scraper/SS1.webp
 galleryImages:
-  - ../../assets/projects/asin-scraper/SS1.webp
+  - /projects/asin-scraper/SS1.webp
 order: 6
 ---
 

@@ -8,9 +8,9 @@ stack:
   - PyQt6
   - LZ77
   - Huffman Coding
-heroImage: ../../assets/projects/anvil-compression/SS1.webp
+heroImage: /projects/anvil-compression/SS1.webp
 galleryImages:
-  - ../../assets/projects/anvil-compression/SS1.webp
+  - /projects/anvil-compression/SS1.webp
 order: 9
 ---
 
