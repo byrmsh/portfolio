@@ -22,6 +22,10 @@ spec:
         preview.bysh.dev/head-sha: {{ .Values.global.previewHeadSha | quote }}
       {{- end }}
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
         - name: web
           image: '{{ .Values.web.image.repository }}:{{ default (include "portfolio.imageTag" .) .Values.web.image.tag }}'

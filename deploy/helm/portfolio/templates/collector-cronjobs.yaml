@@ -27,6 +27,10 @@ spec:
           {{- end }}
         spec:
           restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
           containers:
             - name: {{ $job.name | trimSuffix "-cronjob" }}
               image: "{{ $job.image.repository }}:{{ default (include "portfolio.imageTag" $) $job.image.tag }}"
