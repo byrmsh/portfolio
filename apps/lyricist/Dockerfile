@@ -16,4 +16,6 @@ RUN uv sync --frozen
 ENV PATH="/app/apps/lyricist/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
+RUN addgroup --system appuser && adduser --system --ingroup appuser appuser
+USER appuser
 CMD ["lyricist"]

@@ -15,4 +15,6 @@ RUN uv sync --frozen
 
 ENV PATH="/app/apps/collector/.venv/bin:$PATH"
 
+RUN addgroup --system appuser && adduser --system --ingroup appuser appuser
+USER appuser
 CMD ["collector-github"]

@@ -41,5 +41,6 @@ RUN pnpm install --frozen-lockfile --prod --filter web...
 
 COPY --from=builder /app/apps/web/dist ./apps/web/dist
 
+USER node
 EXPOSE 8080
 CMD ["node", "./apps/web/dist/server/entry.mjs"]
