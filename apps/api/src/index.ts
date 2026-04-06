@@ -421,7 +421,7 @@ async function readSavedLyricsPage(page: number): Promise<{
       operation: 'readSavedLyricsPage',
       error: error instanceof Error ? error.message : String(error),
     });
-    return { items: [], page, pageSize: YTMUSIC_SAVED_PAGE_SIZE, total: 0, totalPages: 0 };
+    return { items: [], page: 1, pageSize: YTMUSIC_SAVED_PAGE_SIZE, total: 0, totalPages: 0 };
   }
 }
 
