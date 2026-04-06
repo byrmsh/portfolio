@@ -231,6 +231,7 @@ function format(template: string, vars: Record<string, string | number>): string
 
 <script>
   const galleries = document.querySelectorAll('[data-project-gallery]');
+  const gallerySetIndex = new Map<Element, (i: number) => void>();
 
   for (const gallery of galleries) {
     const slides = Array.from(gallery.querySelectorAll<HTMLElement>('[data-gallery-slide]'));
@@ -356,6 +357,8 @@ function format(template: string, vars: Record<string, string | number>): string
 
       resetDialogTransform();
     };
+
+    gallerySetIndex.set(gallery, setIndex);
 
     prev?.addEventListener('click', () => setIndex(index - 1));
     next?.addEventListener('click', () => setIndex(index + 1));
@@ -523,57 +526,38 @@ function format(template: string, vars: Record<string, string | number>): string
     );
   }
 
-  window.addEventListener('keydown', (event) => {
+  const onKeydown = (event: KeyboardEvent) => {
     const openDialog = document.querySelector<HTMLDialogElement>('[data-gallery-dialog][open]');
     if (!openDialog) return;
     const gallery = openDialog.closest('[data-project-gallery]');
     if (!gallery) return;
+    const setIndex = gallerySetIndex.get(gallery);
+    if (!setIndex) return;
+
     const dialogSlides = gallery.querySelectorAll<HTMLElement>('[data-gallery-dialog-slide]');
-    const slides = gallery.querySelectorAll<HTMLElement>('[data-gallery-slide]');
-    const thumbs = gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-thumb]');
-    const dialogDots = gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-dialog-dot]');
-
-    const count = slides.length;
-    if (!count) return;
-
     const currentIndex = Array.from(dialogSlides).findIndex((s) =>
       s.classList.contains('opacity-100'),
     );
 
-    const go = (nextIndex: number) => {
-      const idx = ((nextIndex % count) + count) % count;
-      slides.forEach((s, i) => {
-        s.classList.toggle('opacity-100', i === idx);
-        s.classList.toggle('opacity-0', i !== idx);
-        s.classList.toggle('pointer-events-none', i !== idx);
-      });
-      thumbs.forEach((t, i) => {
-        t.classList.toggle('border-[var(--color-accent)]', i === idx);
-        t.classList.toggle('border-[var(--border-subtle)]', i !== idx);
-      });
-      dialogSlides.forEach((s, i) => {
-        s.classList.toggle('opacity-100', i === idx);
-        s.classList.toggle('opacity-0', i !== idx);
-        s.classList.toggle('pointer-events-none', i !== idx);
-        s.style.transform = '';
-      });
-      dialogDots.forEach((d, i) => {
-        d.classList.toggle('is-active', i === idx);
-      });
-    };
-
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
-      go(currentIndex - 1);
+      setIndex(currentIndex - 1);
     }
     if (event.key === 'ArrowRight') {
       event.preventDefault();
-      go(currentIndex + 1);
+      setIndex(currentIndex + 1);
     }
     if (event.key === 'Escape' && typeof openDialog.close === 'function') {
       openDialog.close();
     }
-  });
+  };
+
+  window.addEventListener('keydown', onKeydown);
+  document.addEventListener(
+    'astro:before-swap',
+    () => window.removeEventListener('keydown', onKeydown),
+    { once: true },
+  );
 </script>
 
 <style>
