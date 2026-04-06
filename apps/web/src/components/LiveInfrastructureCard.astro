@@ -234,5 +234,6 @@ const initial = await loadInitialStatus();
 
   setCheckedAt(lastCheckedAt);
   if (!lastCheckedAt) refresh();
-  window.setInterval(refresh, 30000);
+  const intervalId = window.setInterval(refresh, 30000);
+  document.addEventListener('astro:before-swap', () => clearInterval(intervalId), { once: true });
 </script>
