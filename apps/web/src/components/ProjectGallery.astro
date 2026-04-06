@@ -521,23 +521,59 @@ function format(template: string, vars: Record<string, string | number>): string
       },
       { passive: false },
     );
-
-    window.addEventListener('keydown', (event) => {
-      const modalOpen = !!dialog?.open;
-      if (!modalOpen) return;
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        setIndex(index - 1);
-      }
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        setIndex(index + 1);
-      }
-      if (event.key === 'Escape' && dialog && typeof dialog.close === 'function') {
-        dialog.close();
-      }
-    });
   }
+
+  window.addEventListener('keydown', (event) => {
+    const openDialog = document.querySelector<HTMLDialogElement>('[data-gallery-dialog][open]');
+    if (!openDialog) return;
+    const gallery = openDialog.closest('[data-project-gallery]');
+    if (!gallery) return;
+    const dialogSlides = gallery.querySelectorAll<HTMLElement>('[data-gallery-dialog-slide]');
+    const slides = gallery.querySelectorAll<HTMLElement>('[data-gallery-slide]');
+    const thumbs = gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-thumb]');
+    const dialogDots = gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-dialog-dot]');
+
+    const count = slides.length;
+    if (!count) return;
+
+    const currentIndex = Array.from(dialogSlides).findIndex((s) =>
+      s.classList.contains('opacity-100'),
+    );
+
+    const go = (nextIndex: number) => {
+      const idx = ((nextIndex % count) + count) % count;
+      slides.forEach((s, i) => {
+        s.classList.toggle('opacity-100', i === idx);
+        s.classList.toggle('opacity-0', i !== idx);
+        s.classList.toggle('pointer-events-none', i !== idx);
+      });
+      thumbs.forEach((t, i) => {
+        t.classList.toggle('border-[var(--color-accent)]', i === idx);
+        t.classList.toggle('border-[var(--border-subtle)]', i !== idx);
+      });
+      dialogSlides.forEach((s, i) => {
+        s.classList.toggle('opacity-100', i === idx);
+        s.classList.toggle('opacity-0', i !== idx);
+        s.classList.toggle('pointer-events-none', i !== idx);
+        s.style.transform = '';
+      });
+      dialogDots.forEach((d, i) => {
+        d.classList.toggle('is-active', i === idx);
+      });
+    };
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      go(currentIndex - 1);
+    }
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      go(currentIndex + 1);
+    }
+    if (event.key === 'Escape' && typeof openDialog.close === 'function') {
+      openDialog.close();
+    }
+  });
 </script>
 
 <style>
