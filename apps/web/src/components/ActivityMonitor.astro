@@ -47,7 +47,6 @@ try {
   activity = normalizeActivityMonitorData(null, activityLabels);
 }
 
-const fmtDay = new Intl.DateTimeFormat(locale, { weekday: 'short' });
 const fmtRange = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
 const githubCells = padTo7(last7Cells(activity.github));
 const ankiCells = padTo7(last7Cells(activity.anki));
@@ -88,7 +87,7 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
     </div>
   </WidgetHeader>
 
-  <div class="grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-6 lg:gap-x-8 lg:gap-y-0 min-w-0">
+  <div class="grid grid-cols-1 md:grid-cols-[1fr_1px_1fr] gap-6 md:gap-x-8 md:gap-y-0 min-w-0">
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <Code class="w-4 h-4 text-[var(--text-primary)]" />
@@ -98,8 +97,6 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
       <div class="activity-tags" data-tags="github" aria-label={t('activity.github_aria')}>
         {
           githubCells.map((cell, i) => {
-            const d = cell.date ? parseIsoDateUTC(cell.date) : null;
-            const dow = d ? fmtDay.format(d) : '---';
             return (
               <button
                 type="button"
@@ -114,7 +111,6 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
                 data-count={String(cell.count)}
                 data-level={String(cell.level)}
               >
-                <span class="tag-dow text-[10px] font-mono opacity-90">{dow}</span>
                 <span class="tag-count text-xs font-semibold">{cell.count}</span>
               </button>
             );
@@ -123,7 +119,7 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
       </div>
     </div>
 
-    <div class="hidden lg:block w-px bg-[var(--surface-3)] rounded-full" aria-hidden="true"></div>
+    <div class="hidden md:block w-px bg-[var(--surface-3)] rounded-full" aria-hidden="true"></div>
 
     <div class="min-w-0">
       <div class="flex items-center gap-2 mb-3">
@@ -157,8 +153,6 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
       <div class="activity-tags" data-tags="anki" aria-label={t('activity.anki_aria')}>
         {
           ankiCells.map((cell, i) => {
-            const d = cell.date ? parseIsoDateUTC(cell.date) : null;
-            const dow = d ? fmtDay.format(d) : '---';
             return (
               <button
                 type="button"
@@ -173,7 +167,6 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
                 data-count={String(cell.count)}
                 data-level={String(cell.level)}
               >
-                <span class="tag-dow text-[10px] font-mono opacity-90">{dow}</span>
                 <span class="tag-count text-xs font-semibold">{cell.count}</span>
               </button>
             );
@@ -216,7 +209,6 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
     const streakTemplate = root.dataset.streakTemplate ?? 'Streak: {count}';
     const tooltipWithDateTpl = root.dataset.tooltipWithDate ?? '{label}: {date} ({count})';
     const tooltipWithoutDateTpl = root.dataset.tooltipWithoutDate ?? '{label}: ({count})';
-    const fmtDay = new Intl.DateTimeFormat(locale, { weekday: 'short' });
     const fmtRange = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
     const fmtTip = new Intl.DateTimeFormat(locale, {
       month: 'short',
@@ -250,16 +242,13 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
       buttons.forEach((btn, i) => {
         const cell = cells[i] ?? { date: '', count: 0, level: 0 };
         const level = clampInt(Number(cell.level || 0), 0, 4);
-        const date = cell.date ? parseIsoDateUTC(cell.date) : null;
 
         btn.className = `${baseBtn} ${activityColorRamps[source][level]}`;
         btn.dataset.date = String(cell.date || '');
         btn.dataset.count = String(cell.count || 0);
         btn.dataset.level = String(level);
 
-        const dowEl = btn.querySelector<HTMLElement>('.tag-dow');
         const countEl = btn.querySelector<HTMLElement>('.tag-count');
-        if (dowEl) dowEl.textContent = date ? fmtDay.format(date) : '---';
         if (countEl) countEl.textContent = String(cell.count || 0);
       });
 
@@ -440,18 +429,5 @@ const ankiStreak = typeof activity.anki.streak === 'number' ? activity.anki.stre
     font-weight: 600;
     opacity: 0.85;
     font-variant-numeric: tabular-nums;
-  }
-
-  @container (max-width: 360px) {
-    [data-activity-monitor] .activity-tag .tag-dow {
-      display: none;
-    }
-    [data-activity-monitor] .activity-tag .tag-count {
-      font-size: 0.9rem;
-      line-height: 1;
-    }
-    [data-activity-monitor] .activity-tag[data-source='anki'] .tag-count {
-      font-size: 0.7rem;
-    }
   }
 </style>
