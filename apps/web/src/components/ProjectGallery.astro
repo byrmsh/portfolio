@@ -270,7 +270,9 @@ function format(template: string, vars: Record<string, string | number>): string
 
     const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-    const getActiveImageMetrics = () => {
+    let cachedMetrics: ReturnType<typeof getActiveImageMetrics> = null;
+
+    function getActiveImageMetrics() {
       if (!dialogStage) return null;
       const stageRect = dialogStage.getBoundingClientRect();
       const activeSlide = dialogSlides[index];
@@ -282,6 +284,8 @@ function format(template: string, vars: Record<string, string | number>): string
       const naturalHeight = activeImage?.naturalHeight ?? 0;
       if (!naturalWidth || !naturalHeight) {
         return {
+          stageLeft: stageRect.left,
+          stageTop: stageRect.top,
           stageWidth: stageRect.width,
           stageHeight: stageRect.height,
           renderedWidth: stageRect.width,
@@ -291,15 +295,17 @@ function format(template: string, vars: Record<string, string | number>): string
 
       const fit = Math.min(stageRect.width / naturalWidth, stageRect.height / naturalHeight);
       return {
+        stageLeft: stageRect.left,
+        stageTop: stageRect.top,
         stageWidth: stageRect.width,
         stageHeight: stageRect.height,
         renderedWidth: naturalWidth * fit,
         renderedHeight: naturalHeight * fit,
       };
-    };
+    }
 
     const clampOffsets = () => {
-      const metrics = getActiveImageMetrics();
+      const metrics = cachedMetrics;
       if (!metrics) return;
       const maxX = Math.max(0, (metrics.renderedWidth * dialogScale - metrics.stageWidth) / 2);
       const maxY = Math.max(0, (metrics.renderedHeight * dialogScale - metrics.stageHeight) / 2);
@@ -317,6 +323,7 @@ function format(template: string, vars: Record<string, string | number>): string
       dialogScale = 1;
       dialogOffsetX = 0;
       dialogOffsetY = 0;
+      cachedMetrics = null;
       activePointers.clear();
       panPointerId = null;
       swipePointerId = null;
@@ -373,6 +380,11 @@ function format(template: string, vars: Record<string, string | number>): string
       dot.addEventListener('click', () => setIndex(i));
     });
 
+    const invalidateMetrics = () => {
+      cachedMetrics = null;
+    };
+    window.addEventListener('resize', invalidateMetrics);
+
     open?.addEventListener('click', () => {
       if (dialog && typeof dialog.showModal === 'function') {
         dialog.showModal();
@@ -396,6 +408,7 @@ function format(template: string, vars: Record<string, string | number>): string
       dialogStage.setPointerCapture(event.pointerId);
       dialogStage.classList.add('is-grabbing');
       activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      cachedMetrics = getActiveImageMetrics();
 
       if (activePointers.size === 1) {
         panPointerId = event.pointerId;
@@ -497,12 +510,12 @@ function format(template: string, vars: Record<string, string | number>): string
       (event) => {
         if (!dialog?.open) return;
         event.preventDefault();
-        const metrics = getActiveImageMetrics();
+        if (!cachedMetrics) cachedMetrics = getActiveImageMetrics();
+        const metrics = cachedMetrics;
         if (!metrics) return;
 
-        const rect = dialogStage.getBoundingClientRect();
-        const cursorX = event.clientX - rect.left;
-        const cursorY = event.clientY - rect.top;
+        const cursorX = event.clientX - metrics.stageLeft;
+        const cursorY = event.clientY - metrics.stageTop;
         const centerX = metrics.stageWidth / 2;
         const centerY = metrics.stageHeight / 2;
         const prevScale = dialogScale;
