@@ -15,6 +15,14 @@ Set `LYRICIST_MODE`:
 - `analyze`: process pending queue with rate-limited LLM calls
 - `all`: run sync, then analyze
 
+## Missing tracks
+
+The sync uses `ytmusicapi` unauthenticated. Tracks that are Premium-only, private, region-restricted, or otherwise unavailable come back from the playlist endpoint as placeholders with no `videoId` and no `title`, so `_extract_track` drops them. The skip is logged as `lyricist.track.skipped_unavailable` with whatever metadata ytmusicapi returned.
+
+Expected side effect: the Redis index can be smaller than the playlist's `trackCount` reported by YouTube Music. This is not a bug; it is the cost of running without auth.
+
+To close the gap, authenticate ytmusicapi (`ytmusicapi oauth` → `oauth.json`, pass path to `YTMusic(...)`). Refresh tokens last until revoked. The cronjob would need the credential file mounted as a secret. Consider using a secondary Google account to limit blast radius rather than your primary account.
+
 ## Manual batch workflow
 
 The `lyricist-manual-analysis` CLI exports Redis-backed batches and imports cached JSON analysis:
