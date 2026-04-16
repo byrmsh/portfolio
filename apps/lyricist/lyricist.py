@@ -275,6 +275,15 @@ def _extract_track(t: dict[str, Any]) -> Track | None:
     video_id = t.get("videoId") or t.get("video_id")
     title = t.get("title")
     if not video_id or not title:
+        # ytmusicapi returns Premium-only or otherwise-unavailable tracks as
+        # placeholders without a videoId. Log so the gap is visible instead of
+        # silent. See apps/lyricist/README.md "Missing tracks".
+        logger.info(
+            "lyricist.track.skipped_unavailable",
+            title=title,
+            video_id=video_id,
+            is_available=t.get("isAvailable"),
+        )
         return None
 
     artists = t.get("artists") or []
