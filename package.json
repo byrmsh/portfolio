@@ -2,6 +2,7 @@
   "name": "portfolio",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.28.2",
   "scripts": {
     "dev": "./scripts/dev-web-k8s.sh",
     "dev:web:k8s": "./scripts/dev-web-k8s.sh",
