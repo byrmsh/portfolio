@@ -180,4 +180,17 @@ const postCommitPathFilters = Array.from(
     background: transparent;
     padding: 0;
   }
+  .blog-prose :global(img) {
+    margin-top: 1rem;
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-subtle);
+  }
+  .blog-prose :global(img + em) {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
 </style>
