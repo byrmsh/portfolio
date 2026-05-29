@@ -24,14 +24,14 @@ Bring-your-own Supabase is an ordinary Supabase project with full Postgres acces
 
 Connecting an existing project happens in the editor under **More tools > Cloud > "Already have a Supabase project? Connect it here"**, which runs an OAuth flow against the Supabase account. It has to happen before any backend feature: the first time the app needs a database, Lovable provisions Lovable Cloud, with no switching afterward. The order that works is frontend first, then the Supabase connection, then auth and tables.
 
-![Lovable editor showing the Cloud panel with Supabase connected to a bring-your-own project](/blog/lovable-migration/lovable-connected-supabase.png)
+![Lovable editor showing the Cloud panel with Supabase connected to a bring-your-own project](/blog/lovable-supabase-migration/lovable-connected-supabase.png)
 _Lovable connected to a bring-your-own Supabase project; Lovable Cloud was never enabled._
 
 ### The demo app
 
 The starting point is LinkVault, a small bookmark manager built in Lovable. It touches the database features a migration has to carry across: email and password auth, a `collections` table, a `bookmarks` table with a foreign key back to it and a `bigint generated always as identity` column (so there is a sequence), row-level security on both tables, and a storage bucket for avatars. Lovable writes the SQL migration for all of it and runs it against the connected Supabase project.
 
-![The SQL migration Lovable generated, with tables, an identity sequence, and RLS policies](/blog/lovable-migration/migration-sql.png)
+![The SQL migration Lovable generated, with tables, an identity sequence, and RLS policies](/blog/lovable-supabase-migration/migration-sql.png)
 _The generated migration: two tables, the identity sequence, foreign keys, and a row-level security policy per operation._
 
 ### The frontend
@@ -119,7 +119,7 @@ CREATE PUBLICATION linkvault_pub FOR TABLE public.collections, public.bookmarks;
 
 Supabase Cloud's direct database host is IPv6-only, and Docker containers have no IPv6 egress by default. The host reaches the source; the Postgres container does not, and the subscription fails with `Network unreachable`.
 
-![Supabase connection dialog noting that direct connections use IPv6 by default](/blog/lovable-migration/supabase-ipv6.png)
+![Supabase connection dialog noting that direct connections use IPv6 by default](/blog/lovable-supabase-migration/supabase-ipv6.png)
 _Supabase direct connections are IPv6-only. The VPS reaches it natively; the Docker container needs IPv6 enabled._
 
 Enabling IPv6 in the Docker daemon is not sufficient, because Compose creates its network IPv4-only. Set `ipv6` and `ip6tables` in `daemon.json` and `enable_ipv6` on the Compose network. The subscription then connects:
@@ -184,7 +184,7 @@ distinct sequence values: 185 (no duplicates)
 missing: only the single failed request
 ```
 
-![The app dashboard after the cutover, served entirely by self-hosted Supabase](/blog/lovable-migration/post-cutover-dashboard.png)
+![The app dashboard after the cutover, served entirely by self-hosted Supabase](/blog/lovable-supabase-migration/post-cutover-dashboard.png)
 _After the flip: the same session stayed active, served entirely by the self-hosted stack._
 
 Because the self-hosted side trusts the cloud's ES256 tokens, the session open before the cutover kept working without re-login. After confirming the swap, let replication drain the last in-flight writes, drop the subscription (which releases the slot on the source), and decommission the source:
