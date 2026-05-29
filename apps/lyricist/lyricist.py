@@ -108,6 +108,10 @@ def _now_ts() -> int:
     return int(time.time())
 
 
+def _ts_to_iso(ts: int) -> str:
+    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+
+
 def _normalize_origin(origin: str) -> str:
     return origin[:-1] if origin.endswith("/") else origin
 
@@ -895,8 +899,8 @@ def _enqueue_for_analysis(r, track_id: str) -> None:
     r.zadd(PENDING_ZSET_KEY, {track_id: _now_ts()})
 
 
-def _upsert_saved_note_and_index(r, track: Track) -> None:
-    saved_at = _iso_now()
+def _upsert_saved_note_and_index(r, track: Track, *, score: int) -> None:
+    saved_at = _ts_to_iso(score)
     web_origin = _normalize_origin(WEB_ORIGIN)
     note = SavedLyricNote(
         id=track.id,
@@ -910,9 +914,68 @@ def _upsert_saved_note_and_index(r, track: Track) -> None:
 
     stat_key = RedisKeys.stat("ytmusic", track.id)
     r.set(stat_key, note.model_dump_json())
-    r.zadd(RedisKeys.INDEX_LYRICS_RECENT, {track.id: _now_ts()})
+    r.zadd(RedisKeys.INDEX_LYRICS_RECENT, {track.id: score})
     _enqueue_for_analysis(r, track.id)
     emit_event(r, "ytmusic_saved_updated", {"trackId": track.id, "key": stat_key})
+
+
+def _compute_position_scores(
+    r, tracks: list[Track], new_tracks: list[Track]
+) -> dict[str, int]:
+    """Backstamp new tracks based on their playlist neighbors already in Redis.
+
+    Convention for this playlist: lower playlist position = older add, higher
+    position = newer add. Redis score must increase with position so that the
+    most recently added track wins zrevrange. A track that becomes available
+    long after it was added (e.g. previously region-locked) gets stamped
+    between its position-neighbors instead of "now".
+    """
+    new_ids = {t.id for t in new_tracks}
+    existing_scores: dict[str, int] = {}
+    for t in tracks:
+        if t.id in new_ids:
+            continue
+        s = r.zscore(RedisKeys.INDEX_LYRICS_RECENT, t.id)
+        if s is not None:
+            existing_scores[t.id] = int(s)
+
+    now = _now_ts()
+    assigned: dict[str, int] = {}
+
+    def _older_neighbor(idx: int) -> int | None:
+        for j in range(idx - 1, -1, -1):
+            tid = tracks[j].id
+            if tid in existing_scores:
+                return existing_scores[tid]
+            if tid in assigned:
+                return assigned[tid]
+        return None
+
+    def _newer_neighbor(idx: int) -> int | None:
+        for j in range(idx + 1, len(tracks)):
+            tid = tracks[j].id
+            if tid in existing_scores:
+                return existing_scores[tid]
+        return None
+
+    for i, t in enumerate(tracks):
+        if t.id not in new_ids:
+            continue
+        older = _older_neighbor(i)
+        newer = _newer_neighbor(i)
+        if older is not None and newer is not None and newer > older + 1:
+            score = (older + newer) // 2
+        elif older is not None and newer is not None:
+            score = older + 1
+        elif older is not None:
+            score = max(older + 1, now)
+        elif newer is not None:
+            score = max(1, newer - (len(tracks) - i))
+        else:
+            score = now - (len(tracks) - i - 1)
+        assigned[t.id] = score
+
+    return assigned
 
 
 def _prune_removed_tracks(r, playlist_track_ids: set[str]) -> int:
@@ -973,9 +1036,17 @@ def _run_sync(r) -> int:
         logger.info("lyricist.sync.noop", playlist_id=YTMUSIC_PLAYLIST_ID, removed=removed_count)
         return 0
 
+    position_scores = _compute_position_scores(r, tracks, new_tracks)
     for tr in new_tracks:
-        logger.info("lyricist.track.sync", track_id=tr.id, title=tr.title, artist=tr.artist)
-        _upsert_saved_note_and_index(r, tr)
+        score = position_scores[tr.id]
+        logger.info(
+            "lyricist.track.sync",
+            track_id=tr.id,
+            title=tr.title,
+            artist=tr.artist,
+            score=score,
+        )
+        _upsert_saved_note_and_index(r, tr, score=score)
         _write_cursor(r, YTMUSIC_PLAYLIST_ID, tr.id)
 
     logger.info("lyricist.sync.done", processed=len(new_tracks), removed=removed_count)
