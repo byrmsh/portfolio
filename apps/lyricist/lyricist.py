@@ -978,6 +978,91 @@ def _compute_position_scores(
     return assigned
 
 
+def _fingerprint(title: str, artist: str) -> str:
+    def _norm(s: str) -> str:
+        s = unicodedata.normalize("NFKC", s or "").casefold().strip()
+        return re.sub(r"\s+", " ", s)
+
+    return f"{_norm(title)}|{_norm(artist)}"
+
+
+def _migrate_alias_ids(r, tracks: list[Track]) -> int:
+    """Rename Redis entries whose videoId changed but title+artist still match a
+    playlist track. YT Music swaps videoIds for the same song over time; without
+    this, every swap looks like a brand-new track and gets stamped with the
+    current sync time.
+    """
+    playlist_by_fp: dict[str, Track] = {}
+    for t in tracks:
+        playlist_by_fp.setdefault(_fingerprint(t.title, t.artist), t)
+
+    playlist_ids = {t.id for t in tracks}
+    migrated = 0
+    web_origin = _normalize_origin(WEB_ORIGIN)
+
+    for rid in r.zrange(RedisKeys.INDEX_LYRICS_RECENT, 0, -1):
+        old_id = rid.decode("utf-8") if isinstance(rid, (bytes, bytearray)) else str(rid)
+        if not old_id or old_id in playlist_ids:
+            continue
+        stat_key_old = RedisKeys.stat("ytmusic", old_id)
+        raw = r.get(stat_key_old)
+        if not raw:
+            continue
+        try:
+            note_data = json.loads(
+                raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else raw
+            )
+        except (json.JSONDecodeError, ValueError):
+            continue
+        fp = _fingerprint(note_data.get("title", ""), note_data.get("artist", ""))
+        target = playlist_by_fp.get(fp)
+        if not target or target.id == old_id:
+            continue
+        if r.exists(RedisKeys.stat("ytmusic", target.id)):
+            continue
+
+        score = r.zscore(RedisKeys.INDEX_LYRICS_RECENT, old_id)
+        pending_score = r.zscore(PENDING_ZSET_KEY, old_id)
+        analysis_key_old = RedisKeys.stat_field("ytmusic", old_id, "analysis")
+        analysis_raw = r.get(analysis_key_old)
+        attempts_key_old = _analysis_attempts_key(old_id)
+        attempts_raw = r.get(attempts_key_old)
+
+        note_data["id"] = target.id
+        note_data["noteUrl"] = f"{web_origin}/playlist/note?id={target.id}"
+        if target.album_art_url:
+            note_data["albumArtUrl"] = target.album_art_url
+
+        new_stat_key = RedisKeys.stat("ytmusic", target.id)
+        r.set(new_stat_key, json.dumps(note_data))
+        if score is not None:
+            r.zadd(RedisKeys.INDEX_LYRICS_RECENT, {target.id: int(score)})
+        if analysis_raw is not None:
+            r.set(RedisKeys.stat_field("ytmusic", target.id, "analysis"), analysis_raw)
+        if attempts_raw is not None:
+            r.set(_analysis_attempts_key(target.id), attempts_raw)
+        if pending_score is not None:
+            r.zadd(PENDING_ZSET_KEY, {target.id: int(pending_score)})
+
+        r.delete(stat_key_old, analysis_key_old, attempts_key_old)
+        r.zrem(RedisKeys.INDEX_LYRICS_RECENT, old_id)
+        r.zrem(PENDING_ZSET_KEY, old_id)
+
+        emit_event(r, "ytmusic_saved_updated", {"trackId": target.id, "key": new_stat_key})
+        logger.info(
+            "lyricist.track.id_migrated",
+            old_id=old_id,
+            new_id=target.id,
+            title=note_data.get("title"),
+            artist=note_data.get("artist"),
+        )
+        migrated += 1
+
+    if migrated > 0:
+        logger.info("lyricist.sync.migrated_alias_ids", count=migrated)
+    return migrated
+
+
 def _prune_removed_tracks(r, playlist_track_ids: set[str]) -> int:
     raw_ids = r.zrange(RedisKeys.INDEX_LYRICS_RECENT, 0, -1)
     if not raw_ids:
@@ -1018,6 +1103,7 @@ def _run_sync(r) -> int:
 
     logger.info("lyricist.sync.start", playlist_id=YTMUSIC_PLAYLIST_ID, last_seen=last_seen)
     tracks = _list_playlist_tracks(YTMUSIC_PLAYLIST_ID)
+    _migrate_alias_ids(r, tracks)
     playlist_track_ids = {t.id for t in tracks}
     removed_count = _prune_removed_tracks(r, playlist_track_ids)
     if not tracks:
