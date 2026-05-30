@@ -1,5 +1,6 @@
 ---
 title: 'Migrating managed Lovable app and Supabase (Postgres) DB without downtime'
+graphLabel: 'Lovable + Supabase migration'
 description: 'Moving a Lovable app to a self-hosted Supabase on a VPS, the Postgres database cut over live with logical replication.'
 pubDate: '25 May 2026'
 draft: false

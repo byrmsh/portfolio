@@ -1,5 +1,6 @@
 ---
 title: 'PR Previews with Argo CD ApplicationSet'
+graphLabel: 'ArgoCD PR previews'
 description: 'How I run pull request preview environments with Argo CD so each PR gets its own URL and is cleaned up automatically'
 pubDate: '19 Feb 2026'
 heroImage: '../../assets/blog-placeholder-2.jpg'

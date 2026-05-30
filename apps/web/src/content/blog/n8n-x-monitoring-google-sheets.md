@@ -1,5 +1,6 @@
 ---
 title: 'Monitoring X with n8n, configured from a Google Sheet'
+graphLabel: 'n8n X monitoring'
 description: 'An n8n side project that watches X and replies to its own posts when they take off, configured from a Google Sheet.'
 pubDate: '29 May 2026'
 draft: false

@@ -19,6 +19,15 @@ export interface GraphData {
   links: GraphLink[];
 }
 
+// Safety net for titles that lack a hand-picked graphLabel: cut at the last
+// word boundary before the cap so a long title never overruns its node.
+function truncateLabel(text: string, max = 42): string {
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const lastSpace = slice.lastIndexOf(' ');
+  return `${(lastSpace > 0 ? slice.slice(0, lastSpace) : slice).trimEnd()}…`;
+}
+
 export async function buildGraphData(locale = 'eng'): Promise<GraphData> {
   const prefix = locale !== 'eng' ? `/${locale}` : '';
 
@@ -59,7 +68,7 @@ export async function buildGraphData(locale = 'eng'): Promise<GraphData> {
     const nodeId = `blog:${post.slug}`;
     nodes.push({
       id: nodeId,
-      label: post.data.title,
+      label: post.data.graphLabel ?? truncateLabel(post.data.title),
       type: 'blog',
       href: `${prefix}/blog/${post.slug}`,
     });
