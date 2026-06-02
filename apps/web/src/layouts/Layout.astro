@@ -153,5 +153,23 @@ const faviconVersion = '20260217';
   </head>
   <body class="text-[var(--text-primary)] antialiased min-h-screen pb-6">
     <slot />
+    <script is:inline>
+      // Rewrites server-rendered (UTC) timestamps into the visitor's local timezone.
+      // Runs once: this script sits at the end of <body>, so every <time data-localize>
+      // in the static HTML already exists when it executes.
+      (() => {
+        const locale = (document.documentElement.lang || 'en').replace('-x-dev', '');
+        const opts = { dateStyle: 'medium', timeStyle: 'short' };
+        document.querySelectorAll('time[data-localize]').forEach((el) => {
+          const iso = el.getAttribute('datetime');
+          if (!iso) return;
+          const parsed = new Date(iso);
+          if (Number.isNaN(parsed.getTime())) return;
+          try {
+            el.textContent = new Intl.DateTimeFormat(locale, opts).format(parsed);
+          } catch {}
+        });
+      })();
+    </script>
   </body>
 </html>

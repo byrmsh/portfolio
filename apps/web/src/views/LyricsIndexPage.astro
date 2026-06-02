@@ -4,6 +4,7 @@ import Layout from '../layouts/Layout.astro';
 import SiteNav from '../components/SiteNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import LyricNotesList from '../components/LyricNotesList.svelte';
+import LocalTime from '../components/LocalTime.astro';
 import { SITE } from '../config/site';
 import { getLocaleFromUrl, getTranslator, localizedPath } from '../i18n';
 
@@ -129,7 +130,11 @@ const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle
                 </div>
                 <div class="text-xs text-[var(--text-body)] mt-1 line-clamp-1">{latest.artist}</div>
                 <div class="text-xxs font-mono text-[var(--text-muted)] mt-2">
-                  {t('lyrics.saved_at', { date: dateFmt.format(new Date(latest.savedAt)) })}
+                  <LocalTime
+                    iso={latest.savedAt}
+                    fallback={dateFmt.format(new Date(latest.savedAt))}
+                    template={t('lyrics.saved_at', { date: '{date}' })}
+                  />
                 </div>
               </div>
             </a>

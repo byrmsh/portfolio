@@ -1,6 +1,7 @@
 ---
 import type { YtMusicAnalysis } from '@portfolio/schema/dashboard';
 import LyricFlashcardDeck from './LyricFlashcardDeck.svelte';
+import LocalTime from './LocalTime.astro';
 
 interface Props {
   locale: string;
@@ -28,9 +29,6 @@ interface Props {
 }
 
 const { locale, labels, analysis, error } = Astro.props;
-
-const format = (template: string, vars: Record<string, string | number>): string =>
-  template.replaceAll(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? `{${key}}`));
 
 function toIntlLocale(localeCode: string): string {
   if (localeCode === 'eng') return 'en';
@@ -82,9 +80,11 @@ const updatedAtFormatter = new Intl.DateTimeFormat(toIntlLocale(locale), {
             ) : null}
           </div>
           <div class="mt-2 text-xxs font-mono text-[var(--text-muted)]">
-            {format(labels.updatedAt, {
-              date: updatedAtFormatter.format(new Date(analysis.updatedAt)),
-            })}
+            <LocalTime
+              iso={analysis.updatedAt}
+              fallback={updatedAtFormatter.format(new Date(analysis.updatedAt))}
+              template={labels.updatedAt}
+            />
           </div>
         </div>
       </header>
