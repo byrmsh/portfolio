@@ -47,6 +47,7 @@
     template.replaceAll(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? `{${key}}`));
   const totalCount = () => data.total || data.items.length;
   const savedAtFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
+  const [savedAtPre, savedAtPost = ''] = labels.savedAt.split('{date}');
 
   function toRelativeHref(u: URL): string {
     const qs = u.searchParams.toString();
@@ -135,9 +136,9 @@
             <div class="text-sm font-semibold text-[var(--text-primary)] line-clamp-1">{t.title}</div>
             <div class="text-xs text-[var(--text-body)] mt-1 line-clamp-1">{t.artist}</div>
             <div class="text-xxs font-mono text-[var(--text-muted)] mt-2">
-              {format(labels.savedAt, {
-                date: savedAtFmt.format(new Date(t.savedAt)),
-              })}
+              {savedAtPre}<time data-localize="datetime" datetime={t.savedAt}
+                >{savedAtFmt.format(new Date(t.savedAt))}</time
+              >{savedAtPost}
             </div>
           </div>
         </a>

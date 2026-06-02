@@ -1,0 +1,16 @@
+---
+interface Props {
+  iso: string;
+  fallback: string;
+  template?: string;
+}
+
+// `template` is a translated string containing a `{date}` placeholder (e.g. "Saved {date}").
+// The server-rendered `fallback` is shown until the client localizer in Layout rewrites the
+// <time> textContent in the visitor's timezone. If the placeholder is absent, render just the
+// time rather than appending an orphan element after the whole label.
+const { iso, fallback, template = '{date}' } = Astro.props;
+const [pre, post = ''] = template.includes('{date}') ? template.split('{date}') : ['', ''];
+---
+
+{pre}<time data-localize="datetime" datetime={iso}>{fallback}</time>{post}
