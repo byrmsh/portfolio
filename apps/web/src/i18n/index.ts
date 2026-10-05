@@ -1,11 +1,12 @@
 import {
   DEFAULT_LOCALE,
+  NOINDEX_LOCALES,
   SUPPORTED_LOCALES,
   translations,
   type SupportedLocale,
 } from './translations';
 
-export { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale };
+export { DEFAULT_LOCALE, NOINDEX_LOCALES, SUPPORTED_LOCALES, type SupportedLocale };
 
 type Primitive = string | number;
 

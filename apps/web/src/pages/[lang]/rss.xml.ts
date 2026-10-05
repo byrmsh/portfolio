@@ -1,7 +1,13 @@
 import rss from '@astrojs/rss';
 import { getCollection } from 'astro:content';
 import { SITE } from '../../config/site';
-import { DEFAULT_LOCALE, getTranslator, isSupportedLocale, localizedPath } from '../../i18n';
+import {
+  DEFAULT_LOCALE,
+  NOINDEX_LOCALES,
+  getTranslator,
+  isSupportedLocale,
+  localizedPath,
+} from '../../i18n';
 
 export const prerender = false;
 
@@ -24,7 +30,7 @@ export async function GET(context: { site?: URL; params: { lang?: string } }) {
 
   const site = context.site ?? new URL(`https://${SITE.domain}`);
 
-  return rss({
+  const response = await rss({
     title: `${SITE.name} | ${t('meta.blog')}`,
     description: t('blog.description'),
     site,
@@ -37,4 +43,6 @@ export async function GET(context: { site?: URL; params: { lang?: string } }) {
       categories: post.data.tags,
     })),
   });
+  if (NOINDEX_LOCALES.includes(locale)) response.headers.set('X-Robots-Tag', 'noindex');
+  return response;
 }

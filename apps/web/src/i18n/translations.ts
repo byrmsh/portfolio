@@ -4,6 +4,9 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: SupportedLocale = 'eng';
 
+// Locales served to visitors but kept out of search engines.
+export const NOINDEX_LOCALES: readonly SupportedLocale[] = ['dev'];
+
 type TranslationDict = {
   [key: string]: string | TranslationDict;
 };
