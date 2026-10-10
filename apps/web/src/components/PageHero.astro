@@ -21,5 +21,11 @@ const { t } = Astro.props;
     </p>
     <h1 class="text-4xl font-semibold tracking-tight mb-3">{SITE.name}</h1>
     <p class="max-w-2xl text-[var(--text-body)] text-lg">{t('hero.subtitle')}</p>
+    <a
+      class="mt-4 inline-flex w-fit font-mono text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+      href={`https://${SITE.domain}/cv.pdf`}
+    >
+      {t('hero.cv')}
+    </a>
   </div>
 </header>

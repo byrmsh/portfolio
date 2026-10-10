@@ -58,6 +58,12 @@ const sourceUrl = getRepoUrlFromMetadata() ?? '#';
     </div>
     <div class="flex items-center gap-6">
       <a
+        href={`https://${SITE.domain}/cv.pdf`}
+        class="hover:text-[var(--text-primary)] transition-colors"
+      >
+        {t('footer.cv')}
+      </a>
+      <a
         href={sourceUrl}
         target="_blank"
         class="hover:text-[var(--text-primary)] transition-colors"

@@ -14,6 +14,7 @@ const locale = getLocaleFromUrl(url);
 const t = getTranslator(locale);
 
 const email = `contact@${SITE.domain}`;
+const cvUrl = `https://${SITE.domain}/cv.pdf`;
 
 const GPG_PUBLIC_KEY = `-----BEGIN PGP PUBLIC KEY BLOCK-----
 
@@ -57,6 +58,18 @@ lXz5kk4pd+Ykgyreki1Kq7oNxpppB0ms5k6yDg==
           href={`mailto:${email}`}
         >
           {email}
+        </a>
+      </section>
+
+      <section class="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-6">
+        <div class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">
+          {t('contact.cv_label')}
+        </div>
+        <a
+          class="mt-2 block font-mono text-sm text-[var(--text-primary)] hover:opacity-80 transition-opacity"
+          href={cvUrl}
+        >
+          {SITE.domain}/cv.pdf
         </a>
       </section>
 

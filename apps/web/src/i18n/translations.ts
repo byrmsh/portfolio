@@ -87,12 +87,14 @@ const enTranslations = {
     description:
       'Open to new opportunities and technical discussions! PGP key available for encryption.',
     email_label: 'Email',
+    cv_label: 'CV',
     gpg_label: 'PGP Public Key',
   },
   hero: {
     pronunciation: '/bajˈɾam ʃaˈhin/',
     pronunciation_simple: 'bye-RAHM sha-HEEN',
     subtitle: 'Full-Stack Developer & DevOps Practitioner',
+    cv: 'CV',
   },
   activity: {
     title: 'Activity Monitor',
@@ -168,6 +170,7 @@ const enTranslations = {
     copyright: '© {year} {name}',
     language: 'Language',
     source: 'Source',
+    cv: 'CV',
     rss: 'RSS',
   },
   lyrics: {
